@@ -1,9 +1,7 @@
 package dumb.jaider;
 
 import com.github.difflib.DiffUtils;
-import com.github.difflib.patch.Patch;
 import com.github.difflib.unifieddiff.UnifiedDiff;
-import com.github.difflib.unifieddiff.UnifiedDiffFile;
 import com.github.difflib.unifieddiff.UnifiedDiffReader;
 import com.googlecode.lanterna.TerminalSize;
 import com.googlecode.lanterna.TextColor;
@@ -51,7 +49,7 @@ import java.util.stream.Collectors;
 
 public class Jaider {
 
-    public static void main(String[] args) {
+    static void main(String[] args) {
         try {
             new App(new TUI()).run();
         } catch (Exception e) {
@@ -83,7 +81,7 @@ public class Jaider {
     }
 
     interface Agent {
-        String getModeName();
+        String name();
 
         Response<AiMessage> act(List<ChatMessage> messages);
 
@@ -144,17 +142,17 @@ public class Jaider {
                     var text = text(msg);
                     if (text == null || text.isBlank()) continue;
 
-                    var label = new Label(String.format("[%s] %s", msg.type().name(), text));
+                    var l = new Label(String.format("[%s] %s", msg.type().name(), text));
                     if (msg instanceof UserMessage)
-                        label.setForegroundColor(TextColor.ANSI.CYAN);
+                        l.setForegroundColor(TextColor.ANSI.CYAN);
                     else if (msg instanceof AiMessage aim) {
                         if (aim.hasToolExecutionRequests()) {
-                            label.setText(String.format("[Agent] Wants to use tool: %s", aim.toolExecutionRequests().getFirst().name()));
-                            label.setForegroundColor(TextColor.ANSI.YELLOW);
+                            l.setText(String.format("[Agent] Wants to use tool: %s", aim.toolExecutionRequests().getFirst().name()));
+                            l.setForegroundColor(TextColor.ANSI.YELLOW);
                         } else
-                            label.setForegroundColor(TextColor.ANSI.GREEN);
+                            l.setForegroundColor(TextColor.ANSI.GREEN);
                     }
-                    logListBox.addComponent(label);
+                    logListBox.addComponent(l);
                 }
                 //if (logListBox.getChildrenList().size() > 0) logListBox.setSelectedIndex(logListBox.getItemCount() - 1);
                 statusBar.setText(String.format(" | Mode: %s | %s | Tokens: %d", model.agentMode, model.statusBarText, model.currentTokenCount));
@@ -242,7 +240,6 @@ public class Jaider {
         }
     }
 
-    // --- 3. Data & Configuration Models ---
     static class Config {
         final Path configFile;
         final Map<String, String> apiKeys = new HashMap<>();
@@ -256,10 +253,10 @@ public class Jaider {
         void load() {
             try {
                 if (!Files.exists(configFile)) createDefaultConfig();
-                var json = new JSONObject(Files.readString(configFile));
-                llmProvider = json.optString("llmProvider", "openai");
-                testCommand = json.optString("testCommand", null);
-                var keys = json.optJSONObject("apiKeys");
+                var j = new JSONObject(Files.readString(configFile));
+                llmProvider = j.optString("llmProvider", "openai");
+                testCommand = j.optString("testCommand", null);
+                var keys = j.optJSONObject("apiKeys");
                 if (keys != null) keys.keySet().forEach(key -> apiKeys.put(key, keys.getString(key)));
             } catch (Exception e) { /* Use defaults on failure */ }
         }
@@ -291,6 +288,8 @@ public class Jaider {
     }
 
     static class Model {
+        public static final int LOG_CAPACITY = 200;
+
         final Path projectDir = Paths.get("").toAbsolutePath();
         final Set<Path> filesInContext = new HashSet<>();
         final List<ChatMessage> logMessages = new ArrayList<>();
@@ -305,12 +304,13 @@ public class Jaider {
             var t = ((AiMessage) message).text();
             if (t == null || t.isBlank()) return;
             logMessages.add(message);
-            if (logMessages.size() > 200) logMessages.removeFirst();
+            if (logMessages.size() > LOG_CAPACITY) logMessages.removeFirst();
         }
 
         String getFileContext() {
-            if (filesInContext.isEmpty()) return "No files are in context. Use /add or the `findRelevantCode` tool.";
-            return filesInContext.stream().map(this::readFileContent).collect(Collectors.joining("\n\n"));
+            return filesInContext.isEmpty() ?
+                "No files are in context. Use /add or the `findRelevantCode` tool." :
+                filesInContext.stream().map(this::readFileContent).collect(Collectors.joining("\n\n"));
         }
 
         private String readFileContent(Path path) {
@@ -322,27 +322,23 @@ public class Jaider {
         }
     }
 
-    // --- 4. Agent Implementations ---
-    static abstract class BaseAgent implements Agent {
-        protected final JaiderAiService aiService;
+    static abstract class AbstractAgent implements Agent {
+        protected final JaiderAiService ai;
         protected final Set<Object> tools;
 
-        public BaseAgent(ChatLanguageModel model, ChatMemory memory, Set<Object> tools, String systemPrompt) {
+        public AbstractAgent(ChatLanguageModel model, ChatMemory memory, Set<Object> tools, String systemPrompt) {
             this.tools = tools;
-            this.aiService = AiServices.builder(JaiderAiService.class)
-                    .chatLanguageModel(model)
-                    .chatMemory(memory)
-                    .tools(tools.toArray())
-                    .systemMessageProvider(vars ->
-                                    systemPrompt
-                            //SystemMessage.from(systemPrompt)
-                    )
-                    .build();
+            this.ai = AiServices.builder(JaiderAiService.class)
+                .chatLanguageModel(model)
+                .chatMemory(memory)
+                .tools(tools.toArray())
+                .systemMessageProvider(vars -> systemPrompt)
+                .build();
         }
 
         @Override
         public Response<AiMessage> act(List<ChatMessage> messages) {
-            return aiService.act(messages);
+            return ai.act(messages);
         }
 
         @Override
@@ -355,7 +351,7 @@ public class Jaider {
         }
     }
 
-    static class CoderAgent extends BaseAgent {
+    static class CoderAgent extends AbstractAgent {
         public CoderAgent(ChatLanguageModel model, ChatMemory memory, Tools availableTools) {
             super(model, memory, Set.of(availableTools),
                     """
@@ -369,12 +365,12 @@ public class Jaider {
         }
 
         @Override
-        public String getModeName() {
+        public String name() {
             return "Coder";
         }
     }
 
-    static class ArchitectAgent extends BaseAgent {
+    static class ArchitectAgent extends AbstractAgent {
         public ArchitectAgent(ChatLanguageModel model, ChatMemory memory, Tools availableTools) {
             super(model, memory, availableTools.getReadOnlyTools(),
                     "You are a principal software architect. Your goal is to answer questions about the codebase, suggest design patterns, and discuss high-level architectural trade-offs.\n" +
@@ -382,18 +378,18 @@ public class Jaider {
         }
 
         @Override
-        public String getModeName() {
+        public String name() {
             return "Architect";
         }
     }
 
-    static class AskAgent extends BaseAgent {
+    static class AskAgent extends AbstractAgent {
         public AskAgent(ChatLanguageModel model, ChatMemory memory) {
             super(model, memory, Set.of(), "You are a helpful assistant. Answer the user's questions clearly and concisely. You do not have access to any tools.");
         }
 
         @Override
-        public String getModeName() {
+        public String name() {
             return "Ask";
         }
     }
@@ -418,12 +414,12 @@ public class Jaider {
             try {
                 var unifiedDiff = diffReader(diff);
 
-                for (UnifiedDiffFile file : unifiedDiff.getFiles()) {
-                    String fileName = file.getFromFile();
-                    Path filePath = model.projectDir.resolve(fileName);
+                for (var file : unifiedDiff.getFiles()) {
+                    var fileName = file.getFromFile();
+                    var filePath = model.projectDir.resolve(fileName);
 
                     // Ensure the file is in context, unless it's a new file
-                    boolean isNewFile = !Files.exists(filePath);
+                    var isNewFile = !Files.exists(filePath);
                     if (!isNewFile && !model.filesInContext.contains(filePath)) {
                         return "Error: Cannot apply diff to a file not in context: " + fileName;
                     }
@@ -431,8 +427,8 @@ public class Jaider {
                     List<String> originalLines = isNewFile ? new ArrayList<>() : Files.readAllLines(filePath);
 
                     // The patch is already specific to this file
-                    Patch<String> patch = file.getPatch();
-                    List<String> patchedLines = DiffUtils.patch(originalLines, patch);
+                    var patch = file.getPatch();
+                    var patchedLines = DiffUtils.patch(originalLines, patch);
 
                     // If the file is new, add it to the context
                     if (isNewFile) {
@@ -562,7 +558,7 @@ public class Jaider {
                 return;
             }
             model.addLog(UserMessage.from(input));
-            if (input.startsWith("/")) handleCommand(input);
+            if (input.startsWith("/")) execute(input);
             else processAgentTurn();
             ui.redraw(model);
         }
@@ -644,34 +640,39 @@ public class Jaider {
             ui.redraw(model);
         }
 
-        private void handleCommand(String input) {
+        private void execute(String input) {
             var parts = input.split("\\s+", 2);
             switch (parts[0]) {
-                case "/add" ->
-                        Arrays.stream(parts[1].split("\\s+")).map(model.projectDir::resolve).forEach(model.filesInContext::add);
-                case "/undo" -> undoLastChange();
-                case "/index" -> indexProject();
+                case "/add" -> add(parts[1].split("\\s+"));
+                case "/undo" -> undo();
+                case "/index" -> indexUpdate();
                 case "/edit-config" -> editConfig();
-                case "/mode" -> switchMode(parts.length > 1 ? parts[1] : "");
+                case "/mode" -> setAgent(parts.length > 1 ? parts[1] : "");
                 case "/help" -> showHelp();
-                case "/exit" -> {
-                    try {
-                        saveSession();
-                        ui.close();
-                    } catch (IOException e) {
-                    }
-                    System.exit(0);
-                }
+                case "/exit" -> exit();
                 default -> model.addLog(AiMessage.from("[Jaider] Unknown command."));
             }
             updateTokenCount();
         }
 
-        private void switchMode(String modeName) {
-            var newAgent = agents.values().stream().filter(a -> a.getModeName().equalsIgnoreCase(modeName)).findFirst();
+        public synchronized void add(String[] pp) {
+            Arrays.stream(pp).map(model.projectDir::resolve).forEach(model.filesInContext::add);
+        }
+
+        private void exit() {
+            try {
+                saveSession();
+                ui.close();
+            } catch (IOException e) {
+            }
+            System.exit(0);
+        }
+
+        public synchronized void setAgent(String mode) {
+            var newAgent = agents.values().stream().filter(a -> a.name().equalsIgnoreCase(mode)).findFirst();
             if (newAgent.isPresent()) {
                 currentAgent = newAgent.get();
-                model.agentMode = currentAgent.getModeName();
+                model.agentMode = currentAgent.name();
                 model.addLog(AiMessage.from("[Jaider] Switched to " + model.agentMode + " mode."));
             } else {
                 var availableModes = String.join(", ", agents.keySet());
@@ -700,27 +701,32 @@ public class Jaider {
         }
 
         private void showHelp() {
-            var modes = String.join(", ", agents.keySet());
-            model.addLog(AiMessage.from("[Jaider] --- Jaider Help ---\n" +
-                    "Jaider is an AI assistant with multiple modes of operation.\n\n" +
-                    "MODES:\n" +
-                    "Switch modes with `/mode <ModeName>`. Available modes: " + modes + ".\n" +
-                    "- Coder: The default mode for writing and fixing code.\n" +
-                    "- Architect: A read-only mode for high-level questions about the codebase.\n" +
-                    "- Ask: A simple Q&A mode with no access to your files.\n\n" +
-                    "COMMANDS:\n" +
-                    "/add <files...>: Add files to the context.\n" +
-                    "/undo: Revert the last applied change.\n" +
-                    "/index: Create a searchable index of your project (for RAG).\n" +
-                    "/edit-config: Open the .jaider.json configuration file.\n" +
-                    "/help, /exit"));
+            var helpTxt = """
+                [Jaider] --- Jaider Help ---
+                Jaider is an AI assistant with multiple modes of operation.
+
+                MODES:
+                Switch modes with `/mode <ModeName>`. Available modes: ?.
+                - Coder: The default mode for writing and fixing code.
+                - Architect: A read-only mode for high-level questions about the codebase.
+                - Ask: A simple Q&A mode with no access to your files.
+
+                COMMANDS:
+                /add <files...>: Add files to the context.
+                /undo: Revert the last applied change.
+                /index: Create a searchable index of your project (for RAG).
+                /edit-config: Open the .jaider.json configuration file.
+                /help, /exit
+            """;
+            model.addLog(AiMessage.from(helpTxt));
         }
 
+        /** TODO only update if messages has changed */
         private void updateTokenCount() {
             model.currentTokenCount = tokenizer.estimateTokenCountInMessages(chatMemory.messages());
         }
 
-        private void undoLastChange() {
+        public void undo() {
             if (model.lastAppliedDiff == null) {
                 model.addLog(AiMessage.from("[Jaider] No change to undo."));
                 return;
@@ -730,7 +736,7 @@ public class Jaider {
                 // A more robust implementation would reverse-apply the patch.
                 // For now, we use git checkout which reverts to the last committed state.
                 var unifiedDiff = diffReader(model.lastAppliedDiff);
-                for (UnifiedDiffFile file : unifiedDiff.getFiles()) {
+                for (var file : unifiedDiff.getFiles()) {
                     git.checkout().addPath(file.getFromFile()).call();
                 }
                 model.lastAppliedDiff = null;
@@ -740,8 +746,7 @@ public class Jaider {
             }
         }
 
-
-        private void indexProject() {
+        private void indexUpdate() {
             if (model.isIndexed) {
                 model.addLog(AiMessage.from("[Jaider] Project is already indexed."));
                 return;
@@ -787,9 +792,8 @@ public class Jaider {
                             session.getJSONArray("filesInContext").forEach(f -> model.filesInContext.add(model.projectDir.resolve(f.toString())));
                             session.getJSONArray("chatMemory").forEach(m -> {
                                 var msg = (JSONObject) m;
-                                if ("USER".equals(msg.getString("type")))
-                                    chatMemory.add(UserMessage.from(msg.getString("text")));
-                                else chatMemory.add(AiMessage.from(msg.getString("text")));
+                                var text = msg.getString("text");
+                                chatMemory.add("USER".equals(msg.getString("type")) ? UserMessage.from(text) : AiMessage.from(text));
                             });
                             model.addLog(AiMessage.from("[Jaider] Session restored."));
                         } catch (IOException e) {
