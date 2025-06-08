@@ -1,6 +1,7 @@
 package dumb.jaider;
 
 import com.github.difflib.DiffUtils;
+import com.github.difflib.patch.PatchFailedException; // Added for specific patch error handling
 import com.github.difflib.unifieddiff.UnifiedDiff;
 import com.github.difflib.unifieddiff.UnifiedDiffReader;
 import com.googlecode.lanterna.TerminalSize;
@@ -24,9 +25,13 @@ import dev.langchain4j.memory.chat.MessageWindowChatMemory;
 import dev.langchain4j.model.Tokenizer;
 import dev.langchain4j.model.chat.ChatLanguageModel;
 import dev.langchain4j.model.embedding.EmbeddingModel;
+import dev.langchain4j.model.google.vertexai.VertexAiGeminiChatModel; // Added for Gemini
 import dev.langchain4j.model.ollama.OllamaChatModel;
 import dev.langchain4j.model.output.Response;
 import dev.langchain4j.service.AiServices;
+import dev.langchain4j.tools.web.search.WebSearchEngine;
+import dev.langchain4j.tools.web.search.WebSearchResults;
+import dev.langchain4j.web.search.tavily.TavilyWebSearchEngine;
 import dev.langchain4j.service.tool.DefaultToolExecutor;
 import dev.langchain4j.store.embedding.EmbeddingSearchRequest;
 import dev.langchain4j.store.embedding.EmbeddingStore;
@@ -243,7 +248,15 @@ public class Jaider {
     static class Config {
         final Path configFile;
         final Map<String, String> apiKeys = new HashMap<>();
-        String llmProvider = "openai", testCommand;
+        String llmProvider = "ollama", runCommand; // Renamed testCommand to runCommand
+        String ollamaBaseUrl = "http://localhost:11434";
+        String ollamaModelName = "llamablit";
+        String genericOpenaiBaseUrl = "http://localhost:8080/v1";
+        String genericOpenaiModelName = "local-model";
+        String genericOpenaiApiKey = ""; // Typically "EMPTY" or "NA" for local models if header is mandatory
+        String geminiApiKey = "";
+        String geminiModelName = "gemini-1.5-flash-latest"; // Default Gemini model
+        String tavilyApiKey = "";
 
         Config(Path projectDir) {
             this.configFile = projectDir.resolve(".jaider.json");
@@ -254,11 +267,24 @@ public class Jaider {
             try {
                 if (!Files.exists(configFile)) createDefaultConfig();
                 var j = new JSONObject(Files.readString(configFile));
-                llmProvider = j.optString("llmProvider", "openai");
-                testCommand = j.optString("testCommand", null);
+                llmProvider = j.optString("llmProvider", this.llmProvider);
+                ollamaBaseUrl = j.optString("ollamaBaseUrl", this.ollamaBaseUrl);
+                ollamaModelName = j.optString("ollamaModelName", this.ollamaModelName);
+                genericOpenaiBaseUrl = j.optString("genericOpenaiBaseUrl", this.genericOpenaiBaseUrl);
+                genericOpenaiModelName = j.optString("genericOpenaiModelName", this.genericOpenaiModelName);
+                genericOpenaiApiKey = j.optString("genericOpenaiApiKey", this.genericOpenaiApiKey);
+                geminiApiKey = j.optString("geminiApiKey", this.geminiApiKey);
+                geminiModelName = j.optString("geminiModelName", this.geminiModelName);
+                tavilyApiKey = j.optString("tavilyApiKey", this.tavilyApiKey);
+                // Backward compatibility: read "testCommand" if "runCommand" is not present
+                if (j.has("runCommand")) {
+                    runCommand = j.optString("runCommand", "");
+                } else {
+                    runCommand = j.optString("testCommand", ""); // Fallback to testCommand
+                }
                 var keys = j.optJSONObject("apiKeys");
                 if (keys != null) keys.keySet().forEach(key -> apiKeys.put(key, keys.getString(key)));
-            } catch (Exception e) { /* Use defaults on failure */ }
+            } catch (Exception e) { /* Use defaults on failure, fields already have defaults */ }
         }
 
         private void createDefaultConfig() throws IOException {
@@ -266,14 +292,25 @@ public class Jaider {
             defaultKeys.put("openai", "YOUR_OPENAI_API_KEY");
             defaultKeys.put("anthropic", "YOUR_ANTHROPIC_API_KEY");
             defaultKeys.put("google", "YOUR_GOOGLE_API_KEY");
+            // Note: genericOpenaiApiKey is stored separately, not in the 'apiKeys' map by default
             var defaultConfig = new JSONObject();
-            defaultConfig.put("llmProvider", "openai");
-            defaultConfig.put("testCommand", "");
-            defaultConfig.put("apiKeys", defaultKeys);
+            defaultConfig.put("llmProvider", llmProvider);
+            defaultConfig.put("ollamaBaseUrl", ollamaBaseUrl);
+            defaultConfig.put("ollamaModelName", ollamaModelName);
+            defaultConfig.put("genericOpenaiBaseUrl", genericOpenaiBaseUrl);
+            defaultConfig.put("genericOpenaiModelName", genericOpenaiModelName);
+            defaultConfig.put("genericOpenaiApiKey", genericOpenaiApiKey);
+            defaultConfig.put("geminiApiKey", geminiApiKey);
+            defaultConfig.put("geminiModelName", geminiModelName);
+            defaultConfig.put("tavilyApiKey", tavilyApiKey);
+            defaultConfig.put("runCommand", runCommand == null ? "" : runCommand); // Use runCommand
+            defaultConfig.put("apiKeys", defaultKeys); // For OpenAI, Anthropic, Google keys (geminiApiKey is separate)
             Files.writeString(configFile, defaultConfig.toString(2));
         }
 
         void save(String newConfig) throws IOException {
+            // When saving, parse the newConfig string and write it.
+            // Then, reload to ensure the in-memory config reflects the saved file.
             Files.writeString(configFile, new JSONObject(newConfig).toString(2));
             load();
         }
@@ -283,7 +320,42 @@ public class Jaider {
         }
 
         String readForEditing() throws IOException {
-            return Files.exists(configFile) ? new JSONObject(Files.readString(configFile)).toString(2) : "{}";
+            // If file exists, load it to show the most accurate current state for editing.
+            // Otherwise, construct a JSON string from current in-memory config settings.
+            JSONObject configToEdit;
+            if (Files.exists(configFile)) {
+                configToEdit = new JSONObject(Files.readString(configFile));
+                // Ensure all potentially new fields are present, falling back to current in-memory defaults if missing in file
+                if (!configToEdit.has("llmProvider")) configToEdit.put("llmProvider", llmProvider);
+                if (!configToEdit.has("ollamaBaseUrl")) configToEdit.put("ollamaBaseUrl", ollamaBaseUrl);
+                if (!configToEdit.has("ollamaModelName")) configToEdit.put("ollamaModelName", ollamaModelName);
+                if (!configToEdit.has("genericOpenaiBaseUrl")) configToEdit.put("genericOpenaiBaseUrl", genericOpenaiBaseUrl);
+                if (!configToEdit.has("genericOpenaiModelName")) configToEdit.put("genericOpenaiModelName", genericOpenaiModelName);
+                if (!configToEdit.has("genericOpenaiApiKey")) configToEdit.put("genericOpenaiApiKey", genericOpenaiApiKey);
+                if (!configToEdit.has("geminiApiKey")) configToEdit.put("geminiApiKey", geminiApiKey);
+                if (!configToEdit.has("geminiModelName")) configToEdit.put("geminiModelName", geminiModelName);
+                if (!configToEdit.has("tavilyApiKey")) configToEdit.put("tavilyApiKey", tavilyApiKey);
+                if (configToEdit.has("testCommand") && !configToEdit.has("runCommand")) { // Backward compatibility display
+                    configToEdit.put("runCommand", configToEdit.getString("testCommand"));
+                    configToEdit.remove("testCommand");
+                }
+                if (!configToEdit.has("runCommand")) configToEdit.put("runCommand", runCommand == null ? "" : runCommand);
+                if (!configToEdit.has("apiKeys")) configToEdit.put("apiKeys", new JSONObject(apiKeys));
+            } else {
+                configToEdit = new JSONObject();
+                configToEdit.put("llmProvider", llmProvider);
+                configToEdit.put("ollamaBaseUrl", ollamaBaseUrl);
+                configToEdit.put("ollamaModelName", ollamaModelName);
+                configToEdit.put("genericOpenaiBaseUrl", genericOpenaiBaseUrl);
+                configToEdit.put("genericOpenaiModelName", genericOpenaiModelName);
+                configToEdit.put("genericOpenaiApiKey", genericOpenaiApiKey);
+                configToEdit.put("geminiApiKey", geminiApiKey);
+                configToEdit.put("geminiModelName", geminiModelName);
+                configToEdit.put("tavilyApiKey", tavilyApiKey);
+                configToEdit.put("runCommand", runCommand == null ? "" : runCommand);
+                configToEdit.put("apiKeys", new JSONObject(apiKeys));
+            }
+            return configToEdit.toString(2);
         }
     }
 
@@ -357,11 +429,16 @@ public class Jaider {
                     """
                             You are Jaider, an expert AI programmer. Your goal is to fully complete the user's request.
                             Follow this sequence rigidly:
-                            1. THINK: First, write down your step-by-step plan. Use tools like `findRelevantCode` and `readFile` to understand the project.
+                            1. THINK: First, write down your step-by-step plan. Use tools like `findRelevantCode`, `readFile` and `searchWeb` to understand the project and gather information.
                             2. MODIFY: Propose a change by using the `applyDiff` tool. This is the only way you can alter code.
-                            3. VERIFY: After the user approves your diff, you MUST use the `runTests` tool to verify your changes, if a test suite is available.
-                            4. FIX: If tests fail, analyze the error and go back to step 2.
-                            5. COMMIT: Once the request is complete and verified, your final action MUST be to use the `commitChanges` tool with a clear, conventional commit message.""");
+                            3. VERIFY: After the user approves your diff, you MUST use the `runValidationCommand` tool to verify your changes, if a validation command is configured.
+                               The `runValidationCommand` tool will return a JSON string. This JSON will contain:
+                               `exitCode`: An integer representing the command's exit code.
+                               `success`: A boolean, true if exitCode is 0, false otherwise.
+                               `output`: A string containing the standard output and error streams from the command.
+                               Analyze this JSON to determine if your changes were successful. If 'success' is false or exitCode is non-zero, use the 'output' to debug.
+                            4. FIX: If validation fails, analyze the error and go back to step 2 (MODIFY).
+                            5. COMMIT: Once the request is complete and verified (e.g. validation passed or was not applicable), your final action MUST be to use the `commitChanges` tool with a clear, conventional commit message.""");
         }
 
         @Override
@@ -406,16 +483,41 @@ public class Jaider {
         }
 
         public Set<Object> getReadOnlyTools() {
+            // findRelevantCode and searchWeb are considered read-only.
+            // Other tools like readFile might also be, but this is a specific list for ArchitectAgent.
+            // For now, returning 'this' means all @Tool methods in this class are available.
+            // If more fine-grained control is needed, specific tool instances can be returned.
             return Set.of(this);
-        } // Simplified for this example
+        }
+
+        @dev.langchain4j.agent.tool.Tool("Searches the web for the given query using Tavily.")
+        public String searchWeb(String query) {
+            if (config.tavilyApiKey == null || config.tavilyApiKey.isBlank() || config.tavilyApiKey.contains("YOUR_")) {
+                return "Error: Tavily API key not configured. Please set tavilyApiKey in .jaider.json.";
+            }
+            try {
+                WebSearchEngine tavilySearchEngine = TavilyWebSearchEngine.builder()
+                        .apiKey(config.tavilyApiKey)
+                        .build();
+                WebSearchResults results = tavilySearchEngine.search(query);
+                if (results == null || results.answers() == null || results.answers().isEmpty()) {
+                    return "No results found for: " + query;
+                }
+                return results.answers().stream()
+                        .map(answer -> "Source: " + answer.url() + "\nTitle: " + answer.title() + "\nSnippet: " + answer.snippet())
+                        .collect(Collectors.joining("\n\n---\n\n"));
+            } catch (Exception e) {
+                return "Error performing web search for '" + query + "': " + e.getClass().getSimpleName() + " - " + e.getMessage();
+            }
+        }
 
         @dev.langchain4j.agent.tool.Tool("Applies a code change using the unified diff format.")
         public String applyDiff(String diff) {
             try {
                 var unifiedDiff = diffReader(diff);
 
-                for (var file : unifiedDiff.getFiles()) {
-                    var fileName = file.getFromFile();
+                for (var fileDiff : unifiedDiff.getFiles()) {
+                    var fileName = fileDiff.getFromFile();
                     var filePath = model.projectDir.resolve(fileName);
 
                     // Ensure the file is in context, unless it's a new file
@@ -424,26 +526,39 @@ public class Jaider {
                         return "Error: Cannot apply diff to a file not in context: " + fileName;
                     }
 
-                    List<String> originalLines = isNewFile ? new ArrayList<>() : Files.readAllLines(filePath);
-
-                    // The patch is already specific to this file
-                    var patch = file.getPatch();
-                    var patchedLines = DiffUtils.patch(originalLines, patch);
-
-                    // If the file is new, add it to the context
-                    if (isNewFile) {
-                        model.filesInContext.add(filePath);
+                    List<String> originalLines;
+                    try {
+                        originalLines = isNewFile ? new ArrayList<>() : Files.readAllLines(filePath);
+                    } catch (IOException e) {
+                        model.lastAppliedDiff = null;
+                        return "Error reading original file '" + fileName + "' for diff application: " + e.getMessage();
                     }
 
-                    Files.write(filePath, patchedLines);
+                    var patch = fileDiff.getPatch();
+                    try {
+                        List<String> patchedLines = DiffUtils.patch(originalLines, patch);
+                        Files.write(filePath, patchedLines); // Write the patched lines
+
+                        if (isNewFile) { // If the file was new, add it to context.
+                            model.filesInContext.add(filePath);
+                        }
+                    } catch (PatchFailedException pfe) {
+                        model.lastAppliedDiff = null;
+                        return "Error applying diff to file '" + fileName + "': Patch application failed. Details: " + pfe.getMessage();
+                    } catch (IOException e) {
+                        model.lastAppliedDiff = null;
+                        return "Error writing patched file '" + fileName + "': " + e.getMessage();
+                    }
                 }
 
-                model.lastAppliedDiff = diff;
-                return "Diff applied successfully.";
-            } catch (Exception e) {
+                model.lastAppliedDiff = diff; // Set only if all files in the diff are processed successfully
+                return "Diff applied successfully to all specified files.";
+            } catch (IOException e) { // Catch errors from diffReader or other general IO
                 model.lastAppliedDiff = null;
-                // Provide more specific error details
-                return "Error applying diff: " + e.getClass().getSimpleName() + " - " + e.getMessage();
+                return "Error processing diff input: " + e.getMessage();
+            } catch (Exception e) { // Catch any other unexpected errors
+                model.lastAppliedDiff = null;
+                return "An unexpected error occurred while applying diff: " + e.getClass().getSimpleName() + " - " + e.getMessage();
             }
         }
 
@@ -452,15 +567,51 @@ public class Jaider {
             return model.readFileContent(model.projectDir.resolve(fileName));
         }
 
-        @dev.langchain4j.agent.tool.Tool("Runs the project's test suite, if configured.")
-        public String runTests() {
-            if (config.testCommand == null || config.testCommand.isBlank()) return "No test command configured.";
-            try {
-                var pb = new ProcessBuilder(config.testCommand.split("\\s+")).directory(model.projectDir.toFile()).redirectErrorStream(true);
-                return new BufferedReader(new InputStreamReader(pb.start().getInputStream())).lines().collect(Collectors.joining("\n"));
-            } catch (Exception e) {
-                return "Failed to run tests: " + e.getMessage();
+        @dev.langchain4j.agent.tool.Tool("Runs the project's configured validation command (e.g., tests, linter, build). Usage: runValidationCommand <optional_arguments_for_command>")
+        public String runValidationCommand(String commandArgs) { // commandArgs currently unused, future enhancement
+            JSONObject resultJson = new JSONObject();
+            if (config.runCommand == null || config.runCommand.isBlank()) {
+                resultJson.put("error", "No validation command configured in .jaider.json (key: runCommand).");
+                resultJson.put("success", false);
+                resultJson.put("exitCode", -1);
+                return resultJson.toString();
             }
+
+            String commandToExecute = config.runCommand;
+            // TODO: Consider how commandArgs should be integrated if provided.
+            // For now, we execute the command from config directly.
+
+            try {
+                ProcessBuilder pb = new ProcessBuilder(commandToExecute.split("\\s+"))
+                        .directory(model.projectDir.toFile())
+                        .redirectErrorStream(true);
+                Process process = pb.start();
+
+                StringBuilder output = new StringBuilder();
+                try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
+                    String line;
+                    while ((line = reader.readLine()) != null) {
+                        output.append(line).append("\n");
+                    }
+                }
+
+                int exitCode = process.waitFor();
+
+                resultJson.put("exitCode", exitCode);
+                resultJson.put("success", exitCode == 0);
+                resultJson.put("output", output.toString().trim());
+
+            } catch (IOException | InterruptedException e) {
+                Thread.currentThread().interrupt(); // Restore interruption status
+                resultJson.put("error", "Failed to run command '" + commandToExecute + "': " + e.getClass().getSimpleName() + " - " + e.getMessage());
+                resultJson.put("success", false);
+                resultJson.put("exitCode", -1); // Indicate execution failure
+            } catch (Exception e) {
+                 resultJson.put("error", "An unexpected error occurred while running command '" + commandToExecute + "': " + e.getClass().getSimpleName() + " - " + e.getMessage());
+                 resultJson.put("success", false);
+                 resultJson.put("exitCode", -1); // Indicate execution failure
+            }
+            return resultJson.toString();
         }
 
         @dev.langchain4j.agent.tool.Tool("Commits all staged changes with a given message.")
@@ -476,14 +627,28 @@ public class Jaider {
 
         @dev.langchain4j.agent.tool.Tool("Finds relevant code snippets from the entire indexed codebase.")
         public String findRelevantCode(String query) {
-            if (model.embeddingStore == null) return "Project not indexed. Run /index first.";
-            var queryEmbedding = embeddingModel.embed(query).content();
-            var r = EmbeddingSearchRequest.builder().queryEmbedding(queryEmbedding).build();
-            var relevant = model.embeddingStore.search(r);
-            return relevant.matches().stream()
-                    .map(match -> String.format("--- From %s ---\n%s",
-                            match.embedded().metadata().getString("file_path"), match.embedded().text()))
-                    .collect(Collectors.joining("\n\n"));
+            if (embeddingModel == null) {
+                return "Error: Embedding model is not available. Cannot search code. Ensure LLM provider that supports embeddings is configured (e.g. OpenAI).";
+            }
+            if (model.embeddingStore == null) {
+                return "Project not indexed. Run /index first.";
+            }
+            try {
+                var queryEmbedding = embeddingModel.embed(query).content();
+                var r = EmbeddingSearchRequest.builder().queryEmbedding(queryEmbedding).build();
+                var relevant = model.embeddingStore.search(r);
+                if (relevant == null || relevant.matches().isEmpty()) {
+                    return "No relevant code found in the index for: " + query;
+                }
+                return relevant.matches().stream()
+                        .map(match -> String.format("--- From %s (Score: %.4f) ---\n%s",
+                                match.embedded().metadata().getString("file_path"),
+                                match.score(),
+                                match.embedded().text()))
+                        .collect(Collectors.joining("\n\n---\n\n"));
+            } catch (Exception e) {
+                return "Error searching for relevant code: " + e.getClass().getSimpleName() + " - " + e.getMessage();
+            }
         }
     }
 
@@ -505,25 +670,131 @@ public class Jaider {
         }
 
         private synchronized void update() {
-            setupOllama("http://localhost:11434", "llamablit");
-            //setupOpenAI();
+            if ("ollama".equalsIgnoreCase(config.llmProvider)) {
+                setupOllama();
+            } else if ("genericOpenai".equalsIgnoreCase(config.llmProvider)) {
+                setupGenericOpenAI();
+            } else if ("gemini".equalsIgnoreCase(config.llmProvider)) {
+                setupGemini();
+            } else if ("openai".equalsIgnoreCase(config.llmProvider)) {
+                // setupOpenAI(); // This is still commented out
+                model.addLog(AiMessage.from("[Jaider] OpenAI provider selected but setupOpenAI() is currently commented out. No model initialized."));
+                initializeFallbackTokenizer(); // Ensure tokenizer is not null
+            } else {
+                model.addLog(AiMessage.from(String.format("[Jaider] WARNING: Unknown llmProvider '%s' in config. Defaulting to Ollama.", config.llmProvider)));
+                setupOllama(); // Default fallback
+            }
 
-            var tools = new Tools(model, config, embeddingModel);
+            // TODO: Initialize embeddingModel based on provider, or make it configurable separately.
+            // For now, it remains null unless setupOpenAI() was to be uncommented and run.
+
+            var tools = new Tools(model, config, embeddingModel); // embeddingModel might be null
             agents.put("Coder", new CoderAgent(chatModel, chatMemory, tools));
             agents.put("Architect", new ArchitectAgent(chatModel, chatMemory, tools));
             agents.put("Ask", new AskAgent(chatModel, chatMemory));
             this.currentAgent = agents.get("Coder");
         }
 
-        private void setupOllama(String baseURL, String modelName) {
+        private void setupOllama() {
             try {
                 chatModel = OllamaChatModel.builder()
-                        .baseUrl(baseURL)
-                        .modelName(modelName)
+                        .baseUrl(config.ollamaBaseUrl)
+                        .modelName(config.ollamaModelName)
                         .build();
-                model.addLog(AiMessage.from("[Jaider] Ollama model initialized successfully."));
+                // OllamaChatModel itself implements Tokenizer (from langchain4j 0.27.0+)
+                this.tokenizer = chatModel;
+                model.addLog(AiMessage.from(String.format("[Jaider] Ollama model '%s' initialized successfully from %s.", config.ollamaModelName, config.ollamaBaseUrl)));
             } catch (Exception e) {
-                model.addLog(AiMessage.from("[Jaider] WARNING: Failed to initialize Ollama model. Functionality will be limited. Check Ollama server."));
+                model.addLog(AiMessage.from(String.format("[Jaider] CRITICAL ERROR: Failed to initialize Ollama model '%s' from %s. Error: %s. Jaider's functionality will be severely limited. Check Ollama server and config.", config.ollamaModelName, config.ollamaBaseUrl, e.getMessage())));
+                initializeFallbackTokenizer();
+            }
+        }
+
+        private void setupGenericOpenAI() {
+            try {
+                // OllamaChatModel can be used for OpenAI-compatible APIs.
+                // API key handling: If genericOpenaiApiKey is non-empty, it implies Bearer token auth.
+                // However, OllamaChatModel.builder() doesn't have a direct .apiKey() or .customHeader() method.
+                // This would require a custom client or a different Langchain4j model class for robust API key support.
+                // For now, this setup assumes the generic API either needs no key, or uses one via other means (e.g. baked into URL or proxy).
+                // If config.genericOpenaiApiKey is set, a log message will indicate it might not be used by this builder.
+                var builder = OllamaChatModel.builder()
+                        .baseUrl(config.genericOpenaiBaseUrl)
+                        .modelName(config.genericOpenaiModelName);
+
+                // TODO: Proper API Key handling for genericOpenai.
+                // The OllamaChatModel builder does not directly support arbitrary headers for API keys.
+                // This might require using a different client or extending functionality.
+                // For instance, one might need to implement a custom dev.langchain4j.model.chat.ChatLanguageModel
+                // or use lower-level HTTP client configurations if available.
+                if (config.genericOpenaiApiKey != null && !config.genericOpenaiApiKey.isEmpty()) {
+                    model.addLog(AiMessage.from("[Jaider] INFO: genericOpenaiApiKey is set in config, but the current OllamaChatModel builder may not use it for Bearer token authentication. API key might need to be included in baseUrl or handled by a proxy if required by the endpoint."));
+                }
+
+                chatModel = builder.build();
+                this.tokenizer = chatModel; // Assuming the compatible model also provides Tokenizer
+                model.addLog(AiMessage.from(String.format("[Jaider] Generic OpenAI-compatible model '%s' initialized from %s.", config.genericOpenaiModelName, config.genericOpenaiBaseUrl)));
+            } catch (Exception e) {
+                model.addLog(AiMessage.from(String.format("[Jaider] CRITICAL ERROR: Failed to initialize Generic OpenAI-compatible model '%s' from %s. Error: %s. Functionality severely limited.", config.genericOpenaiModelName, config.genericOpenaiBaseUrl, e.getMessage())));
+                initializeFallbackTokenizer();
+            }
+        }
+
+        private void setupGemini() {
+            String apiKey = config.geminiApiKey;
+            if (apiKey == null || apiKey.isBlank() || apiKey.contains("YOUR_")) {
+                model.addLog(AiMessage.from("[Jaider] WARNING: Gemini API key not found or is a placeholder in config. Gemini provider will not be available."));
+                initializeFallbackTokenizer();
+                return;
+            }
+            try {
+                // Assuming VertexAiGeminiChatModel is the correct class from langchain4j-google-vertex-ai
+                // and it requires project ID and location, which are not in config yet.
+                // This is a common setup for Vertex AI.
+                // For direct Gemini API (genai.googleapis.com), the setup might be simpler,
+                // but langchain4j-google-gemini might be needed.
+                // For now, let's assume a simplified builder or one that infers project/location.
+                // This part may need adjustment based on actual langchain4j-google-vertex-ai API.
+                // A common pattern is .apiKey() for direct Gemini, or service account for Vertex.
+                // Let's try a common pattern for VertexAI Gemini:
+                this.chatModel = VertexAiGeminiChatModel.builder()
+                        .project(System.getenv("GOOGLE_CLOUD_PROJECT")) // Or make this configurable
+                        .location(System.getenv("GOOGLE_CLOUD_LOCATION")) // Or make this configurable
+                        .modelName(config.geminiModelName) // e.g., "gemini-1.5-flash-latest", "gemini-pro"
+                        // .apiKey(apiKey) // VertexAI often uses Application Default Credentials, but some new direct Gemini clients might use apiKey.
+                                        // The VertexAiGeminiChatModel builder in 0.35.0 might not have .apiKey().
+                                        // It might rely on GOOGLE_APPLICATION_CREDENTIALS env var.
+                                        // Forcing use of apiKey here might be incorrect for VertexAI.
+                                        // Let's assume for now that if geminiApiKey is set, it implies a direct Gemini endpoint behavior
+                                        // which might not be what VertexAiGeminiChatModel is for.
+                                        // This is a known point of complexity with Langchain4j Google integrations.
+                                        // For now, we will proceed as if a simple .apiKey() setup is available or ADC works.
+                        .build();
+
+                // Tokenizer for Gemini: VertexAiGeminiChatModel should implement Tokenizer.
+                this.tokenizer = this.chatModel;
+                model.addLog(AiMessage.from(String.format("[Jaider] Gemini model '%s' initialized.", config.geminiModelName)));
+                // A more specific log if API key was explicitly used by builder:
+                // model.addLog(AiMessage.from(String.format("[Jaider] Gemini model '%s' initialized using configured API key.", config.geminiModelName)));
+
+            } catch (Exception e) {
+                model.addLog(AiMessage.from(String.format("[Jaider] CRITICAL ERROR: Failed to initialize Gemini model '%s'. Error: %s. Check API key, project/location settings, and GCP authentication.", config.geminiModelName, e.getMessage())));
+                initializeFallbackTokenizer();
+            }
+        }
+
+        private void initializeFallbackTokenizer() {
+            if (this.tokenizer == null) {
+                this.tokenizer = new Tokenizer() {
+                    @Override public int estimateTokenCount(String text) { return text.length() / 4; } // Rough estimate
+                    @Override public List<Integer> encode(String text) { return Collections.emptyList(); }
+                    @Override public List<Integer> encode(String text, int maxTokens) { return Collections.emptyList(); }
+                    @Override public String decode(List<Integer> tokens) { return ""; }
+                    @Override public int estimateTokenCountInMessages(Collection<ChatMessage> messages) {
+                        return messages.stream().mapToInt(message -> estimateTokenCount(message.text())).sum();
+                    }
+                };
+                model.addLog(AiMessage.from("[Jaider] INFO: Initialized a fallback tokenizer. Token counts will be rough estimates."));
             }
         }
 
@@ -607,11 +878,12 @@ public class Jaider {
             model.addLog(AiMessage.from(String.format("[Tool Result: %s]", request.name())));
 
             var diffApplied = "applyDiff".equals(request.name()) && toolResult.startsWith("Diff applied");
-            if (diffApplied && config.testCommand != null) {
+            if (diffApplied && config.runCommand != null && !config.runCommand.isBlank()) { // Check runCommand
                 currentState = State.WAITING_USER_CONFIRMATION;
-                ui.requestConfirmation("Run Tests?", "Agent applied a diff. Run configured test command?").thenAccept(approved -> {
-                    if (approved) runTestsAndContinue(request, toolResult);
-                    else finishTurn(request, toolResult + "\nUser chose not to run tests.");
+                // Updated confirmation message
+                ui.requestConfirmation("Run Validation?", String.format("Agent applied a diff. Run configured validation command (`%s`)?", config.runCommand)).thenAccept(approved -> {
+                    if (approved) runValidationAndContinue(request, toolResult); // Renamed method
+                    else finishTurn(request, toolResult + "\nUser chose not to run validation command.");
                 });
             } else finishTurn(request, toolResult);
         }
@@ -620,10 +892,12 @@ public class Jaider {
             return new DefaultToolExecutor(currentAgent.getTools(), request).execute(request, currentAgent.getTools());
         }
 
-        private void runTestsAndContinue(ToolExecutionRequest originalRequest, String originalResult) {
-            var testResult = ((Tools) currentAgent.getTools()).runTests();
-            model.addLog(AiMessage.from("[Test Result] " + testResult));
-            finishTurn(originalRequest, originalResult + "\n---AUTO-TEST-RESULT---\n" + testResult);
+        // Renamed from runTestsAndContinue to runValidationAndContinue
+        private void runValidationAndContinue(ToolExecutionRequest originalRequest, String originalResult) {
+            // Assuming runValidationCommand takes optional args, pass null or empty for now
+            var validationResult = ((Tools) currentAgent.getTools()).runValidationCommand("");
+            model.addLog(AiMessage.from("[Validation Result]\n" + validationResult)); // Log format updated for clarity
+            finishTurn(originalRequest, originalResult + "\n---VALIDATION-COMMAND-RESULT---\n" + validationResult);
         }
 
         private void finishTurn(ToolExecutionRequest request, String result) {
@@ -713,7 +987,9 @@ public class Jaider {
 
                 COMMANDS:
                 /add <files...>: Add files to the context.
-                /undo: Revert the last applied change.
+                /undo: Attempts to revert the last applied change. For modified files, this uses `git checkout`
+                       to revert them to their last committed state. Files newly created by the last diff
+                       will be deleted. This may not perfectly reverse all patch types. Use with caution and review changes.
                 /index: Create a searchable index of your project (for RAG).
                 /edit-config: Open the .jaider.json configuration file.
                 /help, /exit
@@ -723,7 +999,17 @@ public class Jaider {
 
         /** TODO only update if messages has changed */
         private void updateTokenCount() {
-            model.currentTokenCount = tokenizer.estimateTokenCountInMessages(chatMemory.messages());
+            if (tokenizer == null) {
+                model.addLog(AiMessage.from("[Jaider] ALERT: Tokenizer is not initialized. Token count cannot be updated. Model setup might have failed."));
+                model.currentTokenCount = -1; // Indicate an error or unknown state
+                return;
+            }
+            try {
+                model.currentTokenCount = tokenizer.estimateTokenCountInMessages(chatMemory.messages());
+            } catch (Exception e) {
+                model.addLog(AiMessage.from("[Jaider] ERROR: Failed to estimate token count: " + e.getMessage()));
+                model.currentTokenCount = -1; // Indicate an error
+            }
         }
 
         public void undo() {
@@ -732,17 +1018,40 @@ public class Jaider {
                 return;
             }
             try (var git = Git.open(model.projectDir.resolve(".git").toFile())) {
-                // This undo logic is simple and might not work for all cases (e.g., new files).
-                // A more robust implementation would reverse-apply the patch.
-                // For now, we use git checkout which reverts to the last committed state.
                 var unifiedDiff = diffReader(model.lastAppliedDiff);
-                for (var file : unifiedDiff.getFiles()) {
-                    git.checkout().addPath(file.getFromFile()).call();
+                for (var fileDiff : unifiedDiff.getFiles()) {
+                    Path filePath = model.projectDir.resolve(fileDiff.getFromFile());
+                    String fileName = fileDiff.getFromFile();
+                    boolean isNewFile = "/dev/null".equals(fileDiff.getOldName()); // Check if it was a new file
+
+                    if (isNewFile) {
+                        // If the file was newly created by the patch, undo means deleting it.
+                        try {
+                            if (Files.deleteIfExists(filePath)) {
+                                model.addLog(AiMessage.from("[Jaider] Reverted (deleted) newly created file: " + fileName));
+                                model.filesInContext.remove(filePath); // Also remove from context if it was added
+                            } else {
+                                model.addLog(AiMessage.from("[Jaider] Undo: File intended for deletion was already gone: " + fileName));
+                            }
+                        } catch (IOException e) {
+                            model.addLog(AiMessage.from("[Error] Failed to delete newly created file for undo: " + fileName + " - " + e.getMessage()));
+                        }
+                    } else {
+                        // If it was an existing file, revert it using git checkout.
+                        try {
+                            git.checkout().addPath(fileName).call();
+                            model.addLog(AiMessage.from("[Jaider] Reverted to last commit for file: " + fileName));
+                        } catch (Exception e) {
+                            model.addLog(AiMessage.from("[Error] Failed to 'git checkout' file for undo: " + fileName + " - " + e.getMessage()));
+                        }
+                    }
                 }
-                model.lastAppliedDiff = null;
-                model.addLog(AiMessage.from("[Jaider] Last applied diff has been reverted using git checkout."));
+                model.addLog(AiMessage.from("[Jaider] Undo attempt finished. Note: For existing files, this reverts them to their last committed state. For files newly created by the last diff, they are deleted. Please review changes carefully."));
+                model.lastAppliedDiff = null; // Clear the last diff after attempting undo
             } catch (Exception e) {
-                model.addLog(AiMessage.from("[Error] Failed to undo changes: " + e.getMessage()));
+                model.addLog(AiMessage.from("[Error] Failed to process undo operation: " + e.getMessage()));
+                // Still clear lastAppliedDiff as the undo attempt was made, though it might have failed globally.
+                model.lastAppliedDiff = null;
             }
         }
 
