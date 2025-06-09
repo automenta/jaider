@@ -1,10 +1,10 @@
 package dumb.jaider.commands;
 
-import dumb.jaider.AppContext;
-import dumb.jaider.JaiderModel;
+import dumb.jaider.commands.AppContext;
+import dumb.jaider.model.JaiderModel;
 import dumb.jaider.app.App;
 import dumb.jaider.config.Config;
-import dumb.jaider.models.AiMessage;
+import dev.langchain4j.data.message.AiMessage; // Corrected import
 import dumb.jaider.ui.UI;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

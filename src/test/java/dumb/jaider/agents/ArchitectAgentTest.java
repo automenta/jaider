@@ -5,8 +5,8 @@ import dev.langchain4j.model.chat.ChatLanguageModel;
 import dev.langchain4j.model.output.Response;
 import dev.langchain4j.service.AiServices;
 import dev.langchain4j.service.SystemMessage;
-import dev.langchain4j.service.ToolSpecification;
-import dumb.jaider.JaiderAiService;
+import dev.langchain4j.agent.tool.ToolSpecification; // Corrected
+import dumb.jaider.agents.JaiderAiService; // Corrected
 import dumb.jaider.tools.StandardTools;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -36,9 +36,8 @@ class ArchitectAgentTest {
     @Mock
     StandardTools standardTools;
 
-    // Mocks for JaiderAiService and AiServices.builder
-    @Mock
-    AiServices.Builder<JaiderAiService> mockAiServicesBuilder;
+    // Mocks for JaiderAiService
+    // AiServices.Builder is no longer a separate class in this version of Langchain4j
     @Mock
     JaiderAiService mockJaiderAiService;
 

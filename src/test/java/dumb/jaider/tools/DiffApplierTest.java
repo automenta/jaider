@@ -11,6 +11,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 import java.io.ByteArrayInputStream;
+import java.io.File; // Added import
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -158,5 +159,166 @@ class DiffApplierTest {
 
         // To truly test the "null files list" we'd need a mock or a custom UnifiedDiff implementation.
         // The current check `unifiedDiff == null || unifiedDiff.getFiles() == null` handles it.
+    }
+
+    @Test
+    void testApplyDiffWithPatchFailedException() throws IOException {
+        // 1. Prepare an existing file (or use the one from setUp)
+        Path targetFilePath = model.projectDir.resolve("existingFile.txt");
+        List<String> actualOriginalLines = Files.readAllLines(targetFilePath); // e.g., ["line1", "line2", "line3"]
+
+        // 2. Create a patch that will fail.
+        //    Generate a patch based on a *different* original state.
+        List<String> mismatchedOriginalLines = Arrays.asList(" совершенно", " другая", " строка"); // "completely", "different", "line" in Russian
+        List<String> changedLinesForMismatched = Arrays.asList("совершенно", "другая", "измененная строка"); // "completely", "different", "changed line"
+        Patch<String> failingPatch = DiffUtils.diff(mismatchedOriginalLines, changedLinesForMismatched);
+
+        // 3. Create UnifiedDiff objects
+        UnifiedDiffFile fileDiff = UnifiedDiffFile.from("existingFile.txt", "existingFile.txt", failingPatch);
+        UnifiedDiff unifiedDiff = UnifiedDiff.from(null, null, fileDiff);
+
+        // 4. Apply the diff and assert the expected error message
+        String result = diffApplier.apply(model, unifiedDiff);
+        assertTrue(result.startsWith("Error applying diff to file 'existingFile.txt': Patch application failed. Details:"),
+                "Result message should indicate patch failure. Actual: " + result);
+        // We can't easily assert the full pfe.getMessage() as it's internal to java-diff-utils,
+        // but checking the prefix is a good indicator.
+
+        // 5. Verify that the original file has not been changed
+        List<String> linesAfterAttempt = Files.readAllLines(targetFilePath);
+        assertEquals(actualOriginalLines, linesAfterAttempt, "Original file should not be modified if patch application fails.");
+    }
+
+    @Test
+    void testApplyDiffWithFileReadIOException() throws IOException {
+        // 1. Create a new file specifically for this test
+        Path unreadableFilePath = tempDir.resolve("unreadableFile.txt");
+        List<String> originalLines = Arrays.asList("line1", "line2");
+        Files.write(unreadableFilePath, originalLines);
+        model.filesInContext.add(unreadableFilePath); // Add to context
+
+        // 2. Make the file unreadable
+        java.io.File fileToMakeUnreadable = unreadableFilePath.toFile();
+        if (!fileToMakeUnreadable.setReadable(false)) {
+            // If setting readable to false fails, skip the test or fail with a message
+            // For CI environments, this might sometimes be an issue depending on permissions
+            System.err.println("Warning: Could not make file unreadable. Test testApplyDiffWithFileReadIOException might not be effective.");
+            // Depending on strictness, could use:
+            // fail("Could not make file unreadable, prerequisite for testApplyDiffWithFileReadIOException failed.");
+            // For now, we'll let it proceed, but the error won't be triggered as expected.
+        }
+
+        // 3. Create a simple, valid diff (it won't be applied anyway)
+        List<String> changedLines = Arrays.asList("line1_changed", "line2");
+        Patch<String> patch = DiffUtils.diff(originalLines, changedLines); // Patch against original content
+        UnifiedDiffFile fileDiff = UnifiedDiffFile.from("unreadableFile.txt", "unreadableFile.txt", patch);
+        UnifiedDiff unifiedDiff = UnifiedDiff.from(null, null, fileDiff);
+
+        // 4. Apply the diff and assert the expected error message
+        String result = diffApplier.apply(model, unifiedDiff);
+
+        // 5. Restore readability (important for cleanup, especially if setReadable(false) succeeded)
+        // and assert the result.
+        // Run this regardless of whether setReadable(false) succeeded, to be safe.
+        fileToMakeUnreadable.setReadable(true);
+
+        assertTrue(result.startsWith("Error reading original file 'unreadableFile.txt' for diff application:"),
+                "Result was: " + result); // Provide actual result on failure for better debugging
+
+        // 6. Verify the file content hasn't changed (it shouldn't have been touched if reading failed)
+        List<String> linesAfterAttempt = Files.readAllLines(unreadableFilePath);
+        assertEquals(originalLines, linesAfterAttempt, "File content should not change if initial read fails.");
+
+        // Clean up the test file
+        Files.delete(unreadableFilePath);
+        model.filesInContext.remove(unreadableFilePath);
+    }
+
+    @Test
+    void testApplyDiffWithFileWriteIOException() throws IOException {
+        // 1. Define a name for a "file" that will actually be a directory
+        String targetName = "targetIsDir.txt";
+        Path directoryAsFile = tempDir.resolve(targetName);
+
+        // 2. Create a directory with that name
+        Files.createDirectory(directoryAsFile);
+        // Note: We don't add this directory to filesInContext as a file.
+        // The DiffApplier will attempt to treat it as a new or existing file based on the diff.
+        // If it's treated as a new file, it will try to write to it.
+        // If it's treated as an existing file (not in context), it would error out earlier,
+        // so we'll make the diff indicate this is a new file.
+
+        // 3. Create a diff for a new file that matches the directory's name
+        List<String> newFileLines = Arrays.asList("line1", "line2");
+        // Patch from empty (new file) to newFileLines
+        Patch<String> patch = DiffUtils.diff(Collections.emptyList(), newFileLines);
+        // Critical: getFromFile is /dev/null for new file, getToFile is our targetName
+        UnifiedDiffFile fileDiff = UnifiedDiffFile.from("/dev/null", targetName, patch);
+        UnifiedDiff unifiedDiff = UnifiedDiff.from(null, null, fileDiff);
+
+        // 4. Apply the diff
+        String result = diffApplier.apply(model, unifiedDiff);
+
+        // 5. Assert the expected error message
+        //    The exact message might vary by OS/JVM (e.g., "Is a directory", "Access denied")
+        //    So, we check for the generic prefix from DiffApplier.
+        assertTrue(result.startsWith("Error writing patched file '" + targetName + "':"),
+                   "Result was: " + result); // Provide actual result for debugging
+
+        // 6. Clean up the directory
+        Files.delete(directoryAsFile);
+    }
+
+    @Test
+    void testApplyDiffWithInvalidFileNamesInDiff() throws IOException {
+        // 1. Create a patch (content doesn't really matter for this test, but it needs to be valid for UnifiedDiffFile)
+        //    Using an empty patch for simplicity as the content of the patch is not relevant to filename validation.
+        Patch<String> emptyPatch = DiffUtils.diff(Collections.emptyList(), Collections.emptyList());
+
+        // 2. Create UnifiedDiffFile with problematic fromFile and toFile combinations
+
+        // Scenario 1: Both are /dev/null
+        UnifiedDiffFile fileDiff1 = UnifiedDiffFile.from("/dev/null", "/dev/null", emptyPatch);
+        UnifiedDiff unifiedDiff1 = UnifiedDiff.from(null, null, fileDiff1);
+        String result1 = diffApplier.apply(model, unifiedDiff1);
+        assertEquals("Error: Could not determine file name from UnifiedDiffFile entry.", result1, "Scenario 1 failed: Both /dev/null");
+
+        // Scenario 2: fromFile is /dev/null, toFile is null
+        // UnifiedDiffFile.from() might throw an NPE if toFile is null and patch indicates changes.
+        // Let's ensure the patch is truly empty for this case.
+        UnifiedDiffFile fileDiff2 = UnifiedDiffFile.from("/dev/null", null, emptyPatch);
+        UnifiedDiff unifiedDiff2 = UnifiedDiff.from(null, null, fileDiff2);
+        String result2 = diffApplier.apply(model, unifiedDiff2);
+        assertEquals("Error: Could not determine file name from UnifiedDiffFile entry.", result2, "Scenario 2 failed: fromFile /dev/null, toFile null");
+
+        // Scenario 3: fromFile is /dev/null, toFile is empty
+        UnifiedDiffFile fileDiff3 = UnifiedDiffFile.from("/dev/null", "", emptyPatch);
+        UnifiedDiff unifiedDiff3 = UnifiedDiff.from(null, null, fileDiff3);
+        String result3 = diffApplier.apply(model, unifiedDiff3);
+        assertEquals("Error: Could not determine file name from UnifiedDiffFile entry.", result3, "Scenario 3 failed: fromFile /dev/null, toFile empty");
+
+        // Scenario 4: fromFile is null, toFile is /dev/null
+        UnifiedDiffFile fileDiff4 = UnifiedDiffFile.from(null, "/dev/null", emptyPatch);
+        UnifiedDiff unifiedDiff4 = UnifiedDiff.from(null, null, fileDiff4);
+        String result4 = diffApplier.apply(model, unifiedDiff4);
+        assertEquals("Error: Could not determine file name from UnifiedDiffFile entry.", result4, "Scenario 4 failed: fromFile null, toFile /dev/null");
+
+        // Scenario 5: fromFile is empty, toFile is /dev/null
+        UnifiedDiffFile fileDiff5 = UnifiedDiffFile.from("", "/dev/null", emptyPatch);
+        UnifiedDiff unifiedDiff5 = UnifiedDiff.from(null, null, fileDiff5);
+        String result5 = diffApplier.apply(model, unifiedDiff5);
+        assertEquals("Error: Could not determine file name from UnifiedDiffFile entry.", result5, "Scenario 5 failed: fromFile empty, toFile /dev/null");
+
+        // Scenario 6: Both are null
+        UnifiedDiffFile fileDiff6 = UnifiedDiffFile.from(null, null, emptyPatch);
+        UnifiedDiff unifiedDiff6 = UnifiedDiff.from(null, null, fileDiff6);
+        String result6 = diffApplier.apply(model, unifiedDiff6);
+        assertEquals("Error: Could not determine file name from UnifiedDiffFile entry.", result6, "Scenario 6 failed: Both null");
+
+        // Scenario 7: Both are empty
+        UnifiedDiffFile fileDiff7 = UnifiedDiffFile.from("", "", emptyPatch);
+        UnifiedDiff unifiedDiff7 = UnifiedDiff.from(null, null, fileDiff7);
+        String result7 = diffApplier.apply(model, unifiedDiff7);
+        assertEquals("Error: Could not determine file name from UnifiedDiffFile entry.", result7, "Scenario 7 failed: Both empty");
     }
 }

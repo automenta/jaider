@@ -1,7 +1,7 @@
 package dumb.jaider.commands;
 
-import dumb.jaider.AppContext;
-import dumb.jaider.JaiderModel;
+import dumb.jaider.commands.AppContext; // Corrected
+import dumb.jaider.model.JaiderModel;   // Corrected
 import dumb.jaider.app.App;
 import dumb.jaider.config.Config;
 import dumb.jaider.ui.UI;

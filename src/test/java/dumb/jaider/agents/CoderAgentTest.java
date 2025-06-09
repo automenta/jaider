@@ -4,7 +4,7 @@ import dev.langchain4j.agent.tool.Tool;
 import dev.langchain4j.memory.ChatMemory;
 import dev.langchain4j.model.chat.ChatLanguageModel;
 import dev.langchain4j.model.output.Response;
-import dev.langchain4j.service.ToolSpecification;
+import dev.langchain4j.agent.tool.ToolSpecification; // Corrected import
 import dumb.jaider.tools.StandardTools;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

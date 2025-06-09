@@ -6,7 +6,8 @@ import com.github.difflib.patch.Patch;
 import com.github.difflib.patch.PatchFailedException;
 import com.github.difflib.unifieddiff.UnifiedDiff;
 import com.github.difflib.unifieddiff.UnifiedDiffFile;
-import dumb.jaider.JaiderModel;
+import dumb.jaider.model.JaiderModel; // Corrected
+import dumb.jaider.tools.DiffApplier; // Added
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;

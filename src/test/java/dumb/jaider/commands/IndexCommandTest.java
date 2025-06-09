@@ -5,10 +5,10 @@ import dev.langchain4j.data.embedding.Embedding;
 import dev.langchain4j.data.segment.TextSegment;
 import dev.langchain4j.model.embedding.EmbeddingModel;
 import dev.langchain4j.store.embedding.EmbeddingStore;
-import dumb.jaider.AppContext;
-import dumb.jaider.JaiderModel;
+import dumb.jaider.commands.AppContext;
+import dumb.jaider.model.JaiderModel;
 import dumb.jaider.app.App;
-import dumb.jaider.models.AiMessage;
+import dev.langchain4j.data.message.AiMessage; // Corrected
 import dumb.jaider.ui.UI;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

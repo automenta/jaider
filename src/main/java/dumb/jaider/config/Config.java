@@ -159,20 +159,6 @@ public class Config {
             configToEdit.put("runCommand", runCommand == null ? "" : runCommand);
             configToEdit.put("apiKeys", new JSONObject(apiKeys));
             if (!configToEdit.has(COMPONENTS_KEY)) configToEdit.put(COMPONENTS_KEY, new JSONArray(this.componentDefinitions.values()));
-        } else {
-            configToEdit = new JSONObject();
-            configToEdit.put("llmProvider", llmProvider);
-            configToEdit.put("ollamaBaseUrl", ollamaBaseUrl);
-            configToEdit.put("ollamaModelName", ollamaModelName);
-            configToEdit.put("genericOpenaiBaseUrl", genericOpenaiBaseUrl);
-            configToEdit.put("genericOpenaiModelName", genericOpenaiModelName);
-            configToEdit.put("genericOpenaiApiKey", genericOpenaiApiKey);
-            configToEdit.put("geminiApiKey", geminiApiKey);
-            configToEdit.put("geminiModelName", geminiModelName);
-            configToEdit.put("tavilyApiKey", tavilyApiKey);
-            configToEdit.put("runCommand", runCommand == null ? "" : runCommand);
-            configToEdit.put("apiKeys", new JSONObject(apiKeys));
-            configToEdit.put(COMPONENTS_KEY, new JSONArray(this.componentDefinitions.values()));
         }
         return configToEdit.toString(2);
     }

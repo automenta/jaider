@@ -1,7 +1,7 @@
 package dumb.jaider.commands;
 
-import dumb.jaider.AppContext;
-import dumb.jaider.JaiderModel;
+import dumb.jaider.commands.AppContext;
+import dumb.jaider.model.JaiderModel;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;

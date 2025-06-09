@@ -1,9 +1,9 @@
 package dumb.jaider.tools;
 
-// import com.github.difflib.DiffUtils; // Commented out
-// import com.github.difflib.patch.PatchFailedException; // Commented out
-// import com.github.difflib.unifieddiff.UnifiedDiff; // Commented out
-// import com.github.difflib.unifieddiff.UnifiedDiffReader; // Commented out
+import com.github.difflib.DiffUtils; // Commented out
+import com.github.difflib.patch.PatchFailedException; // Commented out
+import com.github.difflib.unifieddiff.UnifiedDiff; // Commented out
+import com.github.difflib.unifieddiff.UnifiedDiffReader; // Commented out
 import dev.langchain4j.agent.tool.Tool;
 import dev.langchain4j.model.embedding.EmbeddingModel;
 import dev.langchain4j.store.embedding.EmbeddingSearchRequest;
@@ -74,8 +74,8 @@ public class StandardTools {
 
     @Tool("Applies a code change using the unified diff format.")
     public String applyDiff(String diff) {
-        return "Error: Diff functionality is temporarily disabled due to library issues.";
-        /*
+        // return "Error: Diff functionality is temporarily disabled due to library issues.";
+
         try {
             UnifiedDiff unifiedDiff = Util.diffReader(diff); // Step 1: Read the diff
 
@@ -93,11 +93,13 @@ public class StandardTools {
         } catch (IOException e) { // Catch errors from Util.diffReader
             this.model.lastAppliedDiff = null;
             return "Error processing diff input: " + e.getMessage();
+        // PatchFailedException is handled within DiffApplier.apply and returned as a string.
+        // Thus, it's not expected to be thrown here.
         } catch (Exception e) { // Catch any other unexpected errors (e.g., from DiffApplier instantiation)
             this.model.lastAppliedDiff = null;
             return "An unexpected error occurred while applying diff: " + e.getClass().getSimpleName() + " - " + e.getMessage();
         }
-        */
+
     }
 
     @Tool("Reads the complete content of a file.")

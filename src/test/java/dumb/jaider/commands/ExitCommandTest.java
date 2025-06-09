@@ -1,6 +1,6 @@
 package dumb.jaider.commands;
 
-import dumb.jaider.AppContext;
+import dumb.jaider.commands.AppContext;
 import dumb.jaider.app.App;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
