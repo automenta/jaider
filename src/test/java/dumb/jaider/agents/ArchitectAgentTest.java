@@ -2,67 +2,61 @@ package dumb.jaider.agents;
 
 import dev.langchain4j.memory.ChatMemory;
 import dev.langchain4j.model.chat.ChatLanguageModel;
-import dev.langchain4j.model.output.Response;
-import dev.langchain4j.service.AiServices;
-import dev.langchain4j.service.SystemMessage;
-import dev.langchain4j.agent.tool.ToolSpecification; // Corrected
-import dumb.jaider.agents.JaiderAiService; // Corrected
+// import dev.langchain4j.model.output.Response; // Not directly used in revised tests
+// import dev.langchain4j.service.AiServices; // Not directly used in revised tests
+// import dev.langchain4j.service.SystemMessage; // Not directly used in revised tests
+// import dev.langchain4j.agent.tool.ToolSpecification; // ToolSpecification itself might not be directly asserted
+// import dumb.jaider.agents.JaiderAiService; // Will be mocked
 import dumb.jaider.tools.StandardTools;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
-import org.mockito.MockedStatic;
-import org.mockito.Mockito;
+// import org.mockito.MockedStatic; // Not needed for these changes
+// import org.mockito.Mockito; // Covered by static import below
 import org.mockito.junit.jupiter.MockitoExtension;
-import dev.langchain4j.agent.tool.Tool;
+// import dev.langchain4j.agent.tool.Tool; // Not needed for these changes
 
 
-import java.util.Collections;
-import java.util.List;
+// import java.util.Collections; // No longer needed for these direct changes
+// import java.util.List; // No longer needed for these direct changes
 import java.util.Set;
+import java.util.Collections; // Added import
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.any;
+// import static org.mockito.ArgumentMatchers.any; // Use anyString or eq
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class ArchitectAgentTest {
 
     @Mock
-    ChatLanguageModel chatLanguageModel;
+    ChatLanguageModel chatLanguageModel; // Still needed for AbstractAgent constructor
     @Mock
-    ChatMemory chatMemory;
+    ChatMemory chatMemory; // Still needed for AbstractAgent constructor
     @Mock
-    StandardTools standardTools;
-
-    // Mocks for JaiderAiService
-    // AiServices.Builder is no longer a separate class in this version of Langchain4j
+    StandardTools standardTools; // Still needed for AbstractAgent constructor
     @Mock
-    JaiderAiService mockJaiderAiService;
-
+    JaiderAiService jaiderAiServiceMock; // Mock for the AiService
 
     private ArchitectAgent architectAgent;
 
-    // Dummy tool for testing StandardTools interaction
-    static class ReadOnlyTool {
-        @Tool("A read-only tool")
-        public String readSomething(String input) { return "read: " + input; }
-    }
+    // Dummy tool not needed as we're not creating ToolSpecifications directly in this test anymore.
+    // static class ReadOnlyTool {
+    //     @Tool("A read-only tool")
+    //     public String readSomething(String input) { return "read: " + input; }
+    // }
 
     @BeforeEach
     void setUp() {
-        // It's difficult to intercept AiServices.builder() directly without PowerMock.
-        // We will test the inputs to ArchitectAgent constructor and its methods.
-        // The actual AiService instance creation within AbstractAgent cannot be easily mocked here.
-        // So, for act() method, we'll have to assume that if the ChatLanguageModel is called,
-        // it means the AiService was built and invoked.
+        // Mock the behavior of standardTools.getReadOnlyTools() *before* ArchitectAgent is constructed,
+        // as it's called within the constructor chain.
+        // For the general case in setUp, we can return an empty set or a default mock set.
+        // Specific tests can override this mock behavior if needed *before* their specific setup.
+        when(standardTools.getReadOnlyTools()).thenReturn(Collections.emptySet()); // Default for setUp
 
-        // Setup for getTools
-        Set<ToolSpecification> readOnlyToolSpecs = Collections.singleton(ToolSpecification.from(new ReadOnlyTool()));
-        when(standardTools.getReadOnlyTools()).thenReturn(readOnlyToolSpecs);
-
-        architectAgent = new ArchitectAgent(chatLanguageModel, chatMemory, standardTools);
+        architectAgent = new ArchitectAgent(chatLanguageModel, chatMemory, standardTools, jaiderAiServiceMock);
     }
 
     @Test
@@ -71,59 +65,50 @@ class ArchitectAgentTest {
     }
 
     @Test
-    void getTools_shouldReturnReadOnlyToolsFromStandardTools() {
-        Set<ToolSpecification> expectedTools = Collections.singleton(ToolSpecification.from(new ReadOnlyTool()));
-        when(standardTools.getReadOnlyTools()).thenReturn(expectedTools); // re-mock for clarity if needed
+    void getTools_shouldReturnWhatWasPassedToConstructor() {
+        // ArchitectAgent's constructor passes standardTools.getReadOnlyTools() to AbstractAgent.
+        // AbstractAgent.getTools() returns this set.
+        // Here, standardTools is a mock. getReadOnlyTools() by default returns null for a mock.
+        // So, the set of tools in architectAgent will be whatever getReadOnlyTools() returns.
+        // We need to set the specific mock behavior for this test case.
+        Set<Object> expectedToolsSet = Set.of(new Object()); // A dummy set
+        when(standardTools.getReadOnlyTools()).thenReturn(expectedToolsSet);
 
-        Set<ToolSpecification> actualTools = architectAgent.getTools(); // getTools() is directly from AbstractAgent
+        // ArchitectAgent is already constructed in setUp with standardTools mock.
+        // To test a specific return value for getReadOnlyTools for *this* test,
+        // we need to ensure the mock is configured *before* the constructor call that matters.
+        // The setUp method already called the constructor once.
+        // For this test, we will re-initialize to ensure the mock for this test is active during construction.
+        // Or, ensure setUp's when() is suitable for most tests, and this one re-mocks then re-constructs.
+        // Better: The when() in setUp should be the general case. If a test needs a specific scenario
+        // for getReadOnlyTools that affects construction, that test might need its own agent instance.
+        // However, getTools() just returns the set. The crucial part is what was passed during construction.
 
-        assertEquals(expectedTools, actualTools);
-        verify(standardTools).getReadOnlyTools();
+        // Let's stick to re-mocking and re-constructing for this specific test logic to be clear.
+        architectAgent = new ArchitectAgent(chatLanguageModel, chatMemory, standardTools, jaiderAiServiceMock); // Re-construct with new mock behavior
+
+        Set<Object> actualTools = architectAgent.getTools();
+        assertEquals(expectedToolsSet, actualTools);
+        verify(standardTools, times(2)).getReadOnlyTools(); // Called once in setUp, once in re-construction.
     }
 
-    @Test
-    void constructor_systemPrompt_verificationAttempt() {
-        // This test attempts to verify the system prompt indirectly or by assumption.
-        // Direct verification of AiServices.builder().systemMessageProvider() is hard.
-        // We know ArchitectAgent's constructor calls super(..., SYSTEM_MESSAGE, ...).
-        // This test relies on that contract.
-        // A more robust test would involve PowerMock or refactoring AbstractAgent.
-
-        // We can't easily capture the SystemMessageProvider lambda passed to AiServices.builder()
-        // in AbstractAgent's constructor without PowerMockito or refactoring AbstractAgent.
-        // We trust that AbstractAgent correctly uses the systemMessage string passed to its constructor.
-        // The best we can do here is to acknowledge the system message string.
-        String expectedSystemMessageStart = "You are the Architect Agent.";
-        // We cannot assert it here directly. This is more of a conceptual check.
-        // If we could mock the AiServices.builder().systemMessageProvider() call, we would.
-        // For now, we assume this system message is correctly passed.
-        assertTrue(ArchitectAgent.SYSTEM_MESSAGE.startsWith(expectedSystemMessageStart),
-                "SYSTEM_MESSAGE constant should match expected start.");
-    }
-
+    // Removed constructor_systemPrompt_verificationAttempt as SYSTEM_MESSAGE is no longer a public static field
 
     @Test
-    void act_shouldInvokeChatLanguageModel() {
-        // We can't mock the 'JaiderAiService internalService' directly as it's created
-        // within AbstractAgent via AiServices.builder().
-        // However, the 'internalService.chat()' call eventually routes to 'chatLanguageModel.generate()'.
-        // So, if chatLanguageModel.generate() is called, it implies act() worked through the service.
+    void act_shouldCallAiServiceChat() {
+        String testQuery = "What is the architecture of this project?";
+        String expectedResponse = "It's a monolith with microservices aspirations.";
 
-        List<dev.langchain4j.data.message.ChatMessage> messages = Collections.singletonList(
-                dev.langchain4j.data.message.UserMessage.from("Test query")
-        );
-        Response<dev.langchain4j.data.message.AiMessage> mockResponse = Response.from(
-                dev.langchain4j.data.message.AiMessage.from("Test response")
-        );
+        // Set up the mock behavior for the JaiderAiService
+        when(jaiderAiServiceMock.chat(anyString())).thenReturn(expectedResponse);
 
-        // We need to ensure that when internalService.chat(messages) is called,
-        // it ultimately results in chatLanguageModel.generate(messages) being called.
-        // This is an indirect test. The AiServices framework handles this connection.
-        when(chatLanguageModel.generate(anyList())).thenReturn(mockResponse);
+        // Execute the act method (the one taking String)
+        String actualResponse = architectAgent.act(testQuery);
 
-        String response = architectAgent.act(messages);
+        // Verify the response
+        assertEquals(expectedResponse, actualResponse);
 
-        assertEquals("Test response", response);
-        verify(chatLanguageModel).generate(messages); // Verifies the core interaction
+        // Verify that the 'chat' method of the JaiderAiService was called with the testQuery
+        verify(jaiderAiServiceMock).chat(testQuery);
     }
 }

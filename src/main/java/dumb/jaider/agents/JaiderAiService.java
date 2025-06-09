@@ -7,4 +7,5 @@ import java.util.List;
 
 public interface JaiderAiService {
     Response<AiMessage> act(List<ChatMessage> messages);
+    String chat(String userMessage); // Added for direct String interaction
 }

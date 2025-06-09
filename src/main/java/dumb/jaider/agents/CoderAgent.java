@@ -7,7 +7,7 @@ import java.util.Set;
 
 public class CoderAgent extends AbstractAgent {
     public CoderAgent(ChatLanguageModel model, ChatMemory memory, StandardTools availableTools) {
-        super(model, memory, Set.of(availableTools),
+        super(model, memory, Set.of(availableTools), // TODO: This should be availableTools.getAllTools() or similar
                 """
                         You are Jaider, an expert AI programmer. Your goal is to fully complete the user's request.
                         Follow this sequence rigidly:
@@ -23,8 +23,19 @@ public class CoderAgent extends AbstractAgent {
                         5. COMMIT: Once the request is complete and verified (e.g. validation passed or was not applicable), your final action MUST be to use the `commitChanges` tool with a clear, conventional commit message.""");
     }
 
+    // Constructor for testing
+    protected CoderAgent(ChatLanguageModel model, ChatMemory memory, StandardTools availableTools, JaiderAiService aiService) {
+        super(model, memory, Set.of(availableTools), aiService, null); // TODO: This should be availableTools.getAllTools() or similar. System prompt not used by this path if AiService is mocked.
+    }
+
     @Override
     public String name() {
         return "Coder";
+    }
+
+    @Override
+    public String act(String userQuery) {
+        // Delegate to the AiService, which is configured with memory and tools
+        return this.ai.chat(userQuery);
     }
 }

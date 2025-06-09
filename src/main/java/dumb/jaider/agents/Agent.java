@@ -8,6 +8,7 @@ import java.util.Set;
 
 public interface Agent {
     String name();
-    Response<AiMessage> act(List<ChatMessage> messages);
+    Response<AiMessage> act(List<ChatMessage> messages); // Used by some agents that handle full message history
+    String act(String userQuery); // For simpler agents interacting with a single query
     Set<Object> getTools();
 }

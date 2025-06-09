@@ -27,9 +27,9 @@ import java.util.Collections;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.Mockito.when;
+import static org.mockito.ArgumentMatchers.any; // Keep this for general any if needed
 
 @ExtendWith(MockitoExtension.class) // For potential Mockito annotations if needed later, good practice.
 public class DiffApplierTest {
@@ -50,44 +50,27 @@ public class DiffApplierTest {
     }
 
     // This method is problematic due to java-diff-utils API changes.
-    // Commenting out parts that cause compilation errors. Tests using this will likely fail or need rework.
-    private UnifiedDiff createUnifiedDiff(List<UnifiedDiffFile> files) {
-        UnifiedDiff unifiedDiff = new UnifiedDiff();
-        // unifiedDiff.setSchema("jaider_test_schema"); // Method might not exist or be accessible
-        // for (UnifiedDiffFile file : files) {
-        //    unifiedDiff.addFile(file); // Method might not be public or might have changed
-        // }
-        // For now, returning an empty UnifiedDiff or one constructed differently if possible.
-        // If files list is not empty, this will likely not behave as tests expect.
-        if (files != null && !files.isEmpty()) {
-            // Attempt to use a factory method if available, assuming single file for simplicity here.
-            // This is a guess and might need adjustment based on actual java-diff-utils API.
-            // UnifiedDiffFile firstFile = files.get(0);
-            // return UnifiedDiff.from(firstFile.getFromFile(), firstFile.getToFile(), Collections.singletonList(firstFile));
-            // The above is commented as it's a guess. For now, let's just use the list if it's not empty.
-            // The original addFile might be package-private.
-            // The tests using this helper will likely fail if they expect files to be added this way.
-        }
-        return unifiedDiff; // Returns an empty UnifiedDiff if files cannot be added.
-    }
+    // It's better to construct UnifiedDiff objects directly in tests or parse from strings.
+    // private UnifiedDiff createUnifiedDiff(List<UnifiedDiffFile> files) { ... }
 
-    // This method is problematic due to java-diff-utils API changes.
-    // Commenting out parts that cause compilation errors. Tests using this will likely fail or need rework.
-    private UnifiedDiffFile createUnifiedDiffFile(String fromFile, String toFile, List<String> patchLines) {
-        UnifiedDiffFile fileDiff = new UnifiedDiffFile();
-        fileDiff.setFromFile(fromFile);
-        fileDiff.setToFile(toFile);
-        // The following lines are problematic due to API changes in java-diff-utils
-        // Patch<String> patch = UnifiedDiffUtils.parseUnifiedDiff(patchLines).getFiles().get(0).getPatch();
-        // fileDiff.setPatch(patch); // Method might not exist or be accessible
-        return fileDiff;
-    }
+    // This method is not used by active tests and contains errors.
+    // private UnifiedDiffFile createUnifiedDiffFile(String fromFile, String toFile, List<String> patchLines) {
+    //     UnifiedDiffFile fileDiff = new UnifiedDiffFile();
+    //     fileDiff.setFromFile(fromFile);
+    //     fileDiff.setToFile(toFile);
+    //     // The following lines are problematic due to API changes in java-diff-utils
+    //     // Patch<String> patch = UnifiedDiffUtils.parseUnifiedDiff(patchLines).getFiles().get(0).getPatch();
+    //     // fileDiff.setPatch(patch); // Method might not exist or be accessible
+    //     return fileDiff;
+    // }
 
 
     @Test
     void testApplyUnifiedDiffWithEmptyFileList() {
-        UnifiedDiff unifiedDiff = createUnifiedDiff(Collections.emptyList());
-        String result = diffApplier.apply(model, unifiedDiff); // Corrected: pass model
+        // UnifiedDiff unifiedDiff = createUnifiedDiff(Collections.emptyList()); // createUnifiedDiff was problematic
+        com.github.difflib.unifieddiff.UnifiedDiff unifiedDiff = new com.github.difflib.unifieddiff.UnifiedDiff();
+        com.github.difflib.unifieddiff.UnifiedDiff argToSend = unifiedDiff;
+        String result = diffApplier.apply(model, argToSend);
         assertEquals("Diff applied successfully to all specified files.", result);
     }
 
@@ -103,49 +86,75 @@ public class DiffApplierTest {
                 "+World"
         );
         // Create a diff string and parse it to get UnifiedDiffFile
-        String diffStr = String.join("\n", patchLines);
-        UnifiedDiff parsedUnifiedDiff = UnifiedDiffUtils.parseUnifiedDiff(Collections.singletonList(diffStr));
-        UnifiedDiffFile fileDiff = parsedUnifiedDiff.getFiles().get(0);
+        // String diffStr = String.join("\n", patchLines);
+        // com.github.difflib.unifieddiff.UnifiedDiff parsedUnifiedDiff = UnifiedDiffUtils.parseUnifiedDiff(Collections.singletonList(diffStr));
+        // UnifiedDiffFile fileDiff = parsedUnifiedDiff.getFiles().get(0);
         // Ensure getFromFile is /dev/null as per test name
         // Note: Modifying fileDiff after parsing might not be the intended way if parsedUnifiedDiff is used directly.
         // However, the original test logic did this. For now, let's keep it to see effects.
-        fileDiff.setFromFile("/dev/null");
-        fileDiff.setToFile(newFileName);
+        // fileDiff.setFromFile("/dev/null");
+        // fileDiff.setToFile(newFileName);
 
         // Use parsedUnifiedDiff directly instead of the createUnifiedDiff helper for this test
         // model.filesInContext.add(newFilePath); // This might be incorrect if file is new
 
-        String result = diffApplier.apply(model, parsedUnifiedDiff); // Corrected: pass model & use parsedUnifiedDiff
+        // Create a diff string and parse it to get UnifiedDiffFile
+        String diffStr = String.join("\n", patchLines);
+        com.github.difflib.unifieddiff.UnifiedDiff parsedUnifiedDiff = UnifiedDiffUtils.parseUnifiedDiff(Collections.singletonList(diffStr));
+        com.github.difflib.unifieddiff.UnifiedDiffFile fileDiff = parsedUnifiedDiff.getFiles().get(0);
+        // Ensure getFromFile is /dev/null as per test name
+        fileDiff.setFromFile("/dev/null");
+        fileDiff.setToFile(newFileName);
 
-        // This test will likely fail due to changes in createUnifiedDiffFile and createUnifiedDiff
-        // and how UnifiedDiff objects are constructed and handled by the DiffApplier.
-        // For now, focusing on compilation.
-        // assertEquals("Diff applied successfully to all specified files.", result);
+        com.github.difflib.unifieddiff.UnifiedDiff argToSend = parsedUnifiedDiff;
+        String result = diffApplier.apply(model, argToSend);
 
-        // This test will likely fail due to changes in createUnifiedDiffFile and createUnifiedDiff
-        // and how UnifiedDiff objects are constructed and handled by the DiffApplier.
-        // For now, focusing on compilation.
-        // assertEquals("Diff applied successfully to all specified files.", result);
-        assertTrue(Files.exists(newFilePath));
+        // Assertions for file creation and content
+        assertTrue(Files.exists(newFilePath), "File should have been created.");
         List<String> actualLines = Files.readAllLines(newFilePath);
-        assertEquals(Arrays.asList("Hello", "World"), actualLines);
+        assertEquals(Arrays.asList("Hello", "World"), actualLines, "File content should match the diff.");
+        assertEquals("Diff applied successfully to all specified files.", result);
     }
 
     @Test
     void testApplyDiff_invalidFileNameInDiffEntry() {
         // Create a UnifiedDiffFile where getFromFile() is "/dev/null" and getToFile() is also "/dev/null"
-        UnifiedDiffFile invalidFileDiff = new UnifiedDiffFile();
-        invalidFileDiff.setFromFile("/dev/null");
-        invalidFileDiff.setToFile("/dev/null"); // Invalid: should be a real file name for creation
-        // A patch is needed for it to be processed
-        Patch<String> emptyPatch = new Patch<>(); // This might also be problematic if Patch construction changed.
-        // invalidFileDiff.setPatch(emptyPatch); // Method might not exist
+        // com.github.difflib.unifieddiff.UnifiedDiffFile invalidFileDiff = new com.github.difflib.unifieddiff.UnifiedDiffFile();
+        // invalidFileDiff.setFromFile("/dev/null");
+        // invalidFileDiff.setToFile("/dev/null"); // Invalid: should be a real file name for creation
+        // com.github.difflib.patch.Patch<String> emptyPatch = new com.github.difflib.patch.Patch<>();
+        // invalidFileDiff.setPatch(emptyPatch); // This line causes a compilation error as UnifiedDiffFile has no public setPatch
 
+        // Construct UnifiedDiff with this single problematic file by parsing a diff string.
+        // Based on common usage of java-diff-utils, this might require parsing a diff string,
+        // or if UnifiedDiff has a direct way to add files (which it typically doesn't post-construction).
+        // Let's try constructing it with a list containing our file.
+        // If UnifiedDiff(List<UnifiedDiffFile>) constructor is not public/available, this will fail.
+        // An alternative would be to use UnifiedDiffUtils.generateUnifiedDiff with placeholder content
+        // that results in the desired fromFile/toFile in the UnifiedDiffFile object.
+        // For now, let's assume a direct constructor or modifiable list for simplicity of this step.
+        // The most reliable way is often to parse a diff string.
 
-        UnifiedDiff unifiedDiff = createUnifiedDiff(Collections.singletonList(invalidFileDiff));
-        String result = diffApplier.apply(model, unifiedDiff); // Corrected: pass model
+        // Create a minimal diff string that represents this invalid file scenario
+        List<String> diffLines = Arrays.asList(
+            "--- /dev/null",
+            "+++ /dev/null",
+            "@@ -0,0 +0,0 @@" // Empty patch
+        );
+        com.github.difflib.unifieddiff.UnifiedDiff unifiedDiff = UnifiedDiffUtils.parseUnifiedDiff(diffLines);
+
+        // Ensure the parsed diff actually reflects the intended invalid state if necessary,
+        // though parseUnifiedDiff might sanitize it. The goal is to trigger the DiffApplier's check.
+        // If parseUnifiedDiff doesn't create the exact invalidFileDiff state,
+        // we might need to manually adjust the UnifiedDiffFile object it produces, if possible.
+        // For this step, we assume parseUnifiedDiff with /dev/null for both will create a UnifiedDiffFile
+        // that DiffApplier will see as invalid for filename determination.
+
+        com.github.difflib.unifieddiff.UnifiedDiff argToSend = unifiedDiff;
+        String result = diffApplier.apply(model, argToSend);
         assertEquals("Error: Could not determine file name from UnifiedDiffFile entry.", result);
     }
+
 
     @Test
     void testApplyDiff_patchFailedException() throws IOException, PatchFailedException {
@@ -166,7 +175,7 @@ public class DiffApplierTest {
             " line3"
         );
         String diffStr = String.join("\n", patchDefinitionLines);
-        UnifiedDiff parsedUnifiedDiff = UnifiedDiffUtils.parseUnifiedDiff(Collections.singletonList(diffStr));
+        com.github.difflib.unifieddiff.UnifiedDiff parsedUnifiedDiff = UnifiedDiffUtils.parseUnifiedDiff(Collections.singletonList(diffStr));
         UnifiedDiffFile fileDiff = parsedUnifiedDiff.getFiles().get(0);
 
 
@@ -175,16 +184,19 @@ public class DiffApplierTest {
 
         // Use try-with-resources for MockedStatic
         try (MockedStatic<DiffUtils> mockedDiffUtils = Mockito.mockStatic(DiffUtils.class)) {
-            mockedDiffUtils.when(() -> DiffUtils.patch(anyList(), any(Patch.class)))
+            // Using a general 'any()' for the patch argument as a last resort.
+            mockedDiffUtils.when(() -> DiffUtils.patch(Mockito.<List<String>>any(), any(com.github.difflib.patch.Patch.class)))
                            .thenThrow(new PatchFailedException("Simulated patch failure"));
 
-            String result = diffApplier.apply(model, parsedUnifiedDiff); // Corrected: pass model & use parsedUnifiedDiff
+            com.github.difflib.unifieddiff.UnifiedDiff argToSend = parsedUnifiedDiff;
+            String result = diffApplier.apply(model, argToSend);
             assertTrue(result.startsWith("Error applying diff to file '" + existingFileName + "': Patch application failed. Details: Simulated patch failure"),
-                       "Result was: " + result); // Corrected expected message prefix based on DiffApplier
+                       "Result was: " + result);
         }
 
         // Verify original file is unchanged
         List<String> actualLines = Files.readAllLines(existingFilePath);
         assertEquals(originalLines, actualLines, "File content should not change if patch failed.");
     }
+
 }

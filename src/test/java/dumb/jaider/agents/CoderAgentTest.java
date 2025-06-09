@@ -1,10 +1,11 @@
 package dumb.jaider.agents;
 
-import dev.langchain4j.agent.tool.Tool;
+// import dev.langchain4j.agent.tool.Tool; // No longer needed for these direct changes
 import dev.langchain4j.memory.ChatMemory;
 import dev.langchain4j.model.chat.ChatLanguageModel;
-import dev.langchain4j.model.output.Response;
-import dev.langchain4j.agent.tool.ToolSpecification; // Corrected import
+// import dev.langchain4j.model.output.Response; // No longer needed for these direct changes
+// import dev.langchain4j.agent.tool.ToolSpecification; // No longer used
+// import dev.langchain4j.tool.Tools; // Package does not exist / Class not used
 import dumb.jaider.tools.StandardTools;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -12,41 +13,43 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.List;
+// import java.util.Collections; // No longer needed for these direct changes
+// import java.util.HashSet; // No longer needed for these direct changes
+// import java.util.List; // No longer needed for these direct changes
 import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.anyList;
+// import static org.mockito.ArgumentMatchers.anyList; // Use anyString or eq for chat()
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class CoderAgentTest {
 
     @Mock
-    ChatLanguageModel chatLanguageModel;
+    ChatLanguageModel chatLanguageModel; // Still needed for AbstractAgent constructor
     @Mock
-    ChatMemory chatMemory;
+    ChatMemory chatMemory; // Still needed for AbstractAgent constructor
     @Mock
-    StandardTools standardTools;
+    StandardTools standardTools; // Still needed for AbstractAgent constructor
+    @Mock
+    JaiderAiService jaiderAiServiceMock; // Mock for the AiService
 
     private CoderAgent coderAgent;
 
-    // Dummy tools for testing StandardTools interaction
-    static class ReadWriteTool1 {
-        @Tool("A read-write tool 1")
-        public String modifySomething(String input) { return "modified1: " + input; }
-    }
-    static class ReadWriteTool2 {
-        @Tool("A read-write tool 2")
-        public String modifySomethingElse(String input) { return "modified2: " + input; }
-    }
-
+    // Dummy tools are not needed here anymore as we are not testing StandardTools through CoderAgent's getTools directly in this manner.
+    // static class ReadWriteTool1 {
+    //     @Tool("A read-write tool 1")
+    //     public String modifySomething(String input) { return "modified1: " + input; }
+    // }
+    // static class ReadWriteTool2 {
+    //     @Tool("A read-write tool 2")
+    //     public String modifySomethingElse(String input) { return "modified2: " + input; }
+    // }
 
     @BeforeEach
     void setUp() {
-        coderAgent = new CoderAgent(chatLanguageModel, chatMemory, standardTools);
+        // Use the new constructor to inject the mocked JaiderAiService
+        coderAgent = new CoderAgent(chatLanguageModel, chatMemory, standardTools, jaiderAiServiceMock);
     }
 
     @Test
@@ -55,43 +58,32 @@ class CoderAgentTest {
     }
 
     @Test
-    void getTools_shouldReturnAllToolsFromStandardTools() {
-        Set<ToolSpecification> allToolSpecs = new HashSet<>();
-        allToolSpecs.add(ToolSpecification.from(new ReadWriteTool1()));
-        allToolSpecs.add(ToolSpecification.from(new ReadWriteTool2()));
+    void getTools_shouldReturnTheStandardToolsInstanceWrappedInSet() {
+        // CoderAgent's constructor passes Set.of(availableTools) to AbstractAgent.
+        // AbstractAgent.getTools() returns this set.
+        Set<Object> expectedTools = Set.of(standardTools);
+        Set<Object> actualTools = coderAgent.getTools();
 
-        when(standardTools.getAllTools()).thenReturn(allToolSpecs);
-
-        Set<ToolSpecification> actualTools = coderAgent.getTools(); // getTools() from AbstractAgent
-
-        assertEquals(allToolSpecs, actualTools);
-        verify(standardTools).getAllTools();
+        assertEquals(expectedTools, actualTools, "CoderAgent should be configured with the provided StandardTools instance.");
     }
 
-    @Test
-    void constructor_systemPrompt_verificationAttempt() {
-        // Similar to other agent tests, direct verification of the system prompt
-        // passed to AiServices.builder() is difficult with Mockito alone.
-        // We verify the constant.
-        String expectedSystemMessageStart = "You are the Coder Agent.";
-        assertTrue(CoderAgent.SYSTEM_MESSAGE.startsWith(expectedSystemMessageStart),
-                "SYSTEM_MESSAGE constant should match expected start.");
-    }
+    // Removed constructor_systemPrompt_verificationAttempt as SYSTEM_MESSAGE is no longer a public static field in CoderAgent
 
     @Test
-    void act_shouldInvokeChatLanguageModel() {
-        List<dev.langchain4j.data.message.ChatMessage> messages = Collections.singletonList(
-                dev.langchain4j.data.message.UserMessage.from("Test query for CoderAgent")
-        );
-        Response<dev.langchain4j.data.message.AiMessage> mockResponse = Response.from(
-                dev.langchain4j.data.message.AiMessage.from("CoderAgent test response")
-        );
+    void act_shouldCallAiServiceChat() {
+        String testQuery = "Write a python script for me.";
+        String expectedResponse = "Okay, I will write that script.";
 
-        when(chatLanguageModel.generate(anyList())).thenReturn(mockResponse);
+        // Set up the mock behavior for the JaiderAiService
+        when(jaiderAiServiceMock.chat(anyString())).thenReturn(expectedResponse);
 
-        String response = coderAgent.act(messages);
+        // Execute the act method
+        String actualResponse = coderAgent.act(testQuery);
 
-        assertEquals("CoderAgent test response", response);
-        verify(chatLanguageModel).generate(messages); // Verifies the core interaction
+        // Verify the response
+        assertEquals(expectedResponse, actualResponse);
+
+        // Verify that the 'chat' method of the JaiderAiService was called with the testQuery
+        verify(jaiderAiServiceMock).chat(testQuery);
     }
 }

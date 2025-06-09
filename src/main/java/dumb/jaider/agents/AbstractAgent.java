@@ -10,17 +10,30 @@ import java.util.List;
 import java.util.Set;
 
 public abstract class AbstractAgent implements Agent {
+    protected final ChatLanguageModel model;
+    protected final ChatMemory memory;
     protected final JaiderAiService ai;
     protected final Set<Object> tools;
 
+    // Constructor for actual use, creates the AiService
     public AbstractAgent(ChatLanguageModel model, ChatMemory memory, Set<Object> tools, String systemPrompt) {
+        this.model = model;
+        this.memory = memory;
         this.tools = tools;
         this.ai = AiServices.builder(JaiderAiService.class)
-            .chatLanguageModel(model)
-            .chatMemory(memory)
-            .tools(tools.toArray())
-            .systemMessageProvider(vars -> systemPrompt)
-            .build();
+                .chatLanguageModel(model)
+                .chatMemory(memory)
+                .tools(tools.toArray())
+                .systemMessageProvider(prompVars -> systemPrompt) // Ensure prompVars is used or removed if not needed by lambda
+                .build();
+    }
+
+    // Constructor for testing, allows injecting a mock AiService
+    protected AbstractAgent(ChatLanguageModel model, ChatMemory memory, Set<Object> tools, JaiderAiService aiService, String systemPromptWontBeUsedByAskAgent) {
+        this.model = model;
+        this.memory = memory;
+        this.tools = tools;
+        this.ai = aiService; // Use the injected AiService
     }
 
     @Override

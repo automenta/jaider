@@ -11,8 +11,19 @@ public class ArchitectAgent extends AbstractAgent {
                         "You should use tools like `findRelevantCode` to analyze the codebase. You MUST NOT modify any files or run any tests.");
     }
 
+    // Constructor for testing
+    protected ArchitectAgent(ChatLanguageModel model, ChatMemory memory, StandardTools availableTools, JaiderAiService aiService) {
+        super(model, memory, availableTools.getReadOnlyTools(), aiService, null); // System prompt not used by this path if AiService is mocked.
+    }
+
     @Override
     public String name() {
         return "Architect";
+    }
+
+    @Override
+    public String act(String userQuery) {
+        // Delegate to the AiService, which is configured with memory and tools
+        return this.ai.chat(userQuery);
     }
 }
