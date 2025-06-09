@@ -19,10 +19,10 @@ import java.util.Arrays;
 import java.util.concurrent.CompletableFuture;
 
 public class TUI implements UI {
-    private MultiWindowTextGUI gui;
-    private ActionListBox contextListBox;
-    private Panel logListBox;
-    private Label statusBar;
+    /*private*/ MultiWindowTextGUI gui; // Changed to package-private for testing
+    /*private*/ ActionListBox contextListBox; // Changed to package-private for testing
+    /*private*/ Panel logListBox; // Changed to package-private for testing
+    /*private*/ Label statusBar; // Changed to package-private for testing
 
     @Override
     public void init(App app) throws IOException {

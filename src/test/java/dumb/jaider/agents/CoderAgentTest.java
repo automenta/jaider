@@ -48,6 +48,11 @@ class CoderAgentTest {
 
     @BeforeEach
     void setUp() {
+        // Stub the getReadOnlyTools method for the mocked standardTools
+        // This is crucial because AbstractAgent's constructor calls this method on the passed StandardTools instance.
+        // If not stubbed, a mock will return an empty set by default for a method returning a Set.
+        when(standardTools.getReadOnlyTools()).thenReturn(Set.of(standardTools));
+
         // Use the new constructor to inject the mocked JaiderAiService
         coderAgent = new CoderAgent(chatLanguageModel, chatMemory, standardTools, jaiderAiServiceMock);
     }

@@ -16,6 +16,7 @@ public class Config {
     private static final String COMPONENTS_KEY = "components";
 
     // Fields with their Java-level defaults
+    // Ensure apiKeys is initialized to prevent NullPointerExceptions if load() fails early
     final Map<String, String> apiKeys = new HashMap<>();
     public String llmProvider = "ollama";
     public String runCommand = ""; // Default to empty string
@@ -30,16 +31,38 @@ public class Config {
 
     public Config(Path projectDir) {
         this.configFile = projectDir.resolve(".jaider.json");
-        load(); // Load from file or apply defaults
+        load(); // Loads all fields, including componentDefinitions if present in file, or sets all fields to default if no file/bad file.
 
-        // Ensure injector is always initialized after load() has populated componentDefinitions
-        if (this.componentDefinitions.isEmpty()) {
-             // This case should ideally be covered by load() calling populateFieldsFromJson with defaults
-            System.err.println("Warning: Component definitions are empty after load. Re-populating with defaults for injector.");
-            populateFieldsFromJson(getDefaultConfigAsJsonObject());
+        Map<String, JSONObject> injectorDefs = this.componentDefinitions;
+        // If this.componentDefinitions is empty after load(), it means the config source
+        // (either a successfully read file or the initial defaults if file load failed)
+        // did not provide component definitions or they were empty.
+        // In this scenario, the injector should use the default component definitions,
+        // while other settings (apiKeys, llmProvider, etc.) retain values from load().
+        if (injectorDefs.isEmpty()) {
+            System.err.println("Component definitions are empty after load. Initializing injector with default component definitions.");
+            injectorDefs = extractComponentDefinitions(getDefaultConfigAsJsonObject());
         }
-        this.injector = new DependencyInjector(new HashMap<>(this.componentDefinitions)); // Pass a copy
+
+        this.injector = new DependencyInjector(new HashMap<>(injectorDefs)); // Pass a defensive copy
         this.injector.registerSingleton("appConfig", this);
+    }
+
+    // Helper to extract only component definitions from a full JSON config
+    private Map<String, JSONObject> extractComponentDefinitions(JSONObject json) {
+        Map<String, JSONObject> defs = new HashMap<>();
+        if (json.has(COMPONENTS_KEY)) {
+            JSONArray componentDefsArray = json.getJSONArray(COMPONENTS_KEY);
+            for (int i = 0; i < componentDefsArray.length(); i++) {
+                JSONObject componentDef = componentDefsArray.getJSONObject(i);
+                if (componentDef.has("id")) {
+                    defs.put(componentDef.getString("id"), componentDef);
+                } else {
+                    System.err.println("Component definition missing 'id' while extracting: " + componentDef.toString());
+                }
+            }
+        }
+        return defs;
     }
 
     void load() {
@@ -225,30 +248,48 @@ public class Config {
 
         // Ensure all current fields are present, using current Config state as default
         // This is slightly different from populateFieldsFromJson as it preserves existing file values
-        // and only adds missing ones.
-        configToEdit.putOnce("llmProvider", this.llmProvider);
-        configToEdit.putOnce("ollamaBaseUrl", this.ollamaBaseUrl);
-        configToEdit.putOnce("ollamaModelName", this.ollamaModelName);
-        configToEdit.putOnce("genericOpenaiBaseUrl", this.genericOpenaiBaseUrl);
-        configToEdit.putOnce("genericOpenaiModelName", this.genericOpenaiModelName);
-        configToEdit.putOnce("genericOpenaiApiKey", this.genericOpenaiApiKey);
-        configToEdit.putOnce("geminiApiKey", this.geminiApiKey);
-        configToEdit.putOnce("geminiModelName", this.geminiModelName);
-        configToEdit.putOnce("tavilyApiKey", this.tavilyApiKey);
+        JSONObject baseConfig = getDefaultConfigAsJsonObject(); // Start with all defaults
 
-        if (configToEdit.has("testCommand") && !configToEdit.has("runCommand")) {
-            configToEdit.put("runCommand", configToEdit.getString("testCommand"));
+        if (Files.exists(configFile)) {
+            try {
+                JSONObject fileConfig = new JSONObject(Files.readString(configFile));
+                // Merge fileConfig into baseConfig. Keys in fileConfig will overwrite defaults.
+                for (String key : fileConfig.keySet()) {
+                    // Special handling for "apiKeys" and "components" to merge intelligently if needed,
+                    // but for now, a simple put will overwrite, which is the old behavior for these.
+                    baseConfig.put(key, fileConfig.get(key));
+                }
+            } catch (Exception e) {
+                System.err.println("Warning: Couldn't read existing config for editing, using defaults: " + e.getMessage());
+                // baseConfig is already set to defaults, so just proceed
+            }
         }
-        configToEdit.remove("testCommand");
-        configToEdit.putOnce("runCommand", this.runCommand); // ensure it's there, defaults to ""
 
-        if (!configToEdit.has("apiKeys")) {
-            configToEdit.put("apiKeys", new JSONObject(this.apiKeys.isEmpty() ? getDefaultConfigAsJsonObject().getJSONObject("apiKeys") : this.apiKeys));
+        // Ensure legacy testCommand is migrated if present and runCommand is not already set by fileConfig
+        if (baseConfig.has("testCommand") && !baseConfig.has("runCommand")) {
+            baseConfig.put("runCommand", baseConfig.getString("testCommand"));
         }
-        if (!configToEdit.has(COMPONENTS_KEY) || configToEdit.getJSONArray(COMPONENTS_KEY).isEmpty()) {
-            configToEdit.put(COMPONENTS_KEY, getDefaultConfigAsJsonObject().getJSONArray(COMPONENTS_KEY));
+        baseConfig.remove("testCommand"); // Always remove old key if it was there
+
+        // Ensure runCommand has a default if absolutely nothing was specified from file or migration
+        if (!baseConfig.has("runCommand")) {
+             // this.runCommand is "" by default, but getDefaultConfigAsJsonObject already put it.
+             // This line ensures it if somehow getDefaultConfigAsJsonObject changes or was overwritten by a file
+             // that then got its runCommand removed.
+            baseConfig.put("runCommand", this.runCommand);
         }
-        return configToEdit.toString(2);
+
+        // Ensure apiKeys and components are present, using defaults if not in loaded file.
+        // getDefaultConfigAsJsonObject() already populates these, so this is more about ensuring
+        // they weren't removed by a minimal config file.
+        if (!baseConfig.has("apiKeys")) {
+            baseConfig.put("apiKeys", getDefaultConfigAsJsonObject().getJSONObject("apiKeys"));
+        }
+        if (!baseConfig.has(COMPONENTS_KEY) || baseConfig.getJSONArray(COMPONENTS_KEY).isEmpty()) {
+            baseConfig.put(COMPONENTS_KEY, getDefaultConfigAsJsonObject().getJSONArray(COMPONENTS_KEY));
+        }
+
+        return baseConfig.toString(2);
     }
 
     public <T> T getComponent(String id, Class<T> type) {
