@@ -46,8 +46,8 @@ import java.util.stream.Collectors;
 public class App {
     private final UI ui;
     private final JaiderModel model = new JaiderModel();
-    private final Config config = new Config(model.projectDir);
-    private final ChatMemory chatMemory = MessageWindowChatMemory.withMaxMessages(20);
+    private final Config config; // Initialized in constructor
+    private ChatMemory chatMemory; // Initialized via DI
     private final Map<String, Agent> agents = new HashMap<>();
     private EmbeddingModel appEmbeddingModel;
     private State currentState = State.IDLE;
@@ -60,8 +60,31 @@ public class App {
 
     public App(UI ui) {
         this.ui = ui;
+        this.config = new Config(model.projectDir); // Config loads DI definitions
+
+        DependencyInjector injector = config.getInjector();
+        if (injector != null) {
+            injector.registerSingleton("jaiderModel", model);
+            injector.registerSingleton("ui", ui);
+            injector.registerSingleton("app", this);
+            // Assuming chatMemory will be defined in JSON.
+            // If not, a fallback or ensuring definition in JSON is needed.
+            try {
+                 this.chatMemory = config.getComponent("chatMemory", ChatMemory.class);
+            } catch (Exception e) {
+                // Fallback if not defined in DI, or rethrow if critical
+                System.err.println("Failed to get chatMemory from DI, falling back to default: " + e.getMessage());
+                this.chatMemory = MessageWindowChatMemory.withMaxMessages(20);
+                injector.registerSingleton("chatMemory", this.chatMemory); // Register the fallback
+            }
+        } else {
+            // DI not initialized, use defaults (original behavior)
+            System.err.println("DependencyInjector not available from Config. Using default initializations.");
+            this.chatMemory = MessageWindowChatMemory.withMaxMessages(20);
+        }
+
         initializeCommands();
-        update();
+        update(); // This will now use DI for some components
     }
 
     private void initializeCommands() {
@@ -75,17 +98,48 @@ public class App {
     }
 
     public synchronized void update() {
-        var llmFactory = new LlmProviderFactory(this.config, this.model);
-        ChatLanguageModel localChatModel = llmFactory.createChatModel();
-        this.appTokenizer = llmFactory.createTokenizer();
-        this.appEmbeddingModel = llmFactory.createEmbeddingModel();
+        if (config.getInjector() == null) {
+            System.err.println("DI not initialized in App.update(). Cannot fetch components. Reverting to manual creation (limited functionality).");
+            // Fallback to minimal functionality or throw error
+            // For now, let's try to mimic old behavior if DI fails, though this is not ideal.
+            var llmFactoryManual = new LlmProviderFactory(this.config, this.model);
+            ChatLanguageModel localChatModelManual = llmFactoryManual.createChatModel();
+            this.appTokenizer = llmFactoryManual.createTokenizer();
+            this.appEmbeddingModel = llmFactoryManual.createEmbeddingModel();
+            var toolsManual = new StandardTools(model, config, this.appEmbeddingModel);
+            agents.put("Coder", new CoderAgent(localChatModelManual, chatMemory, toolsManual)); // chatMemory should be the DI one or fallback
+            agents.put("Architect", new ArchitectAgent(localChatModelManual, chatMemory, toolsManual));
+            agents.put("Ask", new AskAgent(localChatModelManual, chatMemory));
+        } else {
+            try {
+                LlmProviderFactory llmFactory = config.getComponent("llmProviderFactory", LlmProviderFactory.class);
+                ChatLanguageModel localChatModel = llmFactory.createChatModel(); // Created by factory, not DI component itself
+                this.appTokenizer = llmFactory.createTokenizer(); // Created by factory
+                this.appEmbeddingModel = llmFactory.createEmbeddingModel(); // Created by factory
 
-        var tools = new StandardTools(model, config, this.appEmbeddingModel);
-        agents.put("Coder", new CoderAgent(localChatModel, chatMemory, tools));
-        agents.put("Architect", new ArchitectAgent(localChatModel, chatMemory, tools));
-        agents.put("Ask", new AskAgent(localChatModel, chatMemory));
-        if (this.currentAgent == null) {
-             this.currentAgent = agents.get("Coder");
+                // StandardTools might need JaiderModel, Config, EmbeddingModel injected if it's a DI component.
+                // Assuming StandardTools is defined in JSON and its dependencies are resolved by DI.
+                StandardTools tools = config.getComponent("standardTools", StandardTools.class);
+
+                // Register the created models if other DI components need them by these specific names
+                // This is only if they are NOT already meant to be separate DI components themselves.
+                // config.getInjector().registerSingleton("appEmbeddingModel", this.appEmbeddingModel);
+                // config.getInjector().registerSingleton("appTokenizer", this.appTokenizer);
+
+
+                agents.clear(); // Clear old agent instances
+                agents.put("Coder", config.getComponent("coderAgent", Agent.class));
+                agents.put("Architect", config.getComponent("architectAgent", Agent.class));
+                agents.put("Ask", config.getComponent("askAgent", Agent.class));
+            } catch (Exception e) {
+                System.err.println("Error updating components from DI: " + e.getMessage());
+                model.addLog(AiMessage.from("[Jaider] CRITICAL ERROR: Failed to update components using DI. Application might be unstable. Check config. " + e.getClass().getSimpleName() + ": " + e.getMessage()));
+                // Optionally, could fall back to manual creation like above if critical components fail
+            }
+        }
+
+        if (this.currentAgent == null || !agents.containsKey(this.currentAgent.name())) {
+             this.currentAgent = agents.get("Coder"); // Default to Coder if current is null or no longer exists
              if (this.currentAgent != null) {
                 this.model.agentMode = this.currentAgent.name();
              }

@@ -5,10 +5,16 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.Map;
+import org.json.JSONArray;
 import org.json.JSONObject;
+import dumb.jaider.app.DependencyInjector;
 
 public class Config {
     final Path configFile;
+    private Map<String, JSONObject> componentDefinitions = new HashMap<>();
+    private transient DependencyInjector injector;
+    private static final String COMPONENTS_KEY = "components";
+
     final Map<String, String> apiKeys = new HashMap<>();
     public String llmProvider = "ollama", runCommand;
     public String ollamaBaseUrl = "http://localhost:11434";
@@ -29,6 +35,9 @@ public class Config {
         try {
             if (!Files.exists(configFile)) createDefaultConfig();
             var j = new JSONObject(Files.readString(configFile));
+
+            this.componentDefinitions.clear(); // Clear existing definitions
+
             llmProvider = j.optString("llmProvider", this.llmProvider);
             ollamaBaseUrl = j.optString("ollamaBaseUrl", this.ollamaBaseUrl);
             ollamaModelName = j.optString("ollamaModelName", this.ollamaModelName);
@@ -46,7 +55,39 @@ public class Config {
             }
             var keys = j.optJSONObject("apiKeys");
             if (keys != null) keys.keySet().forEach(key -> apiKeys.put(key, keys.getString(key)));
-        } catch (Exception e) {  }
+
+            // Load component definitions
+            if (j.has(COMPONENTS_KEY)) {
+                JSONArray componentDefsArray = j.getJSONArray(COMPONENTS_KEY);
+                for (int i = 0; i < componentDefsArray.length(); i++) {
+                    JSONObject componentDef = componentDefsArray.getJSONObject(i);
+                    if (componentDef.has("id")) {
+                        this.componentDefinitions.put(componentDef.getString("id"), componentDef);
+                    } else {
+                        System.err.println("Component definition missing 'id' in config: " + componentDef.toString());
+                    }
+                }
+            }
+
+        } catch (Exception e) {
+            System.err.println("Error loading config: " + e.getMessage());
+            // Attempt to create a default config if loading fails, then re-attempt to load parts of it.
+            try {
+                createDefaultConfig(); // This will write a default file.
+                // After creating default, we might want to ensure componentDefinitions is empty or reflects default.
+                // The subsequent injector initialization will use whatever is in componentDefinitions.
+            } catch (IOException ex) {
+                System.err.println("Failed to create default config: " + ex.getMessage());
+            }
+        }
+
+        // Initialize or re-initialize the injector
+        if (!this.componentDefinitions.isEmpty()) {
+            this.injector = new DependencyInjector(new HashMap<>(this.componentDefinitions)); // Pass a copy
+            this.injector.registerSingleton("appConfig", this); // Register Config itself
+        } else {
+            this.injector = null; // No components defined
+        }
     }
 
     private void createDefaultConfig() throws IOException {
@@ -67,12 +108,15 @@ public class Config {
         defaultConfig.put("tavilyApiKey", tavilyApiKey);
         defaultConfig.put("runCommand", runCommand == null ? "" : runCommand);
         defaultConfig.put("apiKeys", defaultKeys);
+        defaultConfig.put(COMPONENTS_KEY, new JSONArray()); // Add empty components array to default config
         Files.writeString(configFile, defaultConfig.toString(2));
     }
 
     public void save(String newConfig) throws IOException {
-
         Files.writeString(configFile, new JSONObject(newConfig).toString(2));
+        if (this.injector != null) {
+            this.injector.clearCache();
+        }
         load();
     }
 
@@ -114,7 +158,42 @@ public class Config {
             configToEdit.put("tavilyApiKey", tavilyApiKey);
             configToEdit.put("runCommand", runCommand == null ? "" : runCommand);
             configToEdit.put("apiKeys", new JSONObject(apiKeys));
+            if (!configToEdit.has(COMPONENTS_KEY)) configToEdit.put(COMPONENTS_KEY, new JSONArray(this.componentDefinitions.values()));
+        } else {
+            configToEdit = new JSONObject();
+            configToEdit.put("llmProvider", llmProvider);
+            configToEdit.put("ollamaBaseUrl", ollamaBaseUrl);
+            configToEdit.put("ollamaModelName", ollamaModelName);
+            configToEdit.put("genericOpenaiBaseUrl", genericOpenaiBaseUrl);
+            configToEdit.put("genericOpenaiModelName", genericOpenaiModelName);
+            configToEdit.put("genericOpenaiApiKey", genericOpenaiApiKey);
+            configToEdit.put("geminiApiKey", geminiApiKey);
+            configToEdit.put("geminiModelName", geminiModelName);
+            configToEdit.put("tavilyApiKey", tavilyApiKey);
+            configToEdit.put("runCommand", runCommand == null ? "" : runCommand);
+            configToEdit.put("apiKeys", new JSONObject(apiKeys));
+            configToEdit.put(COMPONENTS_KEY, new JSONArray(this.componentDefinitions.values()));
         }
         return configToEdit.toString(2);
+    }
+
+    public <T> T getComponent(String id, Class<T> type) {
+        if (injector == null) {
+            throw new IllegalStateException("DependencyInjector not initialized. No components defined or loaded from settings.json?");
+        }
+        Object componentInstance = injector.getComponent(id);
+        if (componentInstance == null) {
+            // This might happen if the component ID is wrong or definition is missing
+            throw new RuntimeException("Component with id '" + id + "' not found or failed to create from injector.");
+        }
+        if (!type.isInstance(componentInstance)) {
+            throw new ClassCastException("Component '" + id + "' is of type " + componentInstance.getClass().getName() +
+                                         " but expected type " + type.getName());
+        }
+        return type.cast(componentInstance);
+    }
+
+    public DependencyInjector getInjector() {
+        return injector;
     }
 }
