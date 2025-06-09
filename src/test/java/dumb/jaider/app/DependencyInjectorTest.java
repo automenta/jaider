@@ -221,24 +221,30 @@ public class DependencyInjectorTest {
 
     @Test
     void testRegisterSingleton() {
+        // definitions map is new for each test via @BeforeEach setUp
         SimpleComponent external = new SimpleComponent();
-        injector = new DependencyInjector(definitions); // definitions is empty initially for this test
-        injector.registerSingleton("externalSimple", external);
 
+        // Define "refToExternal" which depends on "externalSimple".
+        // This definition needs to be in the map when the injector is created.
         definitions.put("refToExternal", new JSONObject()
                 .put("id", "refToExternal")
                 .put("class", RefArgComponent.class.getName())
                 .put("constructorArgs", new JSONArray().put(new JSONObject().put("ref", "externalSimple"))));
-        // Need to re-initialize or ensure the injector uses the updated definitions map.
-        // The current DI adds the registered singleton's definition to its *copy* of the map.
-        // For this test to pass as structured, the definition for 'refToExternal' must be known
-        // to the injector when getComponent("refToExternal") is called.
-        // A new injector with updated definitions could be made, or ensure registerSingleton updates the shared map if that's the design.
-        // Let's assume registerSingleton's definition addition is sufficient for resolving new components.
+
+        // If "externalSimple" itself needs a definition for some reason (e.g., if it were also created by DI first),
+        // it would be added here. But since it's externally created and registered,
+        // registerSingleton will handle its definition within the injector.
+
+        injector = new DependencyInjector(definitions); // Injector is created, knows about "refToExternal"
+
+        // Now, register the external singleton. This will add "externalSimple" to the injector's
+        // internal definitions map and its instance cache.
+        injector.registerSingleton("externalSimple", external);
 
         RefArgComponent component = (RefArgComponent) injector.getComponent("refToExternal");
-        assertNotNull(component);
-        assertSame(external, component.dependency);
+        assertNotNull(component, "The referencing component should not be null.");
+        assertNotNull(component.dependency, "The dependency injected into RefArgComponent should not be null.");
+        assertSame(external, component.dependency, "The injected dependency should be the externally registered instance.");
     }
 
 

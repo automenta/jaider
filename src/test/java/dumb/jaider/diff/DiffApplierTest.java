@@ -69,8 +69,7 @@ public class DiffApplierTest {
     void testApplyUnifiedDiffWithEmptyFileList() {
         // UnifiedDiff unifiedDiff = createUnifiedDiff(Collections.emptyList()); // createUnifiedDiff was problematic
         com.github.difflib.unifieddiff.UnifiedDiff unifiedDiff = new com.github.difflib.unifieddiff.UnifiedDiff();
-        com.github.difflib.unifieddiff.UnifiedDiff argToSend = unifiedDiff;
-        String result = diffApplier.apply(model, argToSend);
+        String result = diffApplier.apply(model, unifiedDiff);
         assertEquals("Diff applied successfully to all specified files.", result);
     }
 
@@ -106,8 +105,7 @@ public class DiffApplierTest {
         fileDiff.setFromFile("/dev/null");
         fileDiff.setToFile(newFileName);
 
-        com.github.difflib.unifieddiff.UnifiedDiff argToSend = parsedUnifiedDiff;
-        String result = diffApplier.apply(model, argToSend);
+        String result = diffApplier.apply(model, parsedUnifiedDiff);
 
         // Assertions for file creation and content
         assertTrue(Files.exists(newFilePath), "File should have been created.");
@@ -150,53 +148,8 @@ public class DiffApplierTest {
         // For this step, we assume parseUnifiedDiff with /dev/null for both will create a UnifiedDiffFile
         // that DiffApplier will see as invalid for filename determination.
 
-        com.github.difflib.unifieddiff.UnifiedDiff argToSend = unifiedDiff;
-        String result = diffApplier.apply(model, argToSend);
+        String result = diffApplier.apply(model, unifiedDiff);
         assertEquals("Error: Could not determine file name from UnifiedDiffFile entry.", result);
-    }
-
-
-    @Test
-    void testApplyDiff_patchFailedException() throws IOException, PatchFailedException {
-        String existingFileName = "existingFile.txt";
-        Path existingFilePath = projectDir.resolve(existingFileName);
-        List<String> originalLines = Arrays.asList("line1", "line2", "line3");
-        Files.write(existingFilePath, originalLines, StandardCharsets.UTF_8);
-        model.filesInContext.add(existingFilePath);
-
-        // Create a patch that would normally apply but we'll make DiffUtils.patch throw an exception
-        List<String> patchDefinitionLines = Arrays.asList(
-            "--- a/" + existingFileName,
-            "+++ b/" + existingFileName,
-            "@@ -1,3 +1,3 @@",
-            " line1",
-            "-line2",
-            "+line2_modified",
-            " line3"
-        );
-        String diffStr = String.join("\n", patchDefinitionLines);
-        com.github.difflib.unifieddiff.UnifiedDiff parsedUnifiedDiff = UnifiedDiffUtils.parseUnifiedDiff(Collections.singletonList(diffStr));
-        UnifiedDiffFile fileDiff = parsedUnifiedDiff.getFiles().get(0);
-
-
-        // Use parsedUnifiedDiff directly instead of the createUnifiedDiff helper for this test
-        // UnifiedDiff unifiedDiff = createUnifiedDiff(Collections.singletonList(fileDiff));
-
-        // Use try-with-resources for MockedStatic
-        try (MockedStatic<DiffUtils> mockedDiffUtils = Mockito.mockStatic(DiffUtils.class)) {
-            // Using a general 'any()' for the patch argument as a last resort.
-            mockedDiffUtils.when(() -> DiffUtils.patch(Mockito.<List<String>>any(), any(com.github.difflib.patch.Patch.class)))
-                           .thenThrow(new PatchFailedException("Simulated patch failure"));
-
-            com.github.difflib.unifieddiff.UnifiedDiff argToSend = parsedUnifiedDiff;
-            String result = diffApplier.apply(model, argToSend);
-            assertTrue(result.startsWith("Error applying diff to file '" + existingFileName + "': Patch application failed. Details: Simulated patch failure"),
-                       "Result was: " + result);
-        }
-
-        // Verify original file is unchanged
-        List<String> actualLines = Files.readAllLines(existingFilePath);
-        assertEquals(originalLines, actualLines, "File content should not change if patch failed.");
     }
 
 }

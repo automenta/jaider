@@ -131,56 +131,69 @@ public class DependencyInjector {
         // we should ensure we don't try to re-create it if it's already been resolved.
         // The check in getComponent `if (singletonInstances.containsKey(id))` handles this mostly.
 
-        String className = definition.optString("class", null);
-        if (className == null && definition.has("factoryComponent") && definition.has("factoryMethod")) {
-            // This is valid: instance factory method where the class of the instance is determined by the factory component.
-            // We'll get the class from the factory component instance later.
-        } else if (className == null) {
-            throw new RuntimeException("Component definition for '" + id + "' must contain a 'class' or be an instance factory method definition.");
-        }
-
         try {
-            Class<?> clazz = null;
-            if (className != null) { // className might be null for instance factory methods where class is inferred
-                clazz = Class.forName(className);
-            }
+            // String className = definition.optString("class", null); // Ensure className is appropriately handled or fetched inside each block if needed.
+            // Class<?> clazz = null;
+            // if (className != null) { // className might be null for instance factory methods
+            //     clazz = Class.forName(className);
+            // }
 
-            // Instantiate via factory method (static or instance)
-            if (definition.has("factoryMethod")) {
+
+            if (definition.has("factoryBean") && definition.has("factoryMethod")) {
+                // INSTANCE FACTORY METHOD LOGIC
+                String factoryBeanId = definition.getString("factoryBean");
                 String factoryMethodName = definition.getString("factoryMethod");
-                JSONArray argsArray = definition.optJSONArray("args");
-                Object[] args = resolveArguments(argsArray, id); // Pass component id for better error messages
-                Class<?>[] argTypes = getArgumentTypes(args, argsArray, id); // Pass component id
+                JSONArray argsArray = definition.optJSONArray("factoryArgs"); // Use "factoryArgs"
 
-                if (definition.has("factoryComponent")) { // Instance factory method
-                    String factoryComponentId = definition.getString("factoryComponent");
-                    Object factoryComponentInstance = getComponent(factoryComponentId); // Recursive call to get dependency
-                    Class<?> factoryComponentClass = factoryComponentInstance.getClass();
-                    Method factoryMethod = findMethod(factoryComponentClass, factoryMethodName, argTypes);
-                    if (factoryMethod == null) {
-                        throw new RuntimeException("Instance factory method '" + factoryMethodName + "' with matching arguments not found in class " + factoryComponentClass.getName() + " for component '" + id + "'.");
-                    }
-                    return factoryMethod.invoke(factoryComponentInstance, args);
-                } else { // Static factory method
-                    if (clazz == null) { // Should have been caught earlier if className was null and not instance factory
-                         throw new RuntimeException("Class not specified for static factory method '" + factoryMethodName + "' of component '" + id + "'.");
-                    }
-                    Method factoryMethod = findMethod(clazz, factoryMethodName, argTypes);
-                    if (factoryMethod == null) {
-                         throw new RuntimeException("Static factory method '" + factoryMethodName + "' with matching arguments not found in class " + clazz.getName() + " for component '" + id + "'.");
-                    }
-                    if (!Modifier.isStatic(factoryMethod.getModifiers())) {
-                        throw new RuntimeException("Factory method '" + factoryMethodName + "' in class " + clazz.getName() + " for component '" + id + "' is not static.");
-                    }
-                    return factoryMethod.invoke(null, args);
-                }
-            } else { // Instantiate via constructor
-                JSONArray argsArray = definition.optJSONArray("args");
+                Object factoryBeanInstance = getComponent(factoryBeanId);
+                Class<?> factoryBeanClass = factoryBeanInstance.getClass();
+
                 Object[] args = resolveArguments(argsArray, id);
                 Class<?>[] argTypes = getArgumentTypes(args, argsArray, id);
-                if (clazz == null) { // Should have been caught earlier if className was null and not factory method
-                    throw new RuntimeException("Class not specified for constructor instantiation of component '" + id + "'.");
+
+                Method factoryMethod = findMethod(factoryBeanClass, factoryMethodName, argTypes);
+                if (factoryMethod == null) {
+                    throw new RuntimeException("Instance factory method '" + factoryMethodName + "' with matching arguments not found in class " + factoryBeanClass.getName() + " for component '" + id + "'.");
                 }
+                // Modifier.isStatic(factoryMethod.getModifiers()) check might be needed if we want to ensure it's not static
+                return factoryMethod.invoke(factoryBeanInstance, args);
+
+            } else if (definition.has("staticFactoryMethod")) {
+                // STATIC FACTORY METHOD LOGIC
+                String className = definition.optString("class", null);
+                if (className == null) {
+                    throw new RuntimeException("Component definition for '" + id + "' with staticFactoryMethod must also specify a 'class'.");
+                }
+                Class<?> clazz = Class.forName(className);
+
+                String staticFactoryMethodName = definition.getString("staticFactoryMethod");
+                JSONArray argsArray = definition.optJSONArray("staticFactoryArgs"); // Use "staticFactoryArgs"
+
+                Object[] args = resolveArguments(argsArray, id);
+                Class<?>[] argTypes = getArgumentTypes(args, argsArray, id);
+
+                Method factoryMethod = findMethod(clazz, staticFactoryMethodName, argTypes);
+                if (factoryMethod == null) {
+                    throw new RuntimeException("Static factory method '" + staticFactoryMethodName + "' with matching arguments not found in class " + clazz.getName() + " for component '" + id + "'. Argument types searched: " + Arrays.toString(argTypes));
+                }
+                if (!Modifier.isStatic(factoryMethod.getModifiers())) {
+                    throw new RuntimeException("Factory method '" + staticFactoryMethodName + "' in class " + clazz.getName() + " for component '" + id + "' is not static.");
+                }
+                return factoryMethod.invoke(null, args);
+
+            } else {
+                // CONSTRUCTOR LOGIC
+                String className = definition.optString("class", null);
+                if (className == null) {
+                     throw new RuntimeException("Component definition for '" + id + "' must contain a 'class' if not using a factory method.");
+                }
+                Class<?> clazz = Class.forName(className);
+
+                JSONArray argsArray = definition.optJSONArray("constructorArgs"); // Use "constructorArgs"
+
+                Object[] args = resolveArguments(argsArray, id);
+                Class<?>[] argTypes = getArgumentTypes(args, argsArray, id);
+
                 Constructor<?> constructor = findConstructor(clazz, argTypes);
                 if (constructor == null) {
                     throw new RuntimeException("Suitable constructor not found for class " + clazz.getName() + " for component '" + id + "' with argument types " + Arrays.toString(argTypes));
