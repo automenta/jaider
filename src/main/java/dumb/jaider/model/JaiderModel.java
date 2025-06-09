@@ -18,7 +18,7 @@ import java.util.stream.Collectors;
 public class JaiderModel {
     public static final int LOG_CAPACITY = 200;
 
-    public final Path projectDir = Paths.get("").toAbsolutePath();
+    public final Path projectDir;
     public final Set<Path> filesInContext = new HashSet<>();
     public final List<ChatMessage> logMessages = new ArrayList<>();
     public String statusBarText = "Jaider initialized. /help for commands.";
@@ -27,6 +27,14 @@ public class JaiderModel {
     public boolean isIndexed = false;
     public String lastAppliedDiff = null;
     public String agentMode = "Coder";
+
+    public JaiderModel() {
+        this.projectDir = Paths.get("").toAbsolutePath();
+    }
+
+    public JaiderModel(Path projectDir) {
+        this.projectDir = projectDir;
+    }
 
     public void addLog(ChatMessage message) {
         if (message instanceof AiMessage) {

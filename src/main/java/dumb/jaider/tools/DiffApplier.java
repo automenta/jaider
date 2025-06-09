@@ -1,9 +1,9 @@
 package dumb.jaider.tools;
 
-// import com.github.difflib.DiffUtils; // Commented out
-// import com.github.difflib.patch.PatchFailedException; // Commented out
-// import com.github.difflib.unifieddiff.UnifiedDiff; // Commented out
-// import com.github.difflib.unifieddiff.UnifiedDiffFile; // Commented out
+import com.github.difflib.DiffUtils;
+import com.github.difflib.patch.PatchFailedException;
+import com.github.difflib.unifieddiff.UnifiedDiff;
+import com.github.difflib.unifieddiff.UnifiedDiffFile;
 import dumb.jaider.model.JaiderModel;
 
 import java.io.IOException;
@@ -14,18 +14,16 @@ import java.util.List;
 
 public class DiffApplier {
 
-    public String apply(JaiderModel model, Object unifiedDiff) { // Changed UnifiedDiff to Object
-        return "Error: Diff functionality is temporarily disabled due to library issues.";
-        /*
-        if (unifiedDiff == null || ((com.github.difflib.unifieddiff.UnifiedDiff)unifiedDiff).getFiles() == null) {
+    public String apply(JaiderModel model, com.github.difflib.unifieddiff.UnifiedDiff unifiedDiff) {
+        if (unifiedDiff == null || unifiedDiff.getFiles() == null) {
             return "Error: UnifiedDiff or its file list is null.";
         }
 
-        for (com.github.difflib.unifieddiff.UnifiedDiffFile fileDiff : ((com.github.difflib.unifieddiff.UnifiedDiff)unifiedDiff).getFiles()) {
+        for (com.github.difflib.unifieddiff.UnifiedDiffFile fileDiff : unifiedDiff.getFiles()) {
             String fileName = fileDiff.getFromFile();
             if (fileName == null || fileName.isEmpty() || "/dev/null".equals(fileName)) {
-                 // For new files, getFromFile might be /dev/null. Use getToFileName.
-                 fileName = fileDiff.getToFileName();
+                 // For new files, getFromFile might be /dev/null. Use getToFile.
+                 fileName = fileDiff.getToFile();
                  if (fileName == null || fileName.isEmpty() || "/dev/null".equals(fileName)) {
                      // If both are /dev/null or invalid, this diff file is problematic.
                      return "Error: Could not determine file name from UnifiedDiffFile entry.";
@@ -64,6 +62,5 @@ public class DiffApplier {
             }
         }
         return "Diff applied successfully to all specified files.";
-        */
     }
 }
