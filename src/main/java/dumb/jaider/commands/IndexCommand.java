@@ -28,15 +28,22 @@ public class IndexCommand implements Command {
 
         CompletableFuture.runAsync(() -> {
             try {
+                Path rootDir = context.getModel().projectDir; // Store rootDir
                 var documents = FileSystemDocumentLoader.loadDocuments(
-                    context.getModel().projectDir,
-                    (Path path) -> {
+                    rootDir, // Use rootDir here
+                    (Path relativePath) -> {
+                        // Path objects from FileSystemDocumentLoader's pathMatcher might be relative to the rootDir.
+                        // Resolve them to ensure Files.isRegularFile and Files.size work correctly.
+                        Path absolutePath = rootDir.resolve(relativePath);
                         try {
-                            return !path.toString().contains(".git") && Files.isRegularFile(path) && Files.size(path) > 0;
+                            // It's good practice to log which path is being evaluated by the matcher if issues persist.
+                            // System.out.println("Predicate evaluating: " + absolutePath);
+                            return !absolutePath.toString().contains(".git") &&
+                                   Files.isRegularFile(absolutePath) &&
+                                   Files.size(absolutePath) > 0;
                         } catch (IOException e) {
-                            // Optionally log the exception, e.g., using a logger or System.err
-                            // System.err.println("Error accessing file attributes: " + path + " - " + e.getMessage());
-                            return false; // Exclude path if attributes can't be read
+                            // System.err.println("Predicate IOException for " + absolutePath + ": " + e.getMessage());
+                            return false; // Exclude path if attributes can't be read or path is problematic
                         }
                     }
                 );
