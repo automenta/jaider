@@ -7,7 +7,7 @@ import java.util.Set;
 
 public class CoderAgent extends AbstractAgent {
     public CoderAgent(ChatLanguageModel model, ChatMemory memory, StandardTools availableTools) {
-        super(model, memory, Set.of(availableTools), // TODO: This should be availableTools.getAllTools() or similar
+        super(model, memory, availableTools.getReadOnlyTools(),
                 """
                         You are Jaider, an expert AI programmer. Your goal is to fully complete the user's request.
                         Follow this sequence rigidly:
@@ -25,7 +25,7 @@ public class CoderAgent extends AbstractAgent {
 
     // Constructor for testing
     protected CoderAgent(ChatLanguageModel model, ChatMemory memory, StandardTools availableTools, JaiderAiService aiService) {
-        super(model, memory, Set.of(availableTools), aiService, null); // TODO: This should be availableTools.getAllTools() or similar. System prompt not used by this path if AiService is mocked.
+        super(model, memory, availableTools.getReadOnlyTools(), aiService, null);
     }
 
     @Override

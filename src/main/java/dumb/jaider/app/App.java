@@ -115,8 +115,17 @@ public class App {
                 LlmProviderFactory llmFactory = config.getComponent("llmProviderFactory", LlmProviderFactory.class);
                 ChatLanguageModel localChatModel = llmFactory.createChatModel(); // Created by factory, not DI component itself
                 this.appTokenizer = llmFactory.createTokenizer(); // Created by factory
+                if (this.appTokenizer == null) {
+                    model.addLog(AiMessage.from("[Jaider] CRITICAL: Tokenizer could not be initialized. This usually means the LLM provider (e.g., Ollama) failed to connect or load the model. Please check the LLM server status and Jaider's configuration. Some features will be unavailable."));
+                    // Consider setting a state here to disable features requiring the tokenizer
+                }
                 this.appEmbeddingModel = llmFactory.createEmbeddingModel(); // Created by factory
 
+                if (config.getInjector() != null) {
+                    config.getInjector().registerSingleton("appChatLanguageModel", localChatModel);
+                    config.getInjector().registerSingleton("appEmbeddingModel", this.appEmbeddingModel);
+                    // appTokenizer is also available via this.appTokenizer if needed by any component by direct App reference
+                }
                 // StandardTools might need JaiderModel, Config, EmbeddingModel injected if it's a DI component.
                 // Assuming StandardTools is defined in JSON and its dependencies are resolved by DI.
                 StandardTools tools = config.getComponent("standardTools", StandardTools.class);
@@ -152,6 +161,7 @@ public class App {
     public EmbeddingModel getEmbeddingModel() { return this.appEmbeddingModel; }
     public Tokenizer getTokenizer() { return this.appTokenizer; }
     public Path getProjectDir() { return model.projectDir; }
+    public Set<String> getAvailableAgentNames() { return agents.keySet(); } // Added method
 
     public void setStatePublic(State newState) { this.currentState = newState; }
     public void finishTurnPublic(ChatMessage message) { this.finishTurn(message); }
@@ -315,7 +325,7 @@ public class App {
                 })
                 .collect(Collectors.toList())));
             Files.writeString(sessionDir.resolve("session.json"), session.toString());
-        } catch (IOException e) {  }
+        } catch (IOException e) { model.addLog(AiMessage.from("[Jaider] ERROR: Failed to save session: " + e.getMessage())); }
     }
 
     private void loadSession() {

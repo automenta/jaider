@@ -7,10 +7,11 @@ import dev.langchain4j.data.message.ToolExecutionResultMessage;
 import dev.langchain4j.data.message.UserMessage;
 // Potentially add: import dev.langchain4j.data.message.TextContent; // Not needed for 1.0.0-beta3 as .text() should be available
 
-import com.github.difflib.unifieddiff.UnifiedDiff;
-import com.github.difflib.unifieddiff.UnifiedDiffReader;
+import com.github.difflib.UnifiedDiffUtils; // Changed import
+import com.github.difflib.patch.Patch; // Added import
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.util.Arrays; // Added import
 
 public class Util {
 
@@ -41,12 +42,13 @@ public class Util {
         return "[Unsupported ChatMessage type for direct text extraction: " + chatMessage.getClass().getName() + "]";
     }
 
-    public static UnifiedDiff diffReader(String diff) throws IOException {
+    public static Patch<String> diffReader(String diff) throws IOException { // Changed return type
         if (diff == null) {
             // Or throw a more specific exception like IllegalArgumentException
             throw new IOException("Input diff string cannot be null.");
         }
-        return UnifiedDiffReader.parseUnifiedDiff(new ByteArrayInputStream(diff.getBytes()));
+        // parseUnifiedDiff expects List<String>, so we split the diff string
+        return UnifiedDiffUtils.parseUnifiedDiff(Arrays.asList(diff.split("\n")));
     }
 
 

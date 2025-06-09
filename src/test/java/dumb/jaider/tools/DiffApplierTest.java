@@ -46,12 +46,12 @@ class DiffApplierTest {
         List<String> originalLines = Files.readAllLines(model.projectDir.resolve("existingFile.txt"));
         List<String> changedLines = Arrays.asList("line1", "line2_changed", "line3");
         Patch<String> patch = DiffUtils.diff(originalLines, changedLines);
-        UnifiedDiffFile fileDiff = UnifiedDiffFile.from("existingFile.txt", "existingFile.txt", patch);
-        UnifiedDiff unifiedDiff = UnifiedDiff.from(null, null, new UnifiedDiffFile[]{fileDiff}); // Explicit array for varargs
+        // UnifiedDiffFile fileDiff = UnifiedDiffFile.from("existingFile.txt", "existingFile.txt", patch);
+        // UnifiedDiff unifiedDiff = UnifiedDiff.from(null, null, new UnifiedDiffFile[]{fileDiff}); // Explicit array for varargs
 
         // Apply the diff
-        String result = diffApplier.apply(model, unifiedDiff);
-        assertEquals("Diff applied successfully to all specified files.", result);
+        String result = diffApplier.apply(model, patch, "existingFile.txt", "existingFile.txt");
+        assertEquals("Diff applied successfully to file existingFile.txt.", result);
 
         // Verify file content
         List<String> actualLines = Files.readAllLines(model.projectDir.resolve("existingFile.txt"));
@@ -62,14 +62,14 @@ class DiffApplierTest {
     void testApplyDiffToNewFile() throws IOException {
         List<String> newFileLines = Arrays.asList("newline1", "newline2");
         Patch<String> patch = DiffUtils.diff(Collections.emptyList(), newFileLines);
-        UnifiedDiffFile fileDiff = UnifiedDiffFile.from("/dev/null", "newFile.txt", patch);
-        System.out.println("testApplyDiffToNewFile - fromFile: " + fileDiff.getFromFile());
-        System.out.println("testApplyDiffToNewFile - toFile: " + fileDiff.getToFile());
-        UnifiedDiff unifiedDiff = UnifiedDiff.from(null, null, new UnifiedDiffFile[]{fileDiff}); // Explicit array for varargs
+        // UnifiedDiffFile fileDiff = UnifiedDiffFile.from("/dev/null", "newFile.txt", patch);
+        // System.out.println("testApplyDiffToNewFile - fromFile: " + fileDiff.getFromFile());
+        // System.out.println("testApplyDiffToNewFile - toFile: " + fileDiff.getToFile());
+        // UnifiedDiff unifiedDiff = UnifiedDiff.from(null, null, new UnifiedDiffFile[]{fileDiff}); // Explicit array for varargs
 
         // Apply the diff
-        String result = diffApplier.apply(model, unifiedDiff);
-        assertTrue(result.startsWith("Diff applied successfully to all specified files."), "Result was: " + result);
+        String result = diffApplier.apply(model, patch, "/dev/null", "newFile.txt");
+        assertTrue(result.startsWith("Diff applied successfully to file newFile.txt."), "Result was: " + result);
 
         // Verify file content and context
         Path newFilePath = model.projectDir.resolve("newFile.txt");
@@ -84,18 +84,16 @@ class DiffApplierTest {
         // Create a diff for deleting a file (empty target)
         List<String> originalLines = Files.readAllLines(model.projectDir.resolve("existingFile.txt"));
         Patch<String> patch = DiffUtils.diff(originalLines, Collections.emptyList());
-        UnifiedDiffFile fileDiff = UnifiedDiffFile.from("existingFile.txt", "existingFile.txt", patch);
-        UnifiedDiff unifiedDiff = UnifiedDiff.from(null, null, new UnifiedDiffFile[]{fileDiff}); // Explicit array for varargs
-        // In a real delete scenario, the toFile might be /dev/null or the patch indicates all lines deleted.
-        // For this test, we'll simulate by checking if the file becomes empty.
+        // UnifiedDiffFile fileDiff = UnifiedDiffFile.from("existingFile.txt", "existingFile.txt", patch);
+        // UnifiedDiff unifiedDiff = UnifiedDiff.from(null, null, new UnifiedDiffFile[]{fileDiff}); // Explicit array for varargs
 
-        // Apply the diff
-        String result = diffApplier.apply(model, unifiedDiff);
-        assertEquals("Diff applied successfully to all specified files.", result);
+        // Apply the diff to delete the file
+        String result = diffApplier.apply(model, patch, "existingFile.txt", "/dev/null");
+        assertEquals("File existingFile.txt deleted successfully.", result);
 
-        // Verify file content (should be empty)
-        List<String> actualLines = Files.readAllLines(model.projectDir.resolve("existingFile.txt"));
-        assertTrue(actualLines.isEmpty());
+        // Verify file is deleted
+        assertFalse(Files.exists(model.projectDir.resolve("existingFile.txt")));
+        assertFalse(model.filesInContext.contains(model.projectDir.resolve("existingFile.txt")));
     }
 
     @Test
@@ -107,12 +105,12 @@ class DiffApplierTest {
         List<String> originalLines = Collections.emptyList(); // Pretend it was empty or non-existent
         List<String> changedLines = Arrays.asList("some content");
         Patch<String> patch = DiffUtils.diff(originalLines, changedLines);
-        UnifiedDiffFile fileDiff = UnifiedDiffFile.from("/dev/null", "nonExistentFile.txt", patch);
-        UnifiedDiff unifiedDiff = UnifiedDiff.from(null, null, new UnifiedDiffFile[]{fileDiff}); // Explicit array for varargs
+        // UnifiedDiffFile fileDiff = UnifiedDiffFile.from("/dev/null", "nonExistentFile.txt", patch);
+        // UnifiedDiff unifiedDiff = UnifiedDiff.from(null, null, new UnifiedDiffFile[]{fileDiff}); // Explicit array for varargs
 
         // Apply the diff
-        String result = diffApplier.apply(model, unifiedDiff);
-        assertEquals("Diff applied successfully to all specified files.", result);
+        String result = diffApplier.apply(model, patch, "/dev/null", "nonExistentFile.txt");
+        assertEquals("Diff applied successfully to file nonExistentFile.txt.", result);
 
         Path newFilePath = model.projectDir.resolve("nonExistentFile.txt");
         assertTrue(Files.exists(newFilePath));
@@ -130,37 +128,40 @@ class DiffApplierTest {
         List<String> changedLines = Arrays.asList("changed line");
         Patch<String> patch = DiffUtils.diff(originalLines, changedLines);
         // Critical: Ensure getFromFile is the actual filename, not /dev/null
-        UnifiedDiffFile fileDiff = UnifiedDiffFile.from("notInContext.txt", "notInContext.txt", patch);
-        UnifiedDiff unifiedDiff = UnifiedDiff.from(null, null, new UnifiedDiffFile[]{fileDiff}); // Explicit array for varargs
-
+        // UnifiedDiffFile fileDiff = UnifiedDiffFile.from("notInContext.txt", "notInContext.txt", patch);
+        // UnifiedDiff unifiedDiff = UnifiedDiff.from(null, null, new UnifiedDiffFile[]{fileDiff}); // Explicit array for varargs
 
         // Apply the diff - expect error
-        String result = diffApplier.apply(model, unifiedDiff);
+        String result = diffApplier.apply(model, patch, "notInContext.txt", "notInContext.txt");
         assertEquals("Error: Cannot apply diff to an existing file not in context: notInContext.txt", result);
     }
 
     @Test
-    void testApplyNullUnifiedDiff() {
-        String result = diffApplier.apply(model, null);
-        assertEquals("Error: UnifiedDiff or its file list is null.", result);
+    void testApplyNullPatch() { // Renamed test and changed to pass null patch
+        String result = diffApplier.apply(model, null, "a.txt", "b.txt");
+        assertEquals("Error: Patch object is null.", result);
     }
 
+    // This test is removed as it's no longer relevant.
+    // The concept of a UnifiedDiff object with a null getFiles() list doesn't directly translate
+    // to the new DiffApplier.apply(model, Patch<String>, String, String) signature.
+    // Testing for null filenames is covered in testApplyDiffWithInvalidFileNamesInDiff.
+    // @Test
+    // void testApplyUnifiedDiffWithNullFiles() { ... }
+
     @Test
-    void testApplyUnifiedDiffWithNullFiles() {
-        // Simulate a UnifiedDiff with a null getFiles() list - this is hard to create directly
-        // For now, this test relies on the first check in DiffApplier.apply()
-        // A more robust way would be to mock UnifiedDiff if a mocking framework was in use.
-        // We will create a UnifiedDiff with no files in it.
-        UnifiedDiff mockDiff = new UnifiedDiff(); // Corrected constructor
+    void testApplyDiffWithEmptyPatch() throws IOException {
+        Patch<String> emptyPatch = new Patch<>(); // Create an empty patch
+        String originalFileName = "existingFile.txt";
+        String revisedFileName = "existingFile.txt";
+        List<String> originalContent = Files.readAllLines(model.projectDir.resolve(originalFileName));
 
-        String result = diffApplier.apply(model, mockDiff);
-        // If getFiles() is empty (not null), it should return "Diff applied successfully..."
-        // If getFiles() itself was null, it would be "Error: UnifiedDiff or its file list is null."
-        // Given the constructor, getFiles() will be an empty list.
-        assertEquals("Diff applied successfully to all specified files.", result);
+        String result = diffApplier.apply(model, emptyPatch, originalFileName, revisedFileName);
+        assertEquals("Diff applied successfully to file " + revisedFileName + ".", result);
 
-        // To truly test the "null files list" we'd need a mock or a custom UnifiedDiff implementation.
-        // The current check `unifiedDiff == null || unifiedDiff.getFiles() == null` handles it.
+        // Verify file content remains unchanged
+        List<String> contentAfterApply = Files.readAllLines(model.projectDir.resolve(revisedFileName));
+        assertEquals(originalContent, contentAfterApply);
     }
 
     @Test
@@ -175,14 +176,14 @@ class DiffApplierTest {
         List<String> changedLinesForMismatched = Arrays.asList("совершенно", "другая", "измененная строка"); // "completely", "different", "changed line"
         Patch<String> failingPatch = DiffUtils.diff(mismatchedOriginalLines, changedLinesForMismatched);
 
-        // 3. Create UnifiedDiff objects
-        UnifiedDiffFile fileDiff = UnifiedDiffFile.from("existingFile.txt", "existingFile.txt", failingPatch);
-        System.out.println("testApplyDiff_patchFailedException - fromFile: " + fileDiff.getFromFile());
-        System.out.println("testApplyDiff_patchFailedException - toFile: " + fileDiff.getToFile());
-        UnifiedDiff unifiedDiff = UnifiedDiff.from(null, null, new UnifiedDiffFile[]{fileDiff}); // Explicit array for varargs
+        // 3. Create UnifiedDiff objects - No longer needed directly for apply method
+        // UnifiedDiffFile fileDiff = UnifiedDiffFile.from("existingFile.txt", "existingFile.txt", failingPatch);
+        // System.out.println("testApplyDiff_patchFailedException - fromFile: " + fileDiff.getFromFile());
+        // System.out.println("testApplyDiff_patchFailedException - toFile: " + fileDiff.getToFile());
+        // UnifiedDiff unifiedDiff = UnifiedDiff.from(null, null, new UnifiedDiffFile[]{fileDiff}); // Explicit array for varargs
 
         // 4. Apply the diff and assert the expected error message
-        String result = diffApplier.apply(model, unifiedDiff);
+        String result = diffApplier.apply(model, failingPatch, "existingFile.txt", "existingFile.txt");
         assertTrue(result.contains("Patch application failed"), "Result message should contain 'Patch application failed'. Actual: " + result);
         // We can't easily assert the full pfe.getMessage() as it's internal to java-diff-utils,
         // but checking the prefix is a good indicator.
@@ -214,11 +215,11 @@ class DiffApplierTest {
         // 3. Create a simple, valid diff (it won't be applied anyway)
         List<String> changedLines = Arrays.asList("line1_changed", "line2");
         Patch<String> patch = DiffUtils.diff(originalLines, changedLines); // Patch against original content
-        UnifiedDiffFile fileDiff = UnifiedDiffFile.from("unreadableFile.txt", "unreadableFile.txt", patch);
-        UnifiedDiff unifiedDiff = UnifiedDiff.from(null, null, new UnifiedDiffFile[]{fileDiff}); // Explicit array for varargs
+        // UnifiedDiffFile fileDiff = UnifiedDiffFile.from("unreadableFile.txt", "unreadableFile.txt", patch);
+        // UnifiedDiff unifiedDiff = UnifiedDiff.from(null, null, new UnifiedDiffFile[]{fileDiff}); // Explicit array for varargs
 
         // 4. Apply the diff and assert the expected error message
-        String result = diffApplier.apply(model, unifiedDiff);
+        String result = diffApplier.apply(model, patch, "unreadableFile.txt", "unreadableFile.txt");
 
         // 5. Restore readability (important for cleanup, especially if setReadable(false) succeeded)
         // and assert the result.
@@ -256,11 +257,11 @@ class DiffApplierTest {
         // Patch from empty (new file) to newFileLines
         Patch<String> patch = DiffUtils.diff(Collections.emptyList(), newFileLines);
         // Critical: getFromFile is /dev/null for new file, getToFile is our targetName
-        UnifiedDiffFile fileDiff = UnifiedDiffFile.from("/dev/null", targetName, patch);
-        UnifiedDiff unifiedDiff = UnifiedDiff.from(null, null, new UnifiedDiffFile[]{fileDiff}); // Explicit array for varargs
+        // UnifiedDiffFile fileDiff = UnifiedDiffFile.from("/dev/null", targetName, patch);
+        // UnifiedDiff unifiedDiff = UnifiedDiff.from(null, null, new UnifiedDiffFile[]{fileDiff}); // Explicit array for varargs
 
         // 4. Apply the diff
-        String result = diffApplier.apply(model, unifiedDiff);
+        String result = diffApplier.apply(model, patch, "/dev/null", targetName);
 
         // 5. Assert the expected error message
         //    The exact message might vary by OS/JVM (e.g., "Is a directory", "Access denied")
@@ -274,54 +275,51 @@ class DiffApplierTest {
 
     @Test
     void testApplyDiffWithInvalidFileNamesInDiff() throws IOException {
-        // 1. Create a patch (content doesn't really matter for this test, but it needs to be valid for UnifiedDiffFile)
-        //    Using an empty patch for simplicity as the content of the patch is not relevant to filename validation.
         Patch<String> emptyPatch = DiffUtils.diff(Collections.emptyList(), Collections.emptyList());
 
-        // 2. Create UnifiedDiffFile with problematic fromFile and toFile combinations
+        // Test cases for invalid filename combinations
+        String errorMsg = "Error: Could not determine file name for applying patch.";
 
         // Scenario 1: Both are /dev/null
-        UnifiedDiffFile fileDiff1 = UnifiedDiffFile.from("/dev/null", "/dev/null", emptyPatch);
-        UnifiedDiff unifiedDiff1 = UnifiedDiff.from(null, null, new UnifiedDiffFile[]{fileDiff1}); // Explicit array for varargs
-        String result1 = diffApplier.apply(model, unifiedDiff1);
-        assertEquals("Error: Could not determine file name from UnifiedDiffFile entry.", result1, "Scenario 1 failed: Both /dev/null");
+        String result1 = diffApplier.apply(model, emptyPatch, "/dev/null", "/dev/null");
+        assertEquals(errorMsg, result1, "Scenario 1 failed: Both /dev/null");
 
         // Scenario 2: fromFile is /dev/null, toFile is null
-        // UnifiedDiffFile.from() might throw an NPE if toFile is null and patch indicates changes.
-        // Let's ensure the patch is truly empty for this case.
-        UnifiedDiffFile fileDiff2 = UnifiedDiffFile.from("/dev/null", null, emptyPatch);
-        UnifiedDiff unifiedDiff2 = UnifiedDiff.from(null, null, new UnifiedDiffFile[]{fileDiff2}); // Explicit array for varargs
-        String result2 = diffApplier.apply(model, unifiedDiff2);
-        assertEquals("Error: Could not determine file name from UnifiedDiffFile entry.", result2, "Scenario 2 failed: fromFile /dev/null, toFile null");
+        String result2 = diffApplier.apply(model, emptyPatch, "/dev/null", null);
+        assertEquals(errorMsg, result2, "Scenario 2 failed: fromFile /dev/null, toFile null");
 
         // Scenario 3: fromFile is /dev/null, toFile is empty
-        UnifiedDiffFile fileDiff3 = UnifiedDiffFile.from("/dev/null", "", emptyPatch);
-        UnifiedDiff unifiedDiff3 = UnifiedDiff.from(null, null, new UnifiedDiffFile[]{fileDiff3}); // Explicit array for varargs
-        String result3 = diffApplier.apply(model, unifiedDiff3);
-        assertEquals("Error: Could not determine file name from UnifiedDiffFile entry.", result3, "Scenario 3 failed: fromFile /dev/null, toFile empty");
+        String result3 = diffApplier.apply(model, emptyPatch, "/dev/null", "");
+        assertEquals(errorMsg, result3, "Scenario 3 failed: fromFile /dev/null, toFile empty");
 
         // Scenario 4: fromFile is null, toFile is /dev/null
-        UnifiedDiffFile fileDiff4 = UnifiedDiffFile.from(null, "/dev/null", emptyPatch);
-        UnifiedDiff unifiedDiff4 = UnifiedDiff.from(null, null, new UnifiedDiffFile[]{fileDiff4}); // Explicit array for varargs
-        String result4 = diffApplier.apply(model, unifiedDiff4);
-        assertEquals("Error: Could not determine file name from UnifiedDiffFile entry.", result4, "Scenario 4 failed: fromFile null, toFile /dev/null");
+        // This is a valid deletion scenario if the patch is not empty.
+        // If the patch IS empty, it's ambiguous, let's test DiffApplier's behavior.
+        // Assuming DiffApplier treats null originalFileName with /dev/null revised as deletion only if patch is non-empty.
+        // For an empty patch, it might fall into "could not determine filename" if it tries to use originalFileName first.
+        // Based on current DiffApplier logic: revisedFileName is /dev/null, so it's deletion.
+        // originalFileName (null) is used for filePath. This will likely cause an NPE or error in model.projectDir.resolve(null).
+        // Let's adjust DiffApplier to handle null originalFileName more gracefully in deletion.
+        // For now, expecting an error. If DiffApplier is robust, it might be a successful no-op or specific error.
+        // String result4 = diffApplier.apply(model, emptyPatch, null, "/dev/null");
+        // assertEquals(errorMsg, result4, "Scenario 4 failed: fromFile null, toFile /dev/null");
+        // After DiffApplier change to handle null originalFileName in deletion:
+        // This test case might change. If originalFileName is null for deletion, it might try to delete a file named "null" or similar.
+        // For now, let's stick to the current expectation that it fails to determine a valid name if original is also unusable.
+         String result4 = diffApplier.apply(model, emptyPatch, null, "/dev/null");
+         assertEquals(errorMsg, result4, "Scenario 4 failed: fromFile null, toFile /dev/null");
+
 
         // Scenario 5: fromFile is empty, toFile is /dev/null
-        UnifiedDiffFile fileDiff5 = UnifiedDiffFile.from("", "/dev/null", emptyPatch);
-        UnifiedDiff unifiedDiff5 = UnifiedDiff.from(null, null, new UnifiedDiffFile[]{fileDiff5}); // Explicit array for varargs
-        String result5 = diffApplier.apply(model, unifiedDiff5);
-        assertEquals("Error: Could not determine file name from UnifiedDiffFile entry.", result5, "Scenario 5 failed: fromFile empty, toFile /dev/null");
+        String result5 = diffApplier.apply(model, emptyPatch, "", "/dev/null");
+        assertEquals(errorMsg, result5, "Scenario 5 failed: fromFile empty, toFile /dev/null");
 
         // Scenario 6: Both are null
-        UnifiedDiffFile fileDiff6 = UnifiedDiffFile.from(null, null, emptyPatch);
-        UnifiedDiff unifiedDiff6 = UnifiedDiff.from(null, null, new UnifiedDiffFile[]{fileDiff6}); // Explicit array for varargs
-        String result6 = diffApplier.apply(model, unifiedDiff6);
-        assertEquals("Error: Could not determine file name from UnifiedDiffFile entry.", result6, "Scenario 6 failed: Both null");
+        String result6 = diffApplier.apply(model, emptyPatch, null, null);
+        assertEquals(errorMsg, result6, "Scenario 6 failed: Both null");
 
         // Scenario 7: Both are empty
-        UnifiedDiffFile fileDiff7 = UnifiedDiffFile.from("", "", emptyPatch);
-        UnifiedDiff unifiedDiff7 = UnifiedDiff.from(null, null, new UnifiedDiffFile[]{fileDiff7}); // Explicit array for varargs
-        String result7 = diffApplier.apply(model, unifiedDiff7);
-        assertEquals("Error: Could not determine file name from UnifiedDiffFile entry.", result7, "Scenario 7 failed: Both empty");
+        String result7 = diffApplier.apply(model, emptyPatch, "", "");
+        assertEquals(errorMsg, result7, "Scenario 7 failed: Both empty");
     }
 }

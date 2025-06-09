@@ -41,7 +41,7 @@ class HelpCommandTest {
         assertNotNull(capturedHelpText);
         assertTrue(capturedHelpText.contains("COMMANDS:"), "Help text should list available commands under 'COMMANDS:'.");
         assertTrue(capturedHelpText.contains("/add <files...>"), "Help text should contain /add command.");
-        // TODO: These assertions are for commands not currently listed in HelpCommand.java.
+        // Assertions for commands not currently listed in HelpCommand.java are commented out.
         // Revisit these if HelpCommand.java is updated to include them (e.g., dynamically).
         // assertTrue(capturedHelpText.contains("/ask <question>"), "Help text should contain /ask command."); // Not listed under COMMANDS
         // assertTrue(capturedHelpText.contains("/commit <message>"), "Help text should contain /commit command."); // Not listed
@@ -51,7 +51,7 @@ class HelpCommandTest {
         assertTrue(capturedHelpText.contains("/help"), "Help text should contain /help command.");
         assertTrue(capturedHelpText.contains("/index"), "Help text should contain /index command.");
         assertTrue(capturedHelpText.contains("/mode <ModeName>"), "Help text should contain /mode command description under MODES.");
-        // TODO: These assertions are for commands not currently listed in HelpCommand.java.
+        // Assertions for commands not currently listed in HelpCommand.java are commented out.
         // Revisit these if HelpCommand.java is updated to include them (e.g., dynamically).
         // assertTrue(capturedHelpText.contains("/reset"), "Help text should contain /reset command."); // Not listed
         assertTrue(capturedHelpText.contains("/undo"), "Help text should contain /undo command.");

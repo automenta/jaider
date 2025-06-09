@@ -13,6 +13,7 @@ import dev.langchain4j.web.search.tavily.TavilyWebSearchEngine;
 import dumb.jaider.config.Config;
 import dumb.jaider.model.JaiderModel;
 import dumb.jaider.utils.Util;
+import com.github.difflib.patch.Patch; // Added import
 import dumb.jaider.vcs.GitService; // Added import
 // org.eclipse.jgit.api.Git is no longer directly used here
 import org.json.JSONObject;
@@ -47,7 +48,6 @@ public class StandardTools {
         // Other tools like readFile might also be, but this is a specific list for ArchitectAgent.
         // For now, returning 'this' means all @Tool methods in this class are available.
         // If more fine-grained control is needed, specific tool instances can be returned.
-        // TODO: This might need to be more granular in the future.
         return Set.of(this);
     }
 
@@ -77,13 +77,44 @@ public class StandardTools {
         // return "Error: Diff functionality is temporarily disabled due to library issues.";
 
         try {
-            UnifiedDiff unifiedDiff = Util.diffReader(diff); // Step 1: Read the diff
+            Patch<String> patch = Util.diffReader(diff); // Step 1: Read the diff, now returns Patch<String>
 
-            DiffApplier diffApplier = new DiffApplier(); // Step 2: Instantiate DiffApplier
-            String applyResult = diffApplier.apply(this.model, unifiedDiff); // Step 3: Apply diff
+            // Step 2: Parse original and revised filenames from the diff string
+            String originalFileName = null;
+            String revisedFileName = null;
+            for (String line : diff.split("\n")) {
+                if (line.startsWith("--- a/")) {
+                    originalFileName = line.substring("--- a/".length());
+                } else if (line.startsWith("+++ b/")) {
+                    revisedFileName = line.substring("+++ b/".length());
+                }
+                if (originalFileName != null && revisedFileName != null) {
+                    break;
+                }
+            }
 
-            // Step 4: Handle result and set lastAppliedDiff
-            if (applyResult.startsWith("Diff applied successfully")) {
+            if (originalFileName == null && revisedFileName == null && patch != null && !patch.getDeltas().isEmpty()) {
+                // If there are deltas, we expect filenames.
+                // However, an empty diff (no deltas) might not have filenames, which is fine.
+                // Check if patch is empty. If not, then it's an error.
+                boolean isEmptyPatch = patch.getDeltas().stream().allMatch(delta -> delta.getSource().getLines().isEmpty() && delta.getTarget().getLines().isEmpty());
+                if (!isEmptyPatch) {
+                   return "Error: Could not parse filenames from diff header.";
+                }
+                // If it's an empty patch with no filenames, treat as no-op / successful no-op.
+                // Or let DiffApplier decide based on null filenames if patch is also empty.
+            }
+
+
+            DiffApplier diffApplier = new DiffApplier(); // Step 3: Instantiate DiffApplier
+            // Step 4: Apply diff, passing parsed filenames
+            String applyResult = diffApplier.apply(this.model, patch, originalFileName, revisedFileName);
+
+            // Step 5: Handle result and set lastAppliedDiff
+            // Adjusted condition to check for specific success message from DiffApplier
+            if (applyResult.startsWith("Diff applied successfully to file") ||
+                (patch != null && patch.getDeltas().isEmpty() && originalFileName == null && revisedFileName == null) ||
+                 applyResult.startsWith("File") && applyResult.endsWith("deleted successfully.")) {
                 this.model.lastAppliedDiff = diff;
             } else {
                 this.model.lastAppliedDiff = null;
@@ -95,7 +126,7 @@ public class StandardTools {
             return "Error processing diff input: " + e.getMessage();
         // PatchFailedException is handled within DiffApplier.apply and returned as a string.
         // Thus, it's not expected to be thrown here.
-        } catch (Exception e) { // Catch any other unexpected errors (e.g., from DiffApplier instantiation)
+        } catch (Exception e) { // Catch any other unexpected errors
             this.model.lastAppliedDiff = null;
             return "An unexpected error occurred while applying diff: " + e.getClass().getSimpleName() + " - " + e.getMessage();
         }

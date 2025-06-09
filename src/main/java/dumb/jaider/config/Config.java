@@ -110,7 +110,71 @@ public class Config {
         defaultConfig.put("tavilyApiKey", tavilyApiKey);
         defaultConfig.put("runCommand", runCommand == null ? "" : runCommand);
         defaultConfig.put("apiKeys", defaultKeys);
-        defaultConfig.put(COMPONENTS_KEY, new JSONArray()); // Add empty components array to default config
+            JSONArray componentDefs = new JSONArray();
+
+            // ChatMemory Component
+            JSONObject chatMemoryDef = new JSONObject();
+            chatMemoryDef.put("id", "chatMemory");
+            chatMemoryDef.put("class", "dev.langchain4j.memory.chat.MessageWindowChatMemory");
+            JSONObject chatMemoryProps = new JSONObject();
+            chatMemoryProps.put("maxMessages", 20);
+            chatMemoryDef.put("properties", chatMemoryProps);
+            componentDefs.put(chatMemoryDef);
+
+            // LlmProviderFactory Component
+            JSONObject llmFactoryDef = new JSONObject();
+            llmFactoryDef.put("id", "llmProviderFactory");
+            llmFactoryDef.put("class", "dumb.jaider.llm.LlmProviderFactory");
+            JSONArray llmFactoryArgs = new JSONArray();
+            llmFactoryArgs.put(new JSONObject().put("ref", "appConfig"));
+            llmFactoryArgs.put(new JSONObject().put("ref", "jaiderModel"));
+            llmFactoryDef.put("constructorArgs", llmFactoryArgs);
+            componentDefs.put(llmFactoryDef);
+
+            // StandardTools Component
+            JSONObject standardToolsDef = new JSONObject();
+            standardToolsDef.put("id", "standardTools");
+            standardToolsDef.put("class", "dumb.jaider.tools.StandardTools");
+            JSONArray standardToolsArgs = new JSONArray();
+            standardToolsArgs.put(new JSONObject().put("ref", "jaiderModel"));
+            standardToolsArgs.put(new JSONObject().put("ref", "appConfig"));
+            standardToolsArgs.put(new JSONObject().put("ref", "appEmbeddingModel"));
+            standardToolsDef.put("constructorArgs", standardToolsArgs);
+            componentDefs.put(standardToolsDef);
+
+            // CoderAgent Component
+            JSONObject coderAgentDef = new JSONObject();
+            coderAgentDef.put("id", "coderAgent");
+            coderAgentDef.put("class", "dumb.jaider.agents.CoderAgent");
+            JSONArray coderAgentArgs = new JSONArray();
+            coderAgentArgs.put(new JSONObject().put("ref", "appChatLanguageModel"));
+            coderAgentArgs.put(new JSONObject().put("ref", "chatMemory"));
+            coderAgentArgs.put(new JSONObject().put("ref", "standardTools"));
+            coderAgentDef.put("constructorArgs", coderAgentArgs);
+            componentDefs.put(coderAgentDef);
+
+            // ArchitectAgent Component
+            JSONObject architectAgentDef = new JSONObject();
+            architectAgentDef.put("id", "architectAgent");
+            architectAgentDef.put("class", "dumb.jaider.agents.ArchitectAgent");
+            JSONArray architectAgentArgs = new JSONArray();
+            architectAgentArgs.put(new JSONObject().put("ref", "appChatLanguageModel"));
+            architectAgentArgs.put(new JSONObject().put("ref", "chatMemory"));
+            architectAgentArgs.put(new JSONObject().put("ref", "standardTools"));
+            architectAgentDef.put("constructorArgs", architectAgentArgs);
+            componentDefs.put(architectAgentDef);
+
+            // AskAgent Component
+            JSONObject askAgentDef = new JSONObject();
+            askAgentDef.put("id", "askAgent");
+            askAgentDef.put("class", "dumb.jaider.agents.AskAgent");
+            JSONArray askAgentArgs = new JSONArray();
+            askAgentArgs.put(new JSONObject().put("ref", "appChatLanguageModel"));
+            askAgentArgs.put(new JSONObject().put("ref", "chatMemory"));
+            askAgentDef.put("constructorArgs", askAgentArgs);
+            componentDefs.put(askAgentDef);
+
+            defaultConfig.put(COMPONENTS_KEY, componentDefs);
         Files.writeString(configFile, defaultConfig.toString(2));
     }
 

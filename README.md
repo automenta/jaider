@@ -115,7 +115,7 @@ Agents (primarily the CoderAgent) can use the following tools:
 ## Getting Started
 
 1.  **Prerequisites:**
-    *   Java 25 (or the version specified in `pom.xml`).
+    *   Java 21 (or the version specified in `pom.xml`).
     *   Apache Maven.
     *   Git (Jaider works best within a Git repository).
     *   (Optional) An Ollama instance running if you intend to use local models.
@@ -125,15 +125,16 @@ Agents (primarily the CoderAgent) can use the following tools:
     mvn clean package
     ```
 3.  **Run:**
-    (The exact command might depend on your `pom.xml`'s exec plugin configuration if any. A typical way to run a Main class with Maven, assuming dependencies are shaded or classpath is managed):
-    ```bash
-    mvn exec:java -Dexec.mainClass="dumb.jaider.Jaider"
-    ```
-    Or, after packaging, run the JAR (details depend on packaging):
+    After packaging, the application can be run using the executable JAR created in the `target` directory:
     ```bash
     java -jar target/jaider-1.0-SNAPSHOT.jar
     ```
-    (Adjust JAR name and command based on your build output).
+    (If you change the project version, update `1.0-SNAPSHOT` accordingly).
+
+    Alternatively, for development purposes, you can run the application directly using Maven:
+    ```bash
+    mvn exec:java -Dexec.mainClass="dumb.jaider.Jaider"
+    ```
 4.  **First Run:** Jaider will create a default `.jaider.json` if one isn't found. You should edit this file to configure your preferred LLM provider and API keys. Use `/edit-config` or edit it manually.
 
 ---

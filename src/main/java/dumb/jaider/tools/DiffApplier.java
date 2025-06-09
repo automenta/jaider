@@ -12,55 +12,70 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.github.difflib.patch.Patch; // Added import
+
 public class DiffApplier {
 
-    public String apply(JaiderModel model, com.github.difflib.unifieddiff.UnifiedDiff unifiedDiff) {
-        if (unifiedDiff == null || unifiedDiff.getFiles() == null) {
-            return "Error: UnifiedDiff or its file list is null.";
+    public String apply(JaiderModel model, Patch<String> patch, String originalFileName, String revisedFileName) {
+        if (patch == null) {
+            return "Error: Patch object is null.";
         }
 
-        for (com.github.difflib.unifieddiff.UnifiedDiffFile fileDiff : unifiedDiff.getFiles()) {
-            String fileName = fileDiff.getFromFile();
+        String fileName = revisedFileName; // Prefer the target file name for operations
+        if (fileName == null || fileName.isEmpty() || "/dev/null".equals(fileName)) {
+            // If revisedFileName is invalid (e.g. /dev/null for a deletion), try originalFileName
+            fileName = originalFileName;
             if (fileName == null || fileName.isEmpty() || "/dev/null".equals(fileName)) {
-                 // For new files, getFromFile might be /dev/null. Use getToFile.
-                 fileName = fileDiff.getToFile();
-                 if (fileName == null || fileName.isEmpty() || "/dev/null".equals(fileName)) {
-                     // If both are /dev/null or invalid, this diff file is problematic.
-                     return "Error: Could not determine file name from UnifiedDiffFile entry.";
-                 }
-            }
-
-            Path filePath = model.projectDir.resolve(fileName);
-            boolean isNewFile = !Files.exists(filePath);
-
-            // For new files, getFromFile is /dev/null. We need to ensure it's not treated as a path.
-            if (!isNewFile && !"/dev/null".equals(fileDiff.getFromFile()) && !model.filesInContext.contains(filePath)) {
-                 // Check context only for existing files.
-                 // If getFromFile is /dev/null, it's a new file, so context check is not applicable here.
-                return "Error: Cannot apply diff to an existing file not in context: " + fileName;
-            }
-
-
-            List<String> originalLines;
-            try {
-                originalLines = isNewFile ? new ArrayList<>() : Files.readAllLines(filePath);
-            } catch (IOException e) {
-                return "Error reading original file '" + fileName + "' for diff application: " + e.getMessage();
-            }
-
-            try {
-                List<String> patchedLines = com.github.difflib.DiffUtils.patch(originalLines, fileDiff.getPatch());
-                Files.write(filePath, patchedLines);
-
-                if (isNewFile) {
-                    model.filesInContext.add(filePath);
-                }
-            } catch (com.github.difflib.patch.PatchFailedException pfe) {
-                return "Error applying diff to file '" + fileName + "': Patch application failed. Details: " + pfe.getMessage();
-            } catch (IOException e) {
-                return "Error writing patched file '" + fileName + "': " + e.getMessage();
+                return "Error: Could not determine file name for applying patch.";
             }
         }
-        return "Diff applied successfully to all specified files.";
+
+        Path filePath = model.projectDir.resolve(fileName);
+        boolean isNewFile = "/dev/null".equals(originalFileName) || !Files.exists(filePath.getParent().resolve(originalFileName));
+
+
+        // Context check: For existing files that are being modified (not new, not deleted)
+        if (!isNewFile && !"/dev/null".equals(originalFileName) && Files.exists(filePath) && !model.filesInContext.contains(filePath)) {
+            return "Error: Cannot apply diff to an existing file not in context: " + fileName;
+        }
+
+        // Deletion scenario
+        if ("/dev/null".equals(revisedFileName)) {
+            try {
+                Files.deleteIfExists(filePath);
+                model.filesInContext.remove(filePath);
+                return "File " + originalFileName + " deleted successfully.";
+            } catch (IOException e) {
+                return "Error deleting file '" + originalFileName + "': " + e.getMessage();
+            }
+        }
+
+        List<String> originalLines;
+        try {
+            // If originalFileName is /dev/null or points to a non-existent file (new file scenario), start with empty lines.
+            if ("/dev/null".equals(originalFileName) || !Files.exists(model.projectDir.resolve(originalFileName))) {
+                originalLines = new ArrayList<>();
+            } else {
+                originalLines = Files.readAllLines(model.projectDir.resolve(originalFileName));
+            }
+        } catch (IOException e) {
+            return "Error reading original file '" + originalFileName + "' for diff application: " + e.getMessage();
+        }
+
+        try {
+            List<String> patchedLines = patch.applyTo(originalLines);
+            Files.createDirectories(filePath.getParent()); // Ensure parent directory exists
+            Files.write(filePath, patchedLines);
+
+            if (!model.filesInContext.contains(filePath)) { // Add if new or was previously removed
+                 model.filesInContext.add(filePath);
+            }
+        } catch (PatchFailedException pfe) {
+            return "Error applying diff to file '" + fileName + "': Patch application failed. Details: " + pfe.getMessage();
+        } catch (IOException e) {
+            return "Error writing patched file '" + fileName + "': " + e.getMessage();
+        }
+
+        return "Diff applied successfully to file " + fileName + ".";
     }
 }
