@@ -15,8 +15,10 @@ public class Config {
     private transient DependencyInjector injector;
     private static final String COMPONENTS_KEY = "components";
 
+    // Fields with their Java-level defaults
     final Map<String, String> apiKeys = new HashMap<>();
-    public String llmProvider = "ollama", runCommand;
+    public String llmProvider = "ollama";
+    public String runCommand = ""; // Default to empty string
     public String ollamaBaseUrl = "http://localhost:11434";
     public String ollamaModelName = "llamablit";
     public String genericOpenaiBaseUrl = "http://localhost:8080/v1";
@@ -28,154 +30,164 @@ public class Config {
 
     public Config(Path projectDir) {
         this.configFile = projectDir.resolve(".jaider.json");
-        load();
+        load(); // Load from file or apply defaults
+
+        // Ensure injector is always initialized after load() has populated componentDefinitions
+        if (this.componentDefinitions.isEmpty()) {
+             // This case should ideally be covered by load() calling populateFieldsFromJson with defaults
+            System.err.println("Warning: Component definitions are empty after load. Re-populating with defaults for injector.");
+            populateFieldsFromJson(getDefaultConfigAsJsonObject());
+        }
+        this.injector = new DependencyInjector(new HashMap<>(this.componentDefinitions)); // Pass a copy
+        this.injector.registerSingleton("appConfig", this);
     }
 
     void load() {
-        try {
-            if (!Files.exists(configFile)) createDefaultConfig();
-            var j = new JSONObject(Files.readString(configFile));
-
-            this.componentDefinitions.clear(); // Clear existing definitions
-
-            llmProvider = j.optString("llmProvider", this.llmProvider);
-            ollamaBaseUrl = j.optString("ollamaBaseUrl", this.ollamaBaseUrl);
-            ollamaModelName = j.optString("ollamaModelName", this.ollamaModelName);
-            genericOpenaiBaseUrl = j.optString("genericOpenaiBaseUrl", this.genericOpenaiBaseUrl);
-            genericOpenaiModelName = j.optString("genericOpenaiModelName", this.genericOpenaiModelName);
-            genericOpenaiApiKey = j.optString("genericOpenaiApiKey", this.genericOpenaiApiKey);
-            geminiApiKey = j.optString("geminiApiKey", this.geminiApiKey);
-            geminiModelName = j.optString("geminiModelName", this.geminiModelName);
-            tavilyApiKey = j.optString("tavilyApiKey", this.tavilyApiKey);
-
-            // Handle runCommand and testCommand migration
-            if (j.has("runCommand")) {
-                runCommand = j.getString("runCommand");
-            } else if (j.has("testCommand")) {
-                runCommand = j.getString("testCommand");
-            } // If neither is present, runCommand retains its default class member value (null)
-
-            var keys = j.optJSONObject("apiKeys");
-            if (keys != null) keys.keySet().forEach(key -> apiKeys.put(key, keys.getString(key)));
-
-            // Load component definitions
-            if (j.has(COMPONENTS_KEY)) {
-                JSONArray componentDefsArray = j.getJSONArray(COMPONENTS_KEY);
-                for (int i = 0; i < componentDefsArray.length(); i++) {
-                    JSONObject componentDef = componentDefsArray.getJSONObject(i);
-                    if (componentDef.has("id")) {
-                        this.componentDefinitions.put(componentDef.getString("id"), componentDef);
-                    } else {
-                        System.err.println("Component definition missing 'id' in config: " + componentDef.toString());
-                    }
-                }
-            }
-
-        } catch (Exception e) {
-            System.err.println("Error loading config: " + e.getMessage());
-            // Attempt to create a default config if loading fails, then re-attempt to load parts of it.
+        boolean loadedSuccessfully = false;
+        if (Files.exists(configFile)) {
             try {
-                createDefaultConfig(); // This will write a default file.
-                // After creating default, we might want to ensure componentDefinitions is empty or reflects default.
-                // The subsequent injector initialization will use whatever is in componentDefinitions.
-            } catch (IOException ex) {
-                System.err.println("Failed to create default config: " + ex.getMessage());
+                JSONObject j = new JSONObject(Files.readString(configFile));
+                populateFieldsFromJson(j); // Populate fields from loaded JSON
+                loadedSuccessfully = true;
+            } catch (Exception e) {
+                System.err.println("Error parsing existing config file ("+ configFile +"): " + e.getMessage() + ". Applying defaults.");
             }
         }
 
-        // Initialize or re-initialize the injector
-        if (!this.componentDefinitions.isEmpty()) {
-            this.injector = new DependencyInjector(new HashMap<>(this.componentDefinitions)); // Pass a copy
-            this.injector.registerSingleton("appConfig", this); // Register Config itself
-        } else {
-            this.injector = null; // No components defined
+        if (!loadedSuccessfully) {
+            System.err.println("Config not loaded from file, or file was partial/invalid. Applying full default configuration.");
+            populateFieldsFromJson(getDefaultConfigAsJsonObject()); // Apply in-memory defaults
+
+            // Attempt to write the default config to disk for user convenience
+            try {
+                Files.createDirectories(configFile.getParent());
+                Files.writeString(configFile, getDefaultConfigAsJsonObject().toString(2));
+                System.err.println("Written default config to: " + configFile);
+            } catch (IOException e) {
+                System.err.println("Warning: Failed to write default config to file: " + configFile + " - " + e.getMessage());
+            }
         }
     }
 
-    private void createDefaultConfig() throws IOException {
-        var defaultKeys = new JSONObject();
+    private JSONObject getDefaultConfigAsJsonObject() {
+        JSONObject defaultConfig = new JSONObject();
+        // Use class field defaults when constructing the default JSON object
+        defaultConfig.put("llmProvider", this.llmProvider);
+        defaultConfig.put("ollamaBaseUrl", this.ollamaBaseUrl);
+        defaultConfig.put("ollamaModelName", this.ollamaModelName);
+        defaultConfig.put("genericOpenaiBaseUrl", this.genericOpenaiBaseUrl);
+        defaultConfig.put("genericOpenaiModelName", this.genericOpenaiModelName);
+        defaultConfig.put("genericOpenaiApiKey", this.genericOpenaiApiKey);
+        defaultConfig.put("geminiApiKey", this.geminiApiKey);
+        defaultConfig.put("geminiModelName", this.geminiModelName);
+        defaultConfig.put("tavilyApiKey", this.tavilyApiKey);
+        defaultConfig.put("runCommand", this.runCommand); // Will be "" by default
+
+        JSONObject defaultKeys = new JSONObject();
         defaultKeys.put("openai", "YOUR_OPENAI_API_KEY");
         defaultKeys.put("anthropic", "YOUR_ANTHROPIC_API_KEY");
         defaultKeys.put("google", "YOUR_GOOGLE_API_KEY");
-
-        var defaultConfig = new JSONObject();
-        defaultConfig.put("llmProvider", llmProvider);
-        defaultConfig.put("ollamaBaseUrl", ollamaBaseUrl);
-        defaultConfig.put("ollamaModelName", ollamaModelName);
-        defaultConfig.put("genericOpenaiBaseUrl", genericOpenaiBaseUrl);
-        defaultConfig.put("genericOpenaiModelName", genericOpenaiModelName);
-        defaultConfig.put("genericOpenaiApiKey", genericOpenaiApiKey);
-        defaultConfig.put("geminiApiKey", geminiApiKey);
-        defaultConfig.put("geminiModelName", geminiModelName);
-        defaultConfig.put("tavilyApiKey", tavilyApiKey);
-        defaultConfig.put("runCommand", runCommand == null ? "" : runCommand);
         defaultConfig.put("apiKeys", defaultKeys);
-            JSONArray componentDefs = new JSONArray();
 
-            // ChatMemory Component
-            JSONObject chatMemoryDef = new JSONObject();
-            chatMemoryDef.put("id", "chatMemory");
-            chatMemoryDef.put("class", "dev.langchain4j.memory.chat.MessageWindowChatMemory");
-            JSONObject chatMemoryProps = new JSONObject();
-            chatMemoryProps.put("maxMessages", 20);
-            chatMemoryDef.put("properties", chatMemoryProps);
-            componentDefs.put(chatMemoryDef);
+        JSONArray componentDefsJsonArray = new JSONArray();
+        JSONObject chatMemoryDef = new JSONObject();
+        chatMemoryDef.put("id", "chatMemory");
+        chatMemoryDef.put("class", "dev.langchain4j.memory.chat.MessageWindowChatMemory");
+        chatMemoryDef.put("staticFactoryMethod", "withMaxMessages");
+        JSONArray chatMemoryArgs = new JSONArray();
+        JSONObject maxMessagesArg = new JSONObject().put("value", 20).put("type", "int");
+        chatMemoryArgs.put(maxMessagesArg);
+        chatMemoryDef.put("staticFactoryArgs", chatMemoryArgs);
+        componentDefsJsonArray.put(chatMemoryDef);
 
-            // LlmProviderFactory Component
-            JSONObject llmFactoryDef = new JSONObject();
-            llmFactoryDef.put("id", "llmProviderFactory");
-            llmFactoryDef.put("class", "dumb.jaider.llm.LlmProviderFactory");
-            JSONArray llmFactoryArgs = new JSONArray();
-            llmFactoryArgs.put(new JSONObject().put("ref", "appConfig"));
-            llmFactoryArgs.put(new JSONObject().put("ref", "jaiderModel"));
-            llmFactoryDef.put("constructorArgs", llmFactoryArgs);
-            componentDefs.put(llmFactoryDef);
+        JSONObject llmFactoryDef = new JSONObject();
+        llmFactoryDef.put("id", "llmProviderFactory");
+        llmFactoryDef.put("class", "dumb.jaider.llm.LlmProviderFactory");
+        JSONArray llmFactoryArgs = new JSONArray();
+        llmFactoryArgs.put(new JSONObject().put("ref", "appConfig"));
+        llmFactoryArgs.put(new JSONObject().put("ref", "jaiderModel"));
+        llmFactoryDef.put("constructorArgs", llmFactoryArgs);
+        componentDefsJsonArray.put(llmFactoryDef);
 
-            // StandardTools Component
-            JSONObject standardToolsDef = new JSONObject();
-            standardToolsDef.put("id", "standardTools");
-            standardToolsDef.put("class", "dumb.jaider.tools.StandardTools");
-            JSONArray standardToolsArgs = new JSONArray();
-            standardToolsArgs.put(new JSONObject().put("ref", "jaiderModel"));
-            standardToolsArgs.put(new JSONObject().put("ref", "appConfig"));
-            standardToolsArgs.put(new JSONObject().put("ref", "appEmbeddingModel"));
-            standardToolsDef.put("constructorArgs", standardToolsArgs);
-            componentDefs.put(standardToolsDef);
+        JSONObject standardToolsDef = new JSONObject();
+        standardToolsDef.put("id", "standardTools");
+        standardToolsDef.put("class", "dumb.jaider.tools.StandardTools");
+        JSONArray standardToolsArgs = new JSONArray();
+        standardToolsArgs.put(new JSONObject().put("ref", "jaiderModel"));
+        standardToolsArgs.put(new JSONObject().put("ref", "appConfig"));
+        standardToolsArgs.put(new JSONObject().put("ref", "appEmbeddingModel"));
+        standardToolsDef.put("constructorArgs", standardToolsArgs);
+        componentDefsJsonArray.put(standardToolsDef);
 
-            // CoderAgent Component
-            JSONObject coderAgentDef = new JSONObject();
-            coderAgentDef.put("id", "coderAgent");
-            coderAgentDef.put("class", "dumb.jaider.agents.CoderAgent");
-            JSONArray coderAgentArgs = new JSONArray();
-            coderAgentArgs.put(new JSONObject().put("ref", "appChatLanguageModel"));
-            coderAgentArgs.put(new JSONObject().put("ref", "chatMemory"));
-            coderAgentArgs.put(new JSONObject().put("ref", "standardTools"));
-            coderAgentDef.put("constructorArgs", coderAgentArgs);
-            componentDefs.put(coderAgentDef);
+        JSONObject coderAgentDef = new JSONObject();
+        coderAgentDef.put("id", "coderAgent");
+        coderAgentDef.put("class", "dumb.jaider.agents.CoderAgent");
+        JSONArray coderAgentArgs = new JSONArray();
+        coderAgentArgs.put(new JSONObject().put("ref", "appChatLanguageModel"));
+        coderAgentArgs.put(new JSONObject().put("ref", "chatMemory"));
+        coderAgentArgs.put(new JSONObject().put("ref", "standardTools"));
+        coderAgentDef.put("constructorArgs", coderAgentArgs);
+        componentDefsJsonArray.put(coderAgentDef);
 
-            // ArchitectAgent Component
-            JSONObject architectAgentDef = new JSONObject();
-            architectAgentDef.put("id", "architectAgent");
-            architectAgentDef.put("class", "dumb.jaider.agents.ArchitectAgent");
-            JSONArray architectAgentArgs = new JSONArray();
-            architectAgentArgs.put(new JSONObject().put("ref", "appChatLanguageModel"));
-            architectAgentArgs.put(new JSONObject().put("ref", "chatMemory"));
-            architectAgentArgs.put(new JSONObject().put("ref", "standardTools"));
-            architectAgentDef.put("constructorArgs", architectAgentArgs);
-            componentDefs.put(architectAgentDef);
+        JSONObject architectAgentDef = new JSONObject();
+        architectAgentDef.put("id", "architectAgent");
+        architectAgentDef.put("class", "dumb.jaider.agents.ArchitectAgent");
+        JSONArray architectAgentArgs = new JSONArray();
+        architectAgentArgs.put(new JSONObject().put("ref", "appChatLanguageModel"));
+        architectAgentArgs.put(new JSONObject().put("ref", "chatMemory"));
+        architectAgentArgs.put(new JSONObject().put("ref", "standardTools"));
+        architectAgentDef.put("constructorArgs", architectAgentArgs);
+        componentDefsJsonArray.put(architectAgentDef);
 
-            // AskAgent Component
-            JSONObject askAgentDef = new JSONObject();
-            askAgentDef.put("id", "askAgent");
-            askAgentDef.put("class", "dumb.jaider.agents.AskAgent");
-            JSONArray askAgentArgs = new JSONArray();
-            askAgentArgs.put(new JSONObject().put("ref", "appChatLanguageModel"));
-            askAgentArgs.put(new JSONObject().put("ref", "chatMemory"));
-            askAgentDef.put("constructorArgs", askAgentArgs);
-            componentDefs.put(askAgentDef);
+        JSONObject askAgentDef = new JSONObject();
+        askAgentDef.put("id", "askAgent");
+        askAgentDef.put("class", "dumb.jaider.agents.AskAgent");
+        JSONArray askAgentArgs = new JSONArray();
+        askAgentArgs.put(new JSONObject().put("ref", "appChatLanguageModel"));
+        askAgentArgs.put(new JSONObject().put("ref", "chatMemory"));
+        askAgentDef.put("constructorArgs", askAgentArgs);
+        componentDefsJsonArray.put(askAgentDef);
 
-            defaultConfig.put(COMPONENTS_KEY, componentDefs);
-        Files.writeString(configFile, defaultConfig.toString(2));
+        defaultConfig.put(COMPONENTS_KEY, componentDefsJsonArray);
+        return defaultConfig;
+    }
+
+    private void populateFieldsFromJson(JSONObject json) {
+        // Use class field defaults as fallback for optString
+        this.llmProvider = json.optString("llmProvider", this.llmProvider);
+        this.ollamaBaseUrl = json.optString("ollamaBaseUrl", this.ollamaBaseUrl);
+        this.ollamaModelName = json.optString("ollamaModelName", this.ollamaModelName);
+        this.genericOpenaiBaseUrl = json.optString("genericOpenaiBaseUrl", this.genericOpenaiBaseUrl);
+        this.genericOpenaiModelName = json.optString("genericOpenaiModelName", this.genericOpenaiModelName);
+        this.genericOpenaiApiKey = json.optString("genericOpenaiApiKey", this.genericOpenaiApiKey);
+        this.geminiApiKey = json.optString("geminiApiKey", this.geminiApiKey);
+        this.geminiModelName = json.optString("geminiModelName", this.geminiModelName);
+        this.tavilyApiKey = json.optString("tavilyApiKey", this.tavilyApiKey);
+
+        // For runCommand, ensure it defaults to "" if missing, to satisfy ConfigTest
+        this.runCommand = json.optString("runCommand", "");
+        if (json.has("testCommand") && !json.has("runCommand")) { // Legacy migration also defaults to ""
+             this.runCommand = json.optString("testCommand", "");
+        }
+
+        this.apiKeys.clear();
+        JSONObject keys = json.optJSONObject("apiKeys");
+        if (keys != null) {
+            keys.keySet().forEach(key -> this.apiKeys.put(key, keys.getString(key)));
+        }
+
+        this.componentDefinitions.clear(); // Clear before populating
+        if (json.has(COMPONENTS_KEY)) {
+            JSONArray componentDefsArray = json.getJSONArray(COMPONENTS_KEY);
+            for (int i = 0; i < componentDefsArray.length(); i++) {
+                JSONObject componentDef = componentDefsArray.getJSONObject(i);
+                if (componentDef.has("id")) {
+                    this.componentDefinitions.put(componentDef.getString("id"), componentDef);
+                } else {
+                     System.err.println("Component definition missing 'id' in config: " + componentDef.toString());
+                }
+            }
+        }
     }
 
     public void save(String newConfig) throws IOException {
@@ -183,7 +195,15 @@ public class Config {
         if (this.injector != null) {
             this.injector.clearCache();
         }
-        load();
+        load(); // Reload config and reinitialize/clear injector
+         // Ensure injector is re-initialized with new definitions if it became null
+        if (this.injector == null) {
+            if (this.componentDefinitions.isEmpty()) {
+                populateFieldsFromJson(getDefaultConfigAsJsonObject());
+            }
+            this.injector = new DependencyInjector(new HashMap<>(this.componentDefinitions));
+            this.injector.registerSingleton("appConfig", this);
+        }
     }
 
     public String getApiKey(String provider) {
@@ -191,57 +211,62 @@ public class Config {
     }
 
     public String readForEditing() throws IOException {
-
         JSONObject configToEdit;
         if (Files.exists(configFile)) {
-            configToEdit = new JSONObject(Files.readString(configFile));
-
-            if (!configToEdit.has("llmProvider")) configToEdit.put("llmProvider", llmProvider);
-            if (!configToEdit.has("ollamaBaseUrl")) configToEdit.put("ollamaBaseUrl", ollamaBaseUrl);
-            if (!configToEdit.has("ollamaModelName")) configToEdit.put("ollamaModelName", ollamaModelName);
-            if (!configToEdit.has("genericOpenaiBaseUrl")) configToEdit.put("genericOpenaiBaseUrl", genericOpenaiBaseUrl);
-            if (!configToEdit.has("genericOpenaiModelName")) configToEdit.put("genericOpenaiModelName", genericOpenaiModelName);
-            if (!configToEdit.has("genericOpenaiApiKey")) configToEdit.put("genericOpenaiApiKey", genericOpenaiApiKey);
-            if (!configToEdit.has("geminiApiKey")) configToEdit.put("geminiApiKey", geminiApiKey);
-            if (!configToEdit.has("geminiModelName")) configToEdit.put("geminiModelName", geminiModelName);
-            if (!configToEdit.has("tavilyApiKey")) configToEdit.put("tavilyApiKey", tavilyApiKey);
-
-            // Handle runCommand and testCommand migration for editing
-            if (configToEdit.has("testCommand")) {
-                if (!configToEdit.has("runCommand")) { // If runCommand isn't there, migrate testCommand's value
-                    configToEdit.put("runCommand", configToEdit.getString("testCommand"));
-                }
-                configToEdit.remove("testCommand"); // Always remove testCommand if it was present
+            try {
+                configToEdit = new JSONObject(Files.readString(configFile));
+            } catch (Exception e) { // If file is corrupt, start with defaults
+                System.err.println("Warning: Couldn't read existing config for editing, starting with defaults: " + e.getMessage());
+                configToEdit = getDefaultConfigAsJsonObject();
             }
-            // Ensure runCommand exists, defaulting to current field value (which could be null or migrated)
-            if (!configToEdit.has("runCommand")) configToEdit.put("runCommand", runCommand == null ? JSONObject.NULL : runCommand);
-
-            if (!configToEdit.has("apiKeys")) configToEdit.put("apiKeys", new JSONObject(apiKeys));
         } else {
-            configToEdit = new JSONObject();
-            configToEdit.put("llmProvider", llmProvider);
-            configToEdit.put("ollamaBaseUrl", ollamaBaseUrl);
-            configToEdit.put("ollamaModelName", ollamaModelName);
-            configToEdit.put("genericOpenaiBaseUrl", genericOpenaiBaseUrl);
-            configToEdit.put("genericOpenaiModelName", genericOpenaiModelName);
-            configToEdit.put("genericOpenaiApiKey", genericOpenaiApiKey);
-            configToEdit.put("geminiApiKey", geminiApiKey);
-            configToEdit.put("geminiModelName", geminiModelName);
-            configToEdit.put("tavilyApiKey", tavilyApiKey);
-            configToEdit.put("runCommand", runCommand == null ? "" : runCommand);
-            configToEdit.put("apiKeys", new JSONObject(apiKeys));
-            if (!configToEdit.has(COMPONENTS_KEY)) configToEdit.put(COMPONENTS_KEY, new JSONArray(this.componentDefinitions.values()));
+            configToEdit = getDefaultConfigAsJsonObject();
+        }
+
+        // Ensure all current fields are present, using current Config state as default
+        // This is slightly different from populateFieldsFromJson as it preserves existing file values
+        // and only adds missing ones.
+        configToEdit.putOnce("llmProvider", this.llmProvider);
+        configToEdit.putOnce("ollamaBaseUrl", this.ollamaBaseUrl);
+        configToEdit.putOnce("ollamaModelName", this.ollamaModelName);
+        configToEdit.putOnce("genericOpenaiBaseUrl", this.genericOpenaiBaseUrl);
+        configToEdit.putOnce("genericOpenaiModelName", this.genericOpenaiModelName);
+        configToEdit.putOnce("genericOpenaiApiKey", this.genericOpenaiApiKey);
+        configToEdit.putOnce("geminiApiKey", this.geminiApiKey);
+        configToEdit.putOnce("geminiModelName", this.geminiModelName);
+        configToEdit.putOnce("tavilyApiKey", this.tavilyApiKey);
+
+        if (configToEdit.has("testCommand") && !configToEdit.has("runCommand")) {
+            configToEdit.put("runCommand", configToEdit.getString("testCommand"));
+        }
+        configToEdit.remove("testCommand");
+        configToEdit.putOnce("runCommand", this.runCommand); // ensure it's there, defaults to ""
+
+        if (!configToEdit.has("apiKeys")) {
+            configToEdit.put("apiKeys", new JSONObject(this.apiKeys.isEmpty() ? getDefaultConfigAsJsonObject().getJSONObject("apiKeys") : this.apiKeys));
+        }
+        if (!configToEdit.has(COMPONENTS_KEY) || configToEdit.getJSONArray(COMPONENTS_KEY).isEmpty()) {
+            configToEdit.put(COMPONENTS_KEY, getDefaultConfigAsJsonObject().getJSONArray(COMPONENTS_KEY));
         }
         return configToEdit.toString(2);
     }
 
     public <T> T getComponent(String id, Class<T> type) {
         if (injector == null) {
-            throw new IllegalStateException("DependencyInjector not initialized. No components defined or loaded from settings.json?");
+            // This might happen if constructor logic for injector init is bypassed or fails early.
+            // Attempt a final re-init.
+            System.err.println("Warning: Injector was null when getComponent was called. Re-initializing.");
+            if (this.componentDefinitions.isEmpty()) {
+                populateFieldsFromJson(getDefaultConfigAsJsonObject());
+            }
+            this.injector = new DependencyInjector(new HashMap<>(this.componentDefinitions));
+            this.injector.registerSingleton("appConfig", this);
+            if (injector == null) { // If still null after re-attempt
+                 throw new IllegalStateException("DependencyInjector critically failed to initialize.");
+            }
         }
         Object componentInstance = injector.getComponent(id);
         if (componentInstance == null) {
-            // This might happen if the component ID is wrong or definition is missing
             throw new RuntimeException("Component with id '" + id + "' not found or failed to create from injector.");
         }
         if (!type.isInstance(componentInstance)) {
@@ -252,6 +277,18 @@ public class Config {
     }
 
     public DependencyInjector getInjector() {
+        // Ensure injector is initialized if accessed directly
+        if (injector == null) {
+             System.err.println("Warning: Injector was null when getInjector was called. Re-initializing.");
+            if (this.componentDefinitions.isEmpty()) {
+                populateFieldsFromJson(getDefaultConfigAsJsonObject());
+            }
+            this.injector = new DependencyInjector(new HashMap<>(this.componentDefinitions));
+            this.injector.registerSingleton("appConfig", this);
+             if (injector == null) { // If still null after re-attempt
+                 throw new IllegalStateException("DependencyInjector critically failed to initialize on getInjector().");
+            }
+        }
         return injector;
     }
 }

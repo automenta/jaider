@@ -7,7 +7,7 @@ import java.util.stream.Collectors;
 public class HelpCommand implements Command {
     @Override
     public void execute(String args, AppContext context) {
-        String availableModes = context.getApp().getAvailableAgentNames().stream()
+        String availableModes = context.getAppInstance().getAvailableAgentNames().stream()
                                      .sorted()
                                      .collect(Collectors.joining(", "));
         if (availableModes.isEmpty()) {

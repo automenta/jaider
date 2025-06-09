@@ -298,9 +298,22 @@ public class DependencyInjector {
                 // the definition of the referenced component if possible, or rely on reflection
                 // to find a method/constructor that can accept the runtime type of args[i].
                 // The current findConstructor/findMethod uses isAssignableFrom, which helps.
-                // However, explicitly declared type in JSON could be an enhancement.
-                // For now, using the runtime type of the resolved dependency.
-                argTypes[i] = args[i].getClass();
+                if (args[i] == null) {
+                    // If the resolved argument is null, try to get its type from its definition.
+                    // This can happen if a dependency failed to create.
+                    String refId = argDef.getString("ref");
+                    JSONObject refDefinition = componentDefinitions.get(refId);
+                    if (refDefinition == null || !refDefinition.has("class")) {
+                        throw new RuntimeException("Cannot determine type of null argument for ref '" + refId + "' in component '" + componentId + "' as its definition or class is missing.");
+                    }
+                    try {
+                        argTypes[i] = Class.forName(refDefinition.getString("class"));
+                    } catch (ClassNotFoundException e) {
+                        throw new RuntimeException("Class not found for referenced component '" + refId + "' while determining argument types for '" + componentId + "'.", e);
+                    }
+                } else {
+                    argTypes[i] = args[i].getClass();
+                }
             } else if (argDef.has("value")) {
                 String type = argDef.optString("type", "String").toLowerCase();
                 switch (type) {

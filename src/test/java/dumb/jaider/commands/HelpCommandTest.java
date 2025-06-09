@@ -1,8 +1,10 @@
 package dumb.jaider.commands;
 
+import dumb.jaider.app.App; // Import the App class
 import dumb.jaider.commands.AppContext;
 import dumb.jaider.model.JaiderModel;
 import org.junit.jupiter.api.BeforeEach;
+import java.util.Collections; // Import Collections for emptySet
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -22,12 +24,17 @@ class HelpCommandTest {
     @Mock
     private JaiderModel model;
 
+    @Mock // Mock the App class
+    private App app;
+
     @InjectMocks
     private HelpCommand helpCommand;
 
     @BeforeEach
     void setUp() {
         when(appContext.getModel()).thenReturn(model); // Corrected
+        when(appContext.getAppInstance()).thenReturn(app); // Configure appContext to return mocked app
+        when(app.getAvailableAgentNames()).thenReturn(Collections.emptySet()); // Configure mocked app
     }
 
     @Test
