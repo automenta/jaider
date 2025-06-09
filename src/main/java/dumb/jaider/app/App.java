@@ -3,15 +3,15 @@ package dumb.jaider.app;
 import dumb.jaider.config.Config;
 import dumb.jaider.llm.LlmProviderFactory;
 import dumb.jaider.model.JaiderModel;
-import dumb.jaider.ui.TUI; // Assuming TUI is the default, or use UI interface
+import dumb.jaider.ui.TUI;
 import dumb.jaider.ui.UI;
-import dumb.jaider.ui.DiffInteractionResult; // Needed by UI interface for requestDiffInteraction
+import dumb.jaider.ui.DiffInteractionResult;
 import dumb.jaider.agents.Agent;
 import dumb.jaider.agents.CoderAgent;
 import dumb.jaider.agents.ArchitectAgent;
 import dumb.jaider.agents.AskAgent;
 import dumb.jaider.tools.StandardTools;
-import dumb.jaider.commands.*; // All commands + AppContext
+import dumb.jaider.commands.*;
 
 import dev.langchain4j.agent.tool.ToolExecutionRequest;
 import dev.langchain4j.data.message.AiMessage;
@@ -24,14 +24,13 @@ import dev.langchain4j.model.Tokenizer;
 import dev.langchain4j.model.chat.ChatLanguageModel;
 import dev.langchain4j.model.embedding.EmbeddingModel;
 import dev.langchain4j.service.tool.DefaultToolExecutor;
-import dev.langchain4j.data.document.loader.FileSystemDocumentLoader; // For IndexCommand context via App
-import dev.langchain4j.data.document.splitter.DocumentSplitters; // For IndexCommand context via App
-import dev.langchain4j.store.embedding.inmemory.InMemoryEmbeddingStore; // For IndexCommand context via App
+import dev.langchain4j.data.document.loader.FileSystemDocumentLoader;
+import dev.langchain4j.data.document.splitter.DocumentSplitters;
+import dev.langchain4j.store.embedding.inmemory.InMemoryEmbeddingStore;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
-// import org.eclipse.jgit.api.Git; // No longer used directly in App.java
-import dumb.jaider.vcs.GitService; // Added import
+import dumb.jaider.vcs.GitService;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -57,7 +56,6 @@ public class App {
 
     private final Map<String, Command> commandMap = new HashMap<>();
 
-    // Public enum for State, accessible by commands
     public enum State {IDLE, AGENT_THINKING, WAITING_USER_CONFIRMATION}
 
     public App(UI ui) {
@@ -77,7 +75,7 @@ public class App {
     }
 
     public synchronized void update() {
-        LlmProviderFactory llmFactory = new LlmProviderFactory(this.config, this.model);
+        var llmFactory = new LlmProviderFactory(this.config, this.model);
         ChatLanguageModel localChatModel = llmFactory.createChatModel();
         this.appTokenizer = llmFactory.createTokenizer();
         this.appEmbeddingModel = llmFactory.createEmbeddingModel();
@@ -94,7 +92,6 @@ public class App {
         }
     }
 
-    // Getters for AppContext
     public JaiderModel getModel() { return this.model; }
     public Config getConfig() { return this.config; }
     public UI getUi() { return this.ui; }
@@ -102,12 +99,10 @@ public class App {
     public Tokenizer getTokenizer() { return this.appTokenizer; }
     public Path getProjectDir() { return model.projectDir; }
 
-    // State and Turn Management for Commands
     public void setStatePublic(State newState) { this.currentState = newState; }
     public void finishTurnPublic(ChatMessage message) { this.finishTurn(message); }
     public void finishTurnPublic(ToolExecutionRequest request, String result) { this.finishTurn(request, result); }
 
-    // App specific actions callable by commands
     public void updateAppConfigPublic(String newConfigStr) throws IOException {
         config.save(newConfigStr);
         update();
@@ -131,7 +126,7 @@ public class App {
             saveSession();
             ui.close();
         } catch (IOException e) {
-            // Log error or handle
+
         }
         System.exit(0);
     }
@@ -139,10 +134,10 @@ public class App {
     public void run() throws IOException {
         if (!isGitRepoClean()) return;
         loadSession();
-        ui.init(this); // Pass this App instance to UI
+        ui.init(this);
     }
 
-    public void handleUserInput(String input) { // Made public for TUI
+    public void handleUserInput(String input) {
         if (currentState != State.IDLE) {
             model.addLog(AiMessage.from("[Jaider] Please wait, I'm already working."));
             ui.redraw(model);
@@ -188,7 +183,7 @@ public class App {
     }
 
     private void executeAndContinue(ToolExecutionRequest request) {
-        var toolResult = executeTool(request); // Renamed from execute to avoid conflict
+        var toolResult = executeTool(request);
         model.addLog(AiMessage.from(String.format("[Tool Result: %s]", request.name())));
 
         var diffApplied = "applyDiff".equals(request.name()) && toolResult.startsWith("Diff applied");
@@ -201,7 +196,7 @@ public class App {
         } else finishTurn(request, toolResult);
     }
 
-    private String executeTool(ToolExecutionRequest request) { // Renamed from execute
+    private String executeTool(ToolExecutionRequest request) {
         return new DefaultToolExecutor(currentAgent.getTools(), request).execute(request, currentAgent.getTools());
     }
 
@@ -225,14 +220,14 @@ public class App {
         ui.redraw(model);
     }
 
-    private void execute(String input) { // This is for slash commands
+    private void execute(String input) {
         var parts = input.split("\\s+", 2);
         String commandName = parts[0];
         String args = parts.length > 1 ? parts[1] : "";
 
         Command command = commandMap.get(commandName);
         if (command != null) {
-            AppContext appContext = new AppContext(this.model, this.config, this.ui, this);
+            var appContext = new AppContext(this.model, this.config, this.ui, this);
             command.execute(args, appContext);
         } else {
             model.addLog(AiMessage.from("[Jaider] Unknown command: " + commandName));
@@ -260,10 +255,13 @@ public class App {
             var session = new JSONObject();
             session.put("filesInContext", new JSONArray(model.filesInContext.stream().map(p -> model.projectDir.relativize(p).toString()).collect(Collectors.toList())));
             session.put("chatMemory", new JSONArray(chatMemory.messages().stream()
-                .map(m -> new JSONObject().put("type", m.type().name()).put("text", m.text())) // Simplified text access
+                .map(m -> {
+                    String text = dumb.jaider.utils.Util.chatMessageToText(m);
+                    return new JSONObject().put("type", m.type().name()).put("text", text == null ? "" : text);
+                })
                 .collect(Collectors.toList())));
             Files.writeString(sessionDir.resolve("session.json"), session.toString());
-        } catch (IOException e) { /* Failed to save session */ }
+        } catch (IOException e) {  }
     }
 
     private void loadSession() {
@@ -272,9 +270,9 @@ public class App {
             ui.requestConfirmation("Session Found", "Restore previous session?").thenAccept(restore -> {
                 if (restore) {
                     try {
-                        var session = new JSONObject(Files.readString(sessionFile));
-                        session.getJSONArray("filesInContext").forEach(f -> model.filesInContext.add(model.projectDir.resolve(f.toString())));
-                        session.getJSONArray("chatMemory").forEach(m -> {
+                        var sessionData = new JSONObject(Files.readString(sessionFile));
+                        sessionData.getJSONArray("filesInContext").forEach(f -> model.filesInContext.add(model.projectDir.resolve(f.toString())));
+                        sessionData.getJSONArray("chatMemory").forEach(m -> {
                             var msg = (JSONObject) m;
                             var text = msg.getString("text");
                             chatMemory.add("USER".equals(msg.getString("type")) ? UserMessage.from(text) : AiMessage.from(text));
@@ -284,13 +282,13 @@ public class App {
                         model.addLog(AiMessage.from("[Error] Failed to load session."));
                     }
                 }
-                ui.redraw(model); // Redraw after attempting to load session or if user declines
+                ui.redraw(model);
             });
         }
     }
 
     private boolean isGitRepoClean() {
-        GitService gitService = new GitService(this.model.projectDir);
+        var gitService = new GitService(this.model.projectDir);
         return gitService.isGitRepoClean();
     }
 }

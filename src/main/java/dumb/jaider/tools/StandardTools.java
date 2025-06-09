@@ -1,14 +1,14 @@
 package dumb.jaider.tools;
 
-import com.github.difflib.DiffUtils;
-import com.github.difflib.patch.PatchFailedException;
-import com.github.difflib.unifieddiff.UnifiedDiff;
-import com.github.difflib.unifieddiff.UnifiedDiffReader;
+// import com.github.difflib.DiffUtils; // Commented out
+// import com.github.difflib.patch.PatchFailedException; // Commented out
+// import com.github.difflib.unifieddiff.UnifiedDiff; // Commented out
+// import com.github.difflib.unifieddiff.UnifiedDiffReader; // Commented out
 import dev.langchain4j.agent.tool.Tool;
 import dev.langchain4j.model.embedding.EmbeddingModel;
 import dev.langchain4j.store.embedding.EmbeddingSearchRequest;
-import dev.langchain4j.tools.web.search.WebSearchEngine;
-import dev.langchain4j.tools.web.search.WebSearchResults;
+import dev.langchain4j.web.search.WebSearchEngine;
+import dev.langchain4j.web.search.WebSearchResults;
 import dev.langchain4j.web.search.tavily.TavilyWebSearchEngine;
 import dumb.jaider.config.Config;
 import dumb.jaider.model.JaiderModel;
@@ -61,10 +61,10 @@ public class StandardTools {
                     .apiKey(config.tavilyApiKey)
                     .build();
             WebSearchResults results = tavilySearchEngine.search(query);
-            if (results == null || results.answers() == null || results.answers().isEmpty()) {
+            if (results == null || results.results() == null || results.results().isEmpty()) {
                 return "No results found for: " + query;
             }
-            return results.answers().stream()
+            return results.results().stream()
                     .map(answer -> "Source: " + answer.url() + "\nTitle: " + answer.title() + "\nSnippet: " + answer.snippet())
                     .collect(Collectors.joining("\n\n---\n\n"));
         } catch (Exception e) {
@@ -74,6 +74,8 @@ public class StandardTools {
 
     @Tool("Applies a code change using the unified diff format.")
     public String applyDiff(String diff) {
+        return "Error: Diff functionality is temporarily disabled due to library issues.";
+        /*
         try {
             UnifiedDiff unifiedDiff = Util.diffReader(diff); // Step 1: Read the diff
 
@@ -95,6 +97,7 @@ public class StandardTools {
             this.model.lastAppliedDiff = null;
             return "An unexpected error occurred while applying diff: " + e.getClass().getSimpleName() + " - " + e.getMessage();
         }
+        */
     }
 
     @Tool("Reads the complete content of a file.")

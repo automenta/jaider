@@ -1,9 +1,9 @@
 package dumb.jaider.tools;
 
-import com.github.difflib.DiffUtils;
-import com.github.difflib.patch.PatchFailedException;
-import com.github.difflib.unifieddiff.UnifiedDiff;
-import com.github.difflib.unifieddiff.UnifiedDiffFile;
+// import com.github.difflib.DiffUtils; // Commented out
+// import com.github.difflib.patch.PatchFailedException; // Commented out
+// import com.github.difflib.unifieddiff.UnifiedDiff; // Commented out
+// import com.github.difflib.unifieddiff.UnifiedDiffFile; // Commented out
 import dumb.jaider.model.JaiderModel;
 
 import java.io.IOException;
@@ -14,13 +14,15 @@ import java.util.List;
 
 public class DiffApplier {
 
-    public String apply(JaiderModel model, UnifiedDiff unifiedDiff) {
-        if (unifiedDiff == null || unifiedDiff.getFiles() == null) {
+    public String apply(JaiderModel model, Object unifiedDiff) { // Changed UnifiedDiff to Object
+        return "Error: Diff functionality is temporarily disabled due to library issues.";
+        /*
+        if (unifiedDiff == null || ((com.github.difflib.unifieddiff.UnifiedDiff)unifiedDiff).getFiles() == null) {
             return "Error: UnifiedDiff or its file list is null.";
         }
 
-        for (UnifiedDiffFile fileDiff : unifiedDiff.getFiles()) {
-            String fileName = fileDiff.getFromFile(); // Or getToFileName, depending on context. getFromFile is typical for patches.
+        for (com.github.difflib.unifieddiff.UnifiedDiffFile fileDiff : ((com.github.difflib.unifieddiff.UnifiedDiff)unifiedDiff).getFiles()) {
+            String fileName = fileDiff.getFromFile();
             if (fileName == null || fileName.isEmpty() || "/dev/null".equals(fileName)) {
                  // For new files, getFromFile might be /dev/null. Use getToFileName.
                  fileName = fileDiff.getToFileName();
@@ -49,18 +51,19 @@ public class DiffApplier {
             }
 
             try {
-                List<String> patchedLines = DiffUtils.patch(originalLines, fileDiff.getPatch());
+                List<String> patchedLines = com.github.difflib.DiffUtils.patch(originalLines, fileDiff.getPatch());
                 Files.write(filePath, patchedLines);
 
                 if (isNewFile) {
                     model.filesInContext.add(filePath);
                 }
-            } catch (PatchFailedException pfe) {
+            } catch (com.github.difflib.patch.PatchFailedException pfe) {
                 return "Error applying diff to file '" + fileName + "': Patch application failed. Details: " + pfe.getMessage();
             } catch (IOException e) {
                 return "Error writing patched file '" + fileName + "': " + e.getMessage();
             }
         }
         return "Diff applied successfully to all specified files.";
+        */
     }
 }

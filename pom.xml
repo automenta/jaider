@@ -9,12 +9,30 @@
     <version>1.0-SNAPSHOT</version>
 
     <properties>
-        <maven.compiler.source>25</maven.compiler.source>
-        <maven.compiler.target>25</maven.compiler.target>
+        <maven.compiler.source>21</maven.compiler.source>
+        <maven.compiler.target>21</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     </properties>
 
     <dependencies>
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter-api</artifactId>
+            <version>5.10.2</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter-engine</artifactId>
+            <version>5.10.2</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter-params</artifactId>
+            <version>5.10.2</version>
+            <scope>test</scope>
+        </dependency>
         <dependency>
             <groupId>com.googlecode.lanterna</groupId>
             <artifactId>lanterna</artifactId>
@@ -35,11 +53,13 @@
             <artifactId>langchain4j-open-ai</artifactId>
             <version>0.35.0</version>
         </dependency>
+        <!--
         <dependency>
             <groupId>dev.langchain4j</groupId>
             <artifactId>langchain4j-google-vertex-ai</artifactId>
-            <version>0.35.0</version> <!-- Or latest compatible, e.g., 1.0.0-beta3 if available -->
+            <version>0.35.0</version>
         </dependency>
+        -->
         <dependency>
             <groupId>dev.langchain4j</groupId>
             <artifactId>langchain4j-web-search-engine-tavily</artifactId>
@@ -50,13 +70,13 @@
             <artifactId>org.eclipse.jgit</artifactId>
             <version>7.0.0.202409031743-r</version>
         </dependency>
-
+        <!--
         <dependency>
             <groupId>io.github.java-diff-utils</groupId>
             <artifactId>java-diff-utils</artifactId>
             <version>4.15</version>
         </dependency>
-
+        -->
         <dependency>
             <groupId>org.json</groupId>
             <artifactId>json</artifactId>

@@ -8,12 +8,12 @@ import com.googlecode.lanterna.input.KeyType;
 import com.googlecode.lanterna.screen.Screen;
 import com.googlecode.lanterna.screen.TerminalScreen;
 import com.googlecode.lanterna.terminal.DefaultTerminalFactory;
-import dumb.jaider.app.App; // Updated import
+import dumb.jaider.app.App;
 import dumb.jaider.model.JaiderModel;
 import dev.langchain4j.data.message.AiMessage;
 import dev.langchain4j.data.message.ChatMessage;
 import dev.langchain4j.data.message.UserMessage;
-import dumb.jaider.utils.Util; // Added import
+import dumb.jaider.utils.Util;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.concurrent.CompletableFuture;
@@ -24,12 +24,10 @@ public class TUI implements UI {
     private Panel logListBox;
     private Label statusBar;
 
-    // Removed temporary text() method
-
     @Override
     public void init(App app) throws IOException {
         var terminal = new DefaultTerminalFactory().createTerminal();
-        Screen screen = new TerminalScreen(terminal);
+        var screen = new TerminalScreen(terminal);
         screen.startScreen();
         var window = new BasicWindow("Jaider - The AI Programming Assistant");
         window.setHints(Arrays.asList(Window.Hint.FULL_SCREEN, Window.Hint.NO_DECORATIONS));
@@ -67,7 +65,7 @@ public class TUI implements UI {
             model.filesInContext.forEach(p -> contextListBox.addItem(model.projectDir.relativize(p).toString(), null));
             logListBox.removeAllComponents();
             for (var msg : model.logMessages) {
-                var text = Util.text(msg); // Using Util.text()
+                var text = dumb.jaider.utils.Util.chatMessageToText(msg);
                 if (text == null || text.isBlank()) continue;
 
                 var l = new Label(String.format("[%s] %s", msg.type().name(), text));
@@ -125,7 +123,7 @@ public class TUI implements UI {
                 dialog.close();
                 requestConfigEdit(diff).thenAccept(editedDiff -> {
                     if (editedDiff != null) future.complete(new DiffInteractionResult(true, true, editedDiff));
-                    else future.complete(new DiffInteractionResult(false, false, null)); // User cancelled edit
+                    else future.complete(new DiffInteractionResult(false, false, null));
                 });
             }));
             content.addComponent(buttonPanel);
