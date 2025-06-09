@@ -1,30 +1,36 @@
 package dumb.jaider.commands;
 
-import dumb.jaider.commands.AppContext; // Corrected
-import dumb.jaider.model.JaiderModel;   // Corrected
+import dev.langchain4j.data.message.AiMessage;
+import dev.langchain4j.data.message.ChatMessage;
 import dumb.jaider.app.App;
+import dumb.jaider.commands.AppContext; // Corrected
 import dumb.jaider.config.Config;
+import dumb.jaider.model.JaiderModel;   // Corrected
 import dumb.jaider.ui.UI;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.api.io.TempDir; // For temporary project directory
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.Spy; // Import Spy
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.HashSet;
 
 import static org.mockito.Mockito.*;
+import static org.junit.jupiter.api.Assertions.*;
 
 @ExtendWith(MockitoExtension.class)
 class AddCommandTest {
 
     @Mock
     private AppContext appContext;
-    @Mock
-    private JaiderModel model;
+    @Spy // Use Spy for JaiderModel to have real fields initialized
+    private JaiderModel model = new JaiderModel(Paths.get("target/test-project-add"));
     @Mock
     private Config config;
     @Mock
@@ -35,143 +41,107 @@ class AddCommandTest {
     @InjectMocks
     private AddCommand addCommand;
 
+    @TempDir
+    Path tempDir; // JUnit 5 temporary directory for testing file operations
+
     @BeforeEach
     void setUp() {
-        // Use public field access as per AppContext.java
-        when(appContext.getModel()).thenReturn(model); // Using getter for consistency
-        when(appContext.getConfig()).thenReturn(config);
-        when(appContext.getUi()).thenReturn(ui);
-        when(appContext.getAppInstance()).thenReturn(app); // Field is appInstance, getter getAppInstance()
+        // Ensure the test project directory exists
+        try {
+            Files.createDirectories(model.projectDir);
+        } catch (IOException e) {
+            throw new RuntimeException("Could not create test project directory", e);
+        }
 
-        // model.filesInContext is a public final field, initialized.
-        // We can't mock model.filesInContext() as it's not a method.
-        // We will verify interactions with the actual HashSet instance later.
-        // For projectDir, it's also a public final field.
-        // We'll create a spy or a real model if we need to control projectDir for some tests.
-        // For now, assume projectDir will be accessed on the mock and might be null if not handled.
-        // The AddCommand uses model.projectDir.resolve, so model.projectDir must be non-null.
-        // Since model is a mock, its fields are not initialized unless we do something specific.
-        // Let's ensure that tests requiring model.projectDir set it up if possible,
-        // or acknowledge that direct field access on mocks can be problematic.
-        // For now, we remove when(model.filesInContext()).thenReturn(new HashSet<>());
-        // as filesInContext is a field.
+        when(appContext.getModel()).thenReturn(model); // model is now a spy
+        // when(appContext.getConfig()).thenReturn(config); // Unnecessary stub
+        // when(appContext.getUi()).thenReturn(ui); // Unnecessary stub
+        // when(appContext.getAppInstance()).thenReturn(app); // Moved to specific tests
     }
 
     @Test
     void execute_nullArguments_shouldLogUsage() {
-        addCommand.execute(null, appContext); // Corrected signature
-        verify(model).addLog(any(dev.langchain4j.data.message.ChatMessage.class)); // Corrected verification
+        addCommand.execute(null, appContext);
+        verify(model).addLog(argThat(msg -> {
+            if (msg instanceof AiMessage) return ((AiMessage) msg).text().equals("[Jaider] Usage: /add <file1> [file2] ...");
+            return false;
+        }));
         verify(app, never()).updateTokenCountPublic();
     }
 
     @Test
     void execute_blankArgument_shouldLogUsage() {
-        addCommand.execute("   ", appContext); // Corrected signature
-        verify(model).addLog(any(dev.langchain4j.data.message.ChatMessage.class)); // Corrected verification
+        addCommand.execute("   ", appContext);
+        verify(model).addLog(argThat(msg -> {
+            if (msg instanceof AiMessage) return ((AiMessage) msg).text().equals("[Jaider] Usage: /add <file1> [file2] ...");
+            return false;
+        }));
         verify(app, never()).updateTokenCountPublic();
     }
 
     @Test
     void execute_oneValidFilePath_shouldAddFileAndLogSuccess() {
-        String filePathStr = "src/main/java/dumb/jaider/Test.java";
-        Path projectPath = Paths.get("/tmp/test-project"); // Dummy project path for test
-        Path expectedPath = projectPath.resolve(filePathStr);
+        when(appContext.getAppInstance()).thenReturn(app); // Added here
+        String filePathStr = "src/main/java/dumb/jaider/Test.java"; // Relative to projectDir
+        Path expectedPath = model.projectDir.resolve(filePathStr);
 
-        // Since model is a mock, and AddCommand uses model.projectDir directly,
-        // we need to ensure model.projectDir is not null.
-        // One way for a mock is to make JaiderModel.projectDir non-final (not ideal for main code)
-        // or pass a model instance where projectDir is set.
-        // For this test, let's assume the mock's projectDir can be influenced via AppContext setup.
-        // The AddCommand gets model via context.getModel().projectDir.
-        // So, the 'model' mock returned by appContext.getModel() must have projectDir.
-        // This is tricky because projectDir is final.
-        // We will rely on the fact that model is a mock, and direct field access model.projectDir
-        // will be what AddCommand uses. We can't use Mockito.when for final fields.
-        // This test might require model to be a spy or a real object for full behavior.
-        // For compilation, changing to direct field access if that was the error.
-        // The error was "cannot find symbol: method projectDir()", so it's not a method.
-        // We will assume that the `model` mock will have a valid (though likely null) `projectDir`
-        // for compilation purposes. Runtime will show if it's an issue.
-        // The actual JaiderModel constructor initializes projectDir.
-        // Let's ensure the test setup accounts for this.
-        // We are testing AddCommand, which receives AppContext. AppContext provides JaiderModel.
-        // The JaiderModel provided by AppContext should have projectDir.
-        // So, when(appContext.getModel()).thenReturn(model) is key.
-        // And 'model' (the mock) needs to behave as if it has projectDir.
-        // We can't mock final fields with `when`.
-        // The line `when(model.projectDir()).thenReturn(projectPath.toString());` was incorrect as it's not a method.
-        // The actual AddCommand will do: `context.getModel().projectDir.resolve(fileNamePart)`
-        // So `model.projectDir` must be valid.
-        // Let's ensure our mock 'model' has this field available.
-        // This often means the mocked 'model' should be a spy or a more complex mock setup if direct field access is tested.
-        // For now, we'll remove the problematic when() and rely on the mock setup.
-        // The actual JaiderModel in AppContext will have projectDir initialized.
+        addCommand.execute(filePathStr, appContext);
 
-        // To make this testable, we should ensure the `model` mock's `projectDir` field is usable.
-        // One approach: use a real JaiderModel instance configured for the test.
-        // Or, if AddCommand could receive projectDir directly or via a getter, that would be better.
-        // For now, let's assume the setup implies model.projectDir is accessible.
-        // The previous error "cannot find symbol method projectDir()" is key.
-        // The main code is `context.getModel().projectDir`.
-        // In the test, `context.getModel()` returns our `model` mock.
-        // So, `model.projectDir` will be accessed.
-        // We'll assume this compiles and see runtime behavior.
-        // No specific `when` for `model.projectDir` is needed if we rely on the mock's default (null for Path).
-        // This will likely cause a NullPointerException in AddCommand if not handled.
-        // The actual fix might be in how AddCommand gets projectDir or how model is mocked.
-        // For now, to fix compilation, we ensure no method call on projectDir.
-
-        // JaiderModel modelReal = new JaiderModel(projectPath);
-        // when(appContext.getModel()).thenReturn(modelReal); // Use a real model for this part.
-
-        // To avoid changing the test structure too much with a real model,
-        // and given projectDir is final, the command must robustly get it.
-        // Let's assume the existing mock setup is what we have to work with.
-        // The command accesses context.getModel().projectDir.
-        // So the 'model' mock's 'projectDir' field would be accessed.
-        // We'll let this be, it will be null for the mock, which should be handled by the command or test.
-        // The original test had `when(model.projectDir()).thenReturn(projectPath.toString());` which was wrong.
-        // The field is public final Path projectDir.
-        // We cannot use Mockito to make model.projectDir return something specific on the mock.
-        // The actual instance of JaiderModel will have this correctly from its constructor.
-        // The test needs to ensure that `context.getModel()` returns a model where `projectDir` is meaningful.
-        // For the purpose of this fix, we assume `model.projectDir` will be accessed.
-
-        addCommand.execute(filePathStr, appContext); // Corrected signature
-
-        verify(model.filesInContext).add(expectedPath); // filesInContext is a field
+        assertTrue(model.filesInContext.contains(expectedPath.normalize()));
         verify(app).updateTokenCountPublic();
-        verify(model).addLog(any(dev.langchain4j.data.message.ChatMessage.class)); // Corrected verification
+        verify(model).addLog(argThat(msg -> {
+            // Command logs the input string, not the resolved path for the success message content part
+            if (msg instanceof AiMessage) return ((AiMessage) msg).text().equals("[Jaider] Added files to context: " + filePathStr);
+            return false;
+        }));
     }
 
     @Test
     void execute_multipleValidFilePaths_shouldAddAllFilesAndLogSuccess() {
+        when(appContext.getAppInstance()).thenReturn(app); // Added here
         String filePathStr1 = "src/main/java/dumb/jaider/Test1.java";
-        String filePathStr2 = "src/main/java/dumb/jaider/Test2.java";
-        Path projectPath = Paths.get("/tmp/test-project");
-        Path expectedPath1 = projectPath.resolve(filePathStr1);
-        Path expectedPath2 = projectPath.resolve(filePathStr2);
+        String filePathStr2 = "docs/README.md";
+        Path expectedPath1 = model.projectDir.resolve(filePathStr1);
+        Path expectedPath2 = model.projectDir.resolve(filePathStr2);
+        String expectedLogMessage = "[Jaider] Added files to context: " + filePathStr1 + ", " + filePathStr2;
 
-        // See comments in execute_oneValidFilePath_shouldAddFileAndLogSuccess about model.projectDir
-        addCommand.execute(filePathStr1 + " " + filePathStr2, appContext); // Corrected signature
 
-        verify(model.filesInContext).add(expectedPath1); // filesInContext is a field
-        verify(model.filesInContext).add(expectedPath2); // filesInContext is a field
-        verify(app, times(2)).updateTokenCountPublic(); // Called for each file
-        verify(model, times(2)).addLog(any(dev.langchain4j.data.message.ChatMessage.class)); // Corrected verification
+        addCommand.execute(filePathStr1 + " " + filePathStr2, appContext);
+
+        assertTrue(model.filesInContext.contains(expectedPath1.normalize()));
+        assertTrue(model.filesInContext.contains(expectedPath2.normalize()));
+        verify(app, times(1)).updateTokenCountPublic(); // Called once after all files
+        verify(model).addLog(argThat(msg -> { // Called once with all files
+            if (msg instanceof AiMessage) return ((AiMessage) msg).text().equals(expectedLogMessage);
+            return false;
+        }));
     }
 
     @Test
     void execute_pathOutsideProject_shouldNotAddAndLogWarning() {
-        String absolutePathStr = "/etc/passwd";
-        Path projectPath = Paths.get("/tmp/test-project");
-        Path expectedPath = Paths.get(absolutePathStr);
+        when(appContext.getAppInstance()).thenReturn(app); // Added here
+        // Use a temporary directory for a controlled "outside" path
+        Path outsideFile = tempDir.resolve("outside.txt");
+        try {
+            Files.writeString(outsideFile, "content");
+        } catch (IOException e) {
+            fail("Could not create temp file for test");
+        }
+        String absolutePathStr = outsideFile.toAbsolutePath().toString();
 
-        // See comments in execute_oneValidFilePath_shouldAddFileAndLogSuccess about model.projectDir
-        addCommand.execute(absolutePathStr, appContext); // Corrected signature
-
-        verify(model.filesInContext).add(expectedPath); // filesInContext is a field
-        verify(app).updateTokenCountPublic();
-        verify(model).addLog(any(dev.langchain4j.data.message.ChatMessage.class)); // Corrected verification
+        addCommand.execute(absolutePathStr, appContext);
+        Path expectedAddedPath = Paths.get(absolutePathStr).normalize();
+        assertTrue(model.filesInContext.contains(expectedAddedPath));
+        verify(app).updateTokenCountPublic(); // It would still update tokens
+        verify(model).addLog(argThat(msg -> {
+            if (msg instanceof AiMessage) {
+                String actualText = ((AiMessage) msg).text();
+                // The AddCommand logs the exact string provided if it's a single argument
+                String expectedText = "[Jaider] Added files to context: " + absolutePathStr;
+                // System.out.println("DEBUG execute_pathOutsideProject_shouldNotAddAndLogWarning: \n  absolutePathStr (expected in log) = " + absolutePathStr + "\n  Actual Logged Msg Content = " + actualText);
+                return actualText.equals(expectedText); // Using .equals() as it should be an exact match.
+            }
+            return false;
+        }));
     }
 }

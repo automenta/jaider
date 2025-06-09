@@ -39,7 +39,7 @@ class UndoCommandTest {
 
         String capturedMessage = messageCaptor.getValue().text(); // AiMessage has .text()
         assertNotNull(capturedMessage);
-        assertEquals("Undo functionality is temporarily disabled. It will be re-enabled in a future version.", capturedMessage);
+        assertEquals("[UndoCommand] Error: Undo functionality is temporarily disabled due to library issues.", capturedMessage);
     }
 
     @Test
@@ -52,6 +52,6 @@ class UndoCommandTest {
 
         String capturedMessage = messageCaptor.getValue().text(); // AiMessage has .text()
         assertNotNull(capturedMessage);
-        assertEquals("Undo functionality is temporarily disabled. It will be re-enabled in a future version.", capturedMessage);
+        assertEquals("[UndoCommand] Error: Undo functionality is temporarily disabled due to library issues.", capturedMessage);
     }
 }

@@ -42,14 +42,15 @@ class EditConfigCommandTest {
 
     @BeforeEach
     void setUp() {
-        when(appContext.getModel()).thenReturn(model);
-        when(appContext.getConfig()).thenReturn(config);
-        when(appContext.getUi()).thenReturn(ui);
-        when(appContext.getAppInstance()).thenReturn(app);
+        lenient().when(appContext.getModel()).thenReturn(model); // Made lenient
+        lenient().when(appContext.getConfig()).thenReturn(config); // Made lenient
+        // when(appContext.getUi()).thenReturn(ui); // Moved to specific tests
+        lenient().when(appContext.getAppInstance()).thenReturn(app); // Made lenient
     }
 
     @Test
     void execute_successfulEdit_shouldUpdateConfigAndFinishTurn() throws IOException {
+        when(appContext.getUi()).thenReturn(ui); // Added here
         when(config.readForEditing()).thenReturn(sampleConfigJson);
         when(ui.requestConfigEdit(sampleConfigJson)).thenReturn(CompletableFuture.completedFuture(newConfigJson));
 
@@ -65,6 +66,7 @@ class EditConfigCommandTest {
 
     @Test
     void execute_userCancelsEdit_shouldNotUpdateConfigAndFinishTurn() throws IOException {
+        when(appContext.getUi()).thenReturn(ui); // Added here
         when(config.readForEditing()).thenReturn(sampleConfigJson);
         when(ui.requestConfigEdit(sampleConfigJson)).thenReturn(CompletableFuture.completedFuture(null)); // User cancels
 
@@ -102,28 +104,24 @@ class EditConfigCommandTest {
 
     @Test
     void execute_updateAppConfigThrowsIOException_shouldLogErrorAndFinishTurn() throws IOException {
+        when(appContext.getUi()).thenReturn(ui); // Added here as requestConfigEdit is called
         when(config.readForEditing()).thenReturn(sampleConfigJson);
         when(ui.requestConfigEdit(sampleConfigJson)).thenReturn(CompletableFuture.completedFuture(newConfigJson));
-        // Simulate the behavior within the CompletableFuture's thenAccept block
-        doAnswer(invocation -> {
-            appContext.getModel().addLog(AiMessage.from("[Error] Failed to save config: " + new IOException("Failed to save config").getMessage()));
-            appContext.getAppInstance().finishTurnPublic(null);
-            return null;
-        }).when(app).updateAppConfigPublic(newConfigJson);
+        doThrow(new IOException("Failed to save config")).when(app).updateAppConfigPublic(newConfigJson);
 
-
-        editConfigCommand.execute(null, appContext); // Corrected signature
+        editConfigCommand.execute(null, appContext);
 
         verify(app).setStatePublic(App.State.WAITING_USER_CONFIRMATION);
         verify(config).readForEditing();
         verify(ui).requestConfigEdit(sampleConfigJson);
-
-        // updateAppConfigPublic is called, and its mock behavior (including logging and finishTurn) is executed
-        verify(app).updateAppConfigPublic(newConfigJson);
+        verify(app).updateAppConfigPublic(newConfigJson); // This call will throw the mocked exception
 
         ArgumentCaptor<AiMessage> logCaptor = ArgumentCaptor.forClass(AiMessage.class);
+        // The log message is added by EditConfigCommand's catch block
         verify(model).addLog(logCaptor.capture());
-        assertTrue(logCaptor.getValue().text().contains("Failed to save config"));
-        verify(app).finishTurnPublic(null);
+        assertTrue(logCaptor.getValue().text().contains("[Error] Failed to save config: Failed to save config"));
+
+        // finishTurnPublic should still be called once by the thenAccept block in EditConfigCommand
+        verify(app, times(1)).finishTurnPublic(null);
     }
 }

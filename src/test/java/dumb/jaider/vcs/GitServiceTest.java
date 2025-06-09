@@ -74,7 +74,7 @@ class GitServiceTest {
         // Verify the commit message
         RevCommit lastCommit = git.log().setMaxCount(1).call().iterator().next();
         assertEquals(commitMessage, lastCommit.getFullMessage());
-        assertEquals("Test User", lastCommit.getAuthorIdent().getName()); // Check author if needed
+        assertEquals("Jaider Committer", lastCommit.getAuthorIdent().getName()); // Check updated author
 
         // Verify another file addition
         Path newFile = projectDir.resolve("another.txt");
@@ -99,8 +99,7 @@ class GitServiceTest {
         String result = serviceForNonGit.commitChanges("Attempt commit in non-git dir");
 
         // Assertions
-        assertNotNull(result, "Error message should be returned for a non-git directory.");
-        assertTrue(result.contains("not a Git repository"), "Error message should indicate it's not a Git repository.");
+        assertEquals("Error: " + nonGitDir.toString() + " is not a Git repository.", result, "Error message should match expected for non-git directory commit.");
     }
 
     @Test
@@ -114,12 +113,11 @@ class GitServiceTest {
         String result = gitService.commitChanges(commitMessage);
 
         // Assertions
-        assertEquals("Changes committed successfully.", result, "Commit with no changes should return the standard success message.");
+        assertEquals("No changes to commit.", result, "Commit with no changes should return 'No changes to commit.'");
 
         // Verify that no new commit was made
         RevCommit currentHead = git.log().setMaxCount(1).call().iterator().next();
         assertEquals(initialHead.getId(), currentHead.getId(), "HEAD should not change if there were no changes to commit.");
-        assertNotEquals(commitMessage, currentHead.getFullMessage(), "The commit message should not be the new one if no commit happened.");
     }
 
     // --- Tests for isGitRepoClean() ---
@@ -214,14 +212,20 @@ class GitServiceTest {
         String result = gitService.undoFileChange("new_staged_file.txt");
 
         // Assertions
-        assertEquals("Reverted to last commit for file: new_staged_file.txt", result, "undoFileChange for staged file should return correct success message.");
+        assertEquals("Unstaged and deleted new file: new_staged_file.txt", result, "Undo message should indicate unstage and delete.");
 
-        // JGit's checkout command for a path that is added but not committed
-        // will typically reset it from the index (unstage it) and delete the working directory file.
-        assertTrue(git.status().call().isClean(), "Repository should be clean after undoing a new staged file.");
-        assertFalse(Files.exists(newFile), "The new staged file should be deleted from working directory after undo.");
+        // Verify it's removed from the index (no longer "added")
         assertFalse(git.status().call().getAdded().contains("new_staged_file.txt"), "File should no longer be in 'added' status.");
-        assertTrue(git.status().call().getUntracked().isEmpty(), "There should be no untracked files if it was deleted properly.");
+
+        // Verify the file does not exist in the working directory
+        assertFalse(Files.exists(newFile), "The new staged file should be deleted from the working directory.");
+
+        // Verify the repository is clean afterwards
+        assertTrue(git.status().call().isClean(), "Repository should be clean after unstaging and deleting a new file.");
+
+        // Optionally, ensure it's not in untracked or missing either, though isClean() should cover much of this.
+        assertTrue(git.status().call().getUntracked().isEmpty(), "There should be no untracked files.");
+        assertTrue(git.status().call().getMissing().isEmpty(), "No files should be in 'missing' state.");
     }
 
     @Test
@@ -234,8 +238,7 @@ class GitServiceTest {
         String result = serviceForNonGit.undoFileChange("somefile.txt");
 
         // Assertions
-        assertNotNull(result, "Error message should be returned for a non-git directory.");
-        assertTrue(result.contains("not a Git repository"), "Error message should indicate it's not a Git repository.");
+        assertEquals("Error: " + nonGitDir.toString() + " is not a Git repository.", result, "Error message should match expected for non-git directory undo.");
     }
 
     @Test

@@ -440,7 +440,14 @@ class ConfigTest {
         assertEquals(config.geminiApiKey, editedJson.getString("geminiApiKey")); // Default
         assertEquals(config.geminiModelName, editedJson.getString("geminiModelName")); // Default
         assertEquals(config.tavilyApiKey, editedJson.getString("tavilyApiKey")); // Default
-        assertEquals(config.runCommand, editedJson.getString("runCommand")); // Default (empty string)
+
+        // config.runCommand is null for this test case as partialConfigContent doesn't define it or testCommand
+        // and readForEditing puts JSONObject.NULL if the field is null.
+        if (config.runCommand == null) {
+            assertTrue(editedJson.isNull("runCommand"), "runCommand should be JSON null if config field is null");
+        } else {
+            assertEquals(config.runCommand, editedJson.getString("runCommand"));
+        }
 
         assertTrue(editedJson.has("apiKeys"), "apiKeys should be present");
         org.json.JSONObject apiKeysJson = editedJson.getJSONObject("apiKeys");

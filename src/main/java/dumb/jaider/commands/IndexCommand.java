@@ -6,7 +6,9 @@ import dev.langchain4j.data.message.AiMessage;
 import dev.langchain4j.store.embedding.inmemory.InMemoryEmbeddingStore;
 import java.util.concurrent.CompletableFuture;
 import dumb.jaider.app.App; // For App.State
-import java.nio.file.Path; // Added for clarity, though might be implicitly available
+import java.nio.file.Path;
+import java.nio.file.Files; // Added import for Files
+import java.io.IOException; // Added import for IOException
 
 public class IndexCommand implements Command {
     @Override
@@ -28,17 +30,51 @@ public class IndexCommand implements Command {
             try {
                 var documents = FileSystemDocumentLoader.loadDocuments(
                     context.getModel().projectDir,
-                    (Path path) -> !path.toString().contains(".git") // Basic gitignore
+                    (Path path) -> {
+                        try {
+                            return !path.toString().contains(".git") && Files.isRegularFile(path) && Files.size(path) > 0;
+                        } catch (IOException e) {
+                            // Optionally log the exception, e.g., using a logger or System.err
+                            // System.err.println("Error accessing file attributes: " + path + " - " + e.getMessage());
+                            return false; // Exclude path if attributes can't be read
+                        }
+                    }
                 );
+
+                if (documents.isEmpty()) {
+                    context.getModel().isIndexed = true;
+                    context.getAppInstance().finishTurnPublic(AiMessage.from("[Jaider] Project successfully indexed with 0 documents. No content found to index."));
+                    return;
+                }
+
                 var splitter = DocumentSplitters.recursive(500, 100);
                 var segments = splitter.splitAll(documents);
-                context.getModel().embeddingStore = new InMemoryEmbeddingStore<>(); // Ensure this is thread-safe if needed, or handle access carefully
-                var embeddings = context.getAppInstance().getEmbeddingModel().embedAll(segments).content();
+
+                if (segments.isEmpty()) { // Should ideally not be reached if documents were loaded, but as a safeguard
+                    context.getModel().isIndexed = true;
+                    context.getAppInstance().finishTurnPublic(AiMessage.from("[Jaider] Project successfully indexed with 0 segments (from non-empty documents). No textual content found to index."));
+                    return;
+                }
+
+                context.getModel().embeddingStore = new InMemoryEmbeddingStore<>();
+                var embeddingResponse = context.getAppInstance().getEmbeddingModel().embedAll(segments);
+                if (embeddingResponse == null || embeddingResponse.content() == null) {
+                    context.getAppInstance().finishTurnPublic(AiMessage.from("[Error] Failed to index project: EmbeddingModel returned null or empty embeddings."));
+                    return;
+                }
+                var embeddings = embeddingResponse.content();
                 context.getModel().embeddingStore.addAll(embeddings, segments);
                 context.getModel().isIndexed = true;
-                context.getAppInstance().finishTurnPublic(AiMessage.from("[Jaider] Project successfully indexed with " + segments.size() + " segments.")); // Needs to be public
+                context.getAppInstance().finishTurnPublic(AiMessage.from("[Jaider] Project successfully indexed with " + segments.size() + " segments."));
             } catch (Exception e) {
-                context.getAppInstance().finishTurnPublic(AiMessage.from("[Error] Failed to index project: " + e.getMessage())); // Needs to be public
+                // Log the full stack trace for better debugging on the server/log file
+                // Consider also sending a more user-friendly part of the message to the UI
+                e.printStackTrace(); // Good for server logs
+                String userFriendlyMessage = e.getMessage();
+                if (userFriendlyMessage == null || userFriendlyMessage.isBlank()) {
+                    userFriendlyMessage = e.getClass().getSimpleName();
+                }
+                context.getAppInstance().finishTurnPublic(AiMessage.from("[Error] Failed to index project: " + userFriendlyMessage));
             }
         });
     }

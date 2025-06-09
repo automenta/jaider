@@ -48,11 +48,13 @@ public class Config {
             geminiModelName = j.optString("geminiModelName", this.geminiModelName);
             tavilyApiKey = j.optString("tavilyApiKey", this.tavilyApiKey);
 
+            // Handle runCommand and testCommand migration
             if (j.has("runCommand")) {
-                runCommand = j.optString("runCommand", "");
-            } else {
-                runCommand = j.optString("testCommand", "");
-            }
+                runCommand = j.getString("runCommand");
+            } else if (j.has("testCommand")) {
+                runCommand = j.getString("testCommand");
+            } // If neither is present, runCommand retains its default class member value (null)
+
             var keys = j.optJSONObject("apiKeys");
             if (keys != null) keys.keySet().forEach(key -> apiKeys.put(key, keys.getString(key)));
 
@@ -139,11 +141,17 @@ public class Config {
             if (!configToEdit.has("geminiApiKey")) configToEdit.put("geminiApiKey", geminiApiKey);
             if (!configToEdit.has("geminiModelName")) configToEdit.put("geminiModelName", geminiModelName);
             if (!configToEdit.has("tavilyApiKey")) configToEdit.put("tavilyApiKey", tavilyApiKey);
-            if (configToEdit.has("testCommand") && !configToEdit.has("runCommand")) {
-                configToEdit.put("runCommand", configToEdit.getString("testCommand"));
-                configToEdit.remove("testCommand");
+
+            // Handle runCommand and testCommand migration for editing
+            if (configToEdit.has("testCommand")) {
+                if (!configToEdit.has("runCommand")) { // If runCommand isn't there, migrate testCommand's value
+                    configToEdit.put("runCommand", configToEdit.getString("testCommand"));
+                }
+                configToEdit.remove("testCommand"); // Always remove testCommand if it was present
             }
-            if (!configToEdit.has("runCommand")) configToEdit.put("runCommand", runCommand == null ? "" : runCommand);
+            // Ensure runCommand exists, defaulting to current field value (which could be null or migrated)
+            if (!configToEdit.has("runCommand")) configToEdit.put("runCommand", runCommand == null ? JSONObject.NULL : runCommand);
+
             if (!configToEdit.has("apiKeys")) configToEdit.put("apiKeys", new JSONObject(apiKeys));
         } else {
             configToEdit = new JSONObject();
