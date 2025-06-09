@@ -24,8 +24,8 @@ class ConfigTest {
         // Simulate a project directory within the temp directory
         projectDir = tempDir.resolve("test-project");
         Files.createDirectories(projectDir);
-        configFilePath = projectDir.resolve(Config.CONFIG_FILE_NAME);
-        Config.setProjectDir(projectDir.toString()); // Important: Set the project directory for Config class
+        configFilePath = projectDir.resolve(".jaider.json"); // Corrected: Use literal filename
+        // Config.setProjectDir(projectDir.toString()); // Removed: Config projectDir is set via constructor
     }
 
     // --- Test Default Config Creation ---

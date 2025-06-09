@@ -25,12 +25,12 @@ class ExitCommandTest {
 
     @BeforeEach
     void setUp() {
-        when(appContext.app()).thenReturn(app);
+        when(appContext.getAppInstance()).thenReturn(app); // Corrected
     }
 
     @Test
     void execute_shouldCallAppExit() {
-        exitCommand.execute(null); // Argument is not used by ExitCommand
+        exitCommand.execute(null, appContext); // Corrected // Argument is not used by ExitCommand
 
         verify(app).exitAppInternalPublic();
     }

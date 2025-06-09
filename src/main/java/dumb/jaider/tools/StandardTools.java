@@ -1,9 +1,9 @@
 package dumb.jaider.tools;
 
-import com.github.difflib.DiffUtils; // Commented out
-import com.github.difflib.patch.PatchFailedException; // Commented out
-import com.github.difflib.unifieddiff.UnifiedDiff; // Commented out
-import com.github.difflib.unifieddiff.UnifiedDiffReader; // Commented out
+import com.github.difflib.DiffUtils;
+import com.github.difflib.patch.PatchFailedException;
+import com.github.difflib.unifieddiff.UnifiedDiff;
+import com.github.difflib.unifieddiff.UnifiedDiffReader;
 import dev.langchain4j.agent.tool.Tool;
 import dev.langchain4j.model.embedding.EmbeddingModel;
 import dev.langchain4j.store.embedding.EmbeddingSearchRequest;

@@ -25,32 +25,32 @@ class ModeCommandTest {
 
     @BeforeEach
     void setUp() {
-        when(appContext.app()).thenReturn(app);
+        when(appContext.getAppInstance()).thenReturn(app); // Corrected
     }
 
     @Test
     void execute_withValidModeString_shouldCallAppSetAgent() {
         String mode = "testMode";
-        modeCommand.execute(mode);
+        modeCommand.execute(mode, appContext); // Corrected
         verify(app).setAgentInternalPublic(mode);
     }
 
     @Test
     void execute_withNullArgs_shouldCallAppSetAgentWithEmptyString() {
-        modeCommand.execute(null);
+        modeCommand.execute(null, appContext); // Corrected
         verify(app).setAgentInternalPublic("");
     }
 
     @Test
     void execute_withBlankArgs_shouldCallAppSetAgentWithEmptyString() {
-        modeCommand.execute("   ");
+        modeCommand.execute("   ", appContext); // Corrected
         verify(app).setAgentInternalPublic("");
     }
 
     @Test
     void execute_withModeStringContainingSpaces_shouldTrimAndCallAppSetAgent() {
         String modeWithSpaces = "  testModeWithSpaces  ";
-        modeCommand.execute(modeWithSpaces);
+        modeCommand.execute(modeWithSpaces, appContext); // Corrected
         // Command implementation trims the argument.
         verify(app).setAgentInternalPublic("testModeWithSpaces");
     }

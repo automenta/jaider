@@ -30,7 +30,7 @@ class GitServiceTest {
     void setUp() throws IOException, GitAPIException {
         projectDir = tempDir.resolve("test-repo");
         Files.createDirectories(projectDir);
-        gitService = new GitService(projectDir.toString());
+        gitService = new GitService(projectDir); // Corrected
 
         // Initialize a Git repository for most tests
         git = Git.init().setDirectory(projectDir.toFile()).setInitialBranch("main").call();
@@ -93,7 +93,7 @@ class GitServiceTest {
     void commitChanges_nonGitDirectory_shouldReturnError() throws IOException {
         // Setup
         Path nonGitDir = createNonGitDir();
-        GitService serviceForNonGit = new GitService(nonGitDir.toString());
+        GitService serviceForNonGit = new GitService(nonGitDir); // Corrected
 
         // Action
         String result = serviceForNonGit.commitChanges("Attempt commit in non-git dir");
@@ -164,7 +164,7 @@ class GitServiceTest {
     void isGitRepoClean_nonGitDirectory_shouldReturnTrueAndPrintError() throws IOException {
         // Setup
         Path nonGitDir = createNonGitDir();
-        GitService serviceForNonGit = new GitService(nonGitDir.toString());
+        GitService serviceForNonGit = new GitService(nonGitDir); // Corrected
 
         // Action
         boolean isClean = serviceForNonGit.isGitRepoClean();
@@ -228,7 +228,7 @@ class GitServiceTest {
     void undoFileChange_nonGitDirectory_shouldReturnError() throws IOException {
         // Setup
         Path nonGitDir = createNonGitDir();
-        GitService serviceForNonGit = new GitService(nonGitDir.toString());
+        GitService serviceForNonGit = new GitService(nonGitDir); // Corrected
 
         // Action
         String result = serviceForNonGit.undoFileChange("somefile.txt");

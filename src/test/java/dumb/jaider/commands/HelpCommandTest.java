@@ -27,17 +27,17 @@ class HelpCommandTest {
 
     @BeforeEach
     void setUp() {
-        when(appContext.model()).thenReturn(model);
+        when(appContext.getModel()).thenReturn(model); // Corrected
     }
 
     @Test
     void execute_shouldLogHelpTextToModel() {
-        helpCommand.execute(null); // Argument is not used
+        helpCommand.execute(null, appContext); // Corrected // Argument is not used
 
-        ArgumentCaptor<String> helpTextCaptor = ArgumentCaptor.forClass(String.class);
-        verify(model).logUser(helpTextCaptor.capture());
+        ArgumentCaptor<dev.langchain4j.data.message.AiMessage> messageCaptor = ArgumentCaptor.forClass(dev.langchain4j.data.message.AiMessage.class); // Specific to AiMessage
+        verify(model).addLog(messageCaptor.capture()); // Corrected
 
-        String capturedHelpText = helpTextCaptor.getValue();
+        String capturedHelpText = messageCaptor.getValue().text(); // AiMessage has .text()
         assertNotNull(capturedHelpText);
         assertTrue(capturedHelpText.contains("Available commands:"), "Help text should list available commands.");
         assertTrue(capturedHelpText.contains("/add <file_path_1> [file_path_2] ..."), "Help text should contain /add command.");

@@ -7,8 +7,8 @@ import dev.langchain4j.data.message.ToolExecutionResultMessage;
 import dev.langchain4j.data.message.UserMessage;
 // Potentially add: import dev.langchain4j.data.message.TextContent; // Not needed for 1.0.0-beta3 as .text() should be available
 
-import com.github.difflib.unifieddiff.UnifiedDiff; // Commented out due to java-diff-utils removal
-import com.github.difflib.unifieddiff.UnifiedDiffReader; // Commented out due to java-diff-utils removal
+import com.github.difflib.unifieddiff.UnifiedDiff;
+import com.github.difflib.unifieddiff.UnifiedDiffReader;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 
@@ -40,8 +40,6 @@ public class Util {
         // If it's a custom ChatMessage or a type not handled above, direct text extraction is not guaranteed.
         return "[Unsupported ChatMessage type for direct text extraction: " + chatMessage.getClass().getName() + "]";
     }
-
-    // Commenting out diffReader as UnifiedDiff is no longer available
 
     public static UnifiedDiff diffReader(String diff) throws IOException {
         if (diff == null) {

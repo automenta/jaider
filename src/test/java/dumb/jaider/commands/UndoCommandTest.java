@@ -27,17 +27,17 @@ class UndoCommandTest {
 
     @BeforeEach
     void setUp() {
-        when(appContext.model()).thenReturn(model);
+        when(appContext.getModel()).thenReturn(model); // Corrected
     }
 
     @Test
     void execute_shouldLogDisabledMessage() {
-        undoCommand.execute(null); // Argument is not currently used by UndoCommand
+        undoCommand.execute(null, appContext); // Corrected // Argument is not currently used by UndoCommand
 
-        ArgumentCaptor<String> messageCaptor = ArgumentCaptor.forClass(String.class);
-        verify(model).logUser(messageCaptor.capture());
+        ArgumentCaptor<dev.langchain4j.data.message.AiMessage> messageCaptor = ArgumentCaptor.forClass(dev.langchain4j.data.message.AiMessage.class); // Specific to AiMessage
+        verify(model).addLog(messageCaptor.capture()); // Corrected
 
-        String capturedMessage = messageCaptor.getValue();
+        String capturedMessage = messageCaptor.getValue().text(); // AiMessage has .text()
         assertNotNull(capturedMessage);
         assertEquals("Undo functionality is temporarily disabled. It will be re-enabled in a future version.", capturedMessage);
     }
@@ -45,12 +45,12 @@ class UndoCommandTest {
     @Test
     void execute_withArguments_shouldStillLogDisabledMessage() {
         // Verify that arguments don't change the "disabled" message.
-        undoCommand.execute("some/file/path.txt");
+        undoCommand.execute("some/file/path.txt", appContext); // Corrected
 
-        ArgumentCaptor<String> messageCaptor = ArgumentCaptor.forClass(String.class);
-        verify(model).logUser(messageCaptor.capture());
+        ArgumentCaptor<dev.langchain4j.data.message.AiMessage> messageCaptor = ArgumentCaptor.forClass(dev.langchain4j.data.message.AiMessage.class); // Specific to AiMessage
+        verify(model).addLog(messageCaptor.capture()); // Corrected
 
-        String capturedMessage = messageCaptor.getValue();
+        String capturedMessage = messageCaptor.getValue().text(); // AiMessage has .text()
         assertNotNull(capturedMessage);
         assertEquals("Undo functionality is temporarily disabled. It will be re-enabled in a future version.", capturedMessage);
     }
