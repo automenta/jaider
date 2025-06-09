@@ -1,8 +1,9 @@
 package dumb.jaider.commands;
 
 import com.github.difflib.unifieddiff.UnifiedDiff;
-import dumb.jaider.tools.StandardTools; // For the static diffReader
-import org.eclipse.jgit.api.Git;
+import dumb.jaider.utils.Util;
+import dumb.jaider.vcs.GitService; // Added import
+// import org.eclipse.jgit.api.Git; // No longer directly used
 import dev.langchain4j.data.message.AiMessage;
 
 import java.io.IOException;
@@ -16,8 +17,11 @@ public class UndoCommand implements Command {
             context.getModel().addLog(AiMessage.from("[Jaider] No change to undo."));
             return;
         }
-        try (var git = Git.open(context.getAppInstance().getProjectDir().resolve(".git").toFile())) { // getProjectDir via AppInstance
-            UnifiedDiff unifiedDiff = StandardTools.diffReader(context.getModel().lastAppliedDiff); // Use static call
+        GitService gitService = new GitService(context.getAppInstance().getProjectDir());
+        try {
+            // The Git.open() call is now handled by GitService.
+            // We still need to read the diff to know which files were affected.
+            UnifiedDiff unifiedDiff = Util.diffReader(context.getModel().lastAppliedDiff);
             for (var fileDiff : unifiedDiff.getFiles()) {
                 Path filePath = context.getAppInstance().getProjectDir().resolve(fileDiff.getFromFile());
                 String fileName = fileDiff.getFromFile();
@@ -35,12 +39,8 @@ public class UndoCommand implements Command {
                         context.getModel().addLog(AiMessage.from("[Error] Failed to delete newly created file for undo: " + fileName + " - " + e.getMessage()));
                     }
                 } else {
-                    try {
-                        git.checkout().addPath(fileName).call();
-                        context.getModel().addLog(AiMessage.from("[Jaider] Reverted to last commit for file: " + fileName));
-                    } catch (Exception e) {
-                        context.getModel().addLog(AiMessage.from("[Error] Failed to 'git checkout' file for undo: " + fileName + " - " + e.getMessage()));
-                    }
+                    String undoResult = gitService.undoFileChange(fileName);
+                    context.getModel().addLog(AiMessage.from("[Jaider] " + undoResult));
                 }
             }
             context.getModel().addLog(AiMessage.from("[Jaider] Undo attempt finished. Note: For existing files, this reverts them to their last committed state. For files newly created by the last diff, they are deleted. Please review changes carefully."));

@@ -30,7 +30,8 @@ import dev.langchain4j.store.embedding.inmemory.InMemoryEmbeddingStore; // For I
 
 import org.json.JSONArray;
 import org.json.JSONObject;
-import org.eclipse.jgit.api.Git; // For isGitRepoClean & UndoCommand context via App
+// import org.eclipse.jgit.api.Git; // No longer used directly in App.java
+import dumb.jaider.vcs.GitService; // Added import
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -289,14 +290,7 @@ public class App {
     }
 
     private boolean isGitRepoClean() {
-        try (var git = Git.open(model.projectDir.resolve(".git").toFile())) {
-            if (!git.status().call().isClean()) {
-                System.err.println("Your repository has uncommitted changes. Please commit or stash them before running Jaider.");
-                return false;
-            }
-        } catch (Exception e) {
-            System.err.println("Not a git repository or git error. Jaider works best with git.");
-        }
-        return true;
+        GitService gitService = new GitService(this.model.projectDir);
+        return gitService.isGitRepoClean();
     }
 }

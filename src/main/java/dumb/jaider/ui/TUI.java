@@ -13,6 +13,7 @@ import dumb.jaider.model.JaiderModel;
 import dev.langchain4j.data.message.AiMessage;
 import dev.langchain4j.data.message.ChatMessage;
 import dev.langchain4j.data.message.UserMessage;
+import dumb.jaider.utils.Util; // Added import
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.concurrent.CompletableFuture;
@@ -23,10 +24,7 @@ public class TUI implements UI {
     private Panel logListBox;
     private Label statusBar;
 
-    // Temporary text() method, to be replaced by a static import from JaiderUtils
-    private static String text(ChatMessage msg) {
-        return (msg instanceof UserMessage u) ? u.singleText() : ((AiMessage) msg).text();
-    }
+    // Removed temporary text() method
 
     @Override
     public void init(App app) throws IOException {
@@ -69,7 +67,7 @@ public class TUI implements UI {
             model.filesInContext.forEach(p -> contextListBox.addItem(model.projectDir.relativize(p).toString(), null));
             logListBox.removeAllComponents();
             for (var msg : model.logMessages) {
-                var text = text(msg); // Using the temporary local text() method
+                var text = Util.text(msg); // Using Util.text()
                 if (text == null || text.isBlank()) continue;
 
                 var l = new Label(String.format("[%s] %s", msg.type().name(), text));

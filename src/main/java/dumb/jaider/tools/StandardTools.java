@@ -12,8 +12,11 @@ import dev.langchain4j.tools.web.search.WebSearchResults;
 import dev.langchain4j.web.search.tavily.TavilyWebSearchEngine;
 import dumb.jaider.config.Config;
 import dumb.jaider.model.JaiderModel;
-import org.eclipse.jgit.api.Git;
+import dumb.jaider.utils.Util;
+import dumb.jaider.vcs.GitService; // Added import
+// org.eclipse.jgit.api.Git is no longer directly used here
 import org.json.JSONObject;
+import dumb.jaider.tools.DiffApplier; // Added import
 
 import java.io.BufferedReader;
 import java.io.ByteArrayInputStream;
@@ -37,10 +40,7 @@ public class StandardTools {
         this.embeddingModel = embeddingModel;
     }
 
-    // Copied from Jaider.java, to be moved to a utils class later
-    public static UnifiedDiff diffReader(String diff) throws IOException { // Made public static
-        return UnifiedDiffReader.parseUnifiedDiff(new ByteArrayInputStream(diff.getBytes()));
-    }
+    // Removed diffReader method
 
     public Set<Object> getReadOnlyTools() {
         // findRelevantCode and searchWeb are considered read-only.
@@ -75,49 +75,24 @@ public class StandardTools {
     @Tool("Applies a code change using the unified diff format.")
     public String applyDiff(String diff) {
         try {
-            var unifiedDiff = diffReader(diff); // Uses the local static method
+            UnifiedDiff unifiedDiff = Util.diffReader(diff); // Step 1: Read the diff
 
-            for (var fileDiff : unifiedDiff.getFiles()) {
-                var fileName = fileDiff.getFromFile();
-                var filePath = model.projectDir.resolve(fileName);
+            DiffApplier diffApplier = new DiffApplier(); // Step 2: Instantiate DiffApplier
+            String applyResult = diffApplier.apply(this.model, unifiedDiff); // Step 3: Apply diff
 
-                var isNewFile = !Files.exists(filePath);
-                if (!isNewFile && !model.filesInContext.contains(filePath)) {
-                    return "Error: Cannot apply diff to a file not in context: " + fileName;
-                }
-
-                List<String> originalLines;
-                try {
-                    originalLines = isNewFile ? new ArrayList<>() : Files.readAllLines(filePath);
-                } catch (IOException e) {
-                    model.lastAppliedDiff = null;
-                    return "Error reading original file '" + fileName + "' for diff application: " + e.getMessage();
-                }
-
-                var patch = fileDiff.getPatch();
-                try {
-                    List<String> patchedLines = DiffUtils.patch(originalLines, patch);
-                    Files.write(filePath, patchedLines);
-
-                    if (isNewFile) {
-                        model.filesInContext.add(filePath);
-                    }
-                } catch (PatchFailedException pfe) {
-                    model.lastAppliedDiff = null;
-                    return "Error applying diff to file '" + fileName + "': Patch application failed. Details: " + pfe.getMessage();
-                } catch (IOException e) {
-                    model.lastAppliedDiff = null;
-                    return "Error writing patched file '" + fileName + "': " + e.getMessage();
-                }
+            // Step 4: Handle result and set lastAppliedDiff
+            if (applyResult.startsWith("Diff applied successfully")) {
+                this.model.lastAppliedDiff = diff;
+            } else {
+                this.model.lastAppliedDiff = null;
             }
+            return applyResult;
 
-            model.lastAppliedDiff = diff;
-            return "Diff applied successfully to all specified files.";
-        } catch (IOException e) {
-            model.lastAppliedDiff = null;
+        } catch (IOException e) { // Catch errors from Util.diffReader
+            this.model.lastAppliedDiff = null;
             return "Error processing diff input: " + e.getMessage();
-        } catch (Exception e) {
-            model.lastAppliedDiff = null;
+        } catch (Exception e) { // Catch any other unexpected errors (e.g., from DiffApplier instantiation)
+            this.model.lastAppliedDiff = null;
             return "An unexpected error occurred while applying diff: " + e.getClass().getSimpleName() + " - " + e.getMessage();
         }
     }
@@ -174,13 +149,8 @@ public class StandardTools {
 
     @Tool("Commits all staged changes with a given message.")
     public String commitChanges(String message) {
-        try (var git = Git.open(model.projectDir.resolve(".git").toFile())) {
-            git.add().addFilepattern(".").call();
-            git.commit().setMessage(message).call();
-            return "Changes committed successfully.";
-        } catch (Exception e) {
-            return "Git commit failed: " + e.getMessage();
-        }
+        GitService gitService = new GitService(this.model.projectDir);
+        return gitService.commitChanges(message);
     }
 
     @Tool("Finds relevant code snippets from the entire indexed codebase.")

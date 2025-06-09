@@ -2,13 +2,13 @@ package dumb.jaider.commands;
 
 import dev.langchain4j.data.message.AiMessage;
 import java.io.IOException;
-import dumb.jaider.Jaider; // For Jaider.App.State
+import dumb.jaider.app.App; // For App.State
 
 
 public class EditConfigCommand implements Command {
     @Override
     public void execute(String args, AppContext context) {
-        context.getAppInstance().setStatePublic(Jaider.App.State.WAITING_USER_CONFIRMATION); // Needs public access
+        context.getAppInstance().setStatePublic(App.State.WAITING_USER_CONFIRMATION); // Needs public access
         try {
             context.getUi().requestConfigEdit(context.getConfig().readForEditing()).thenAccept(newConfigStr -> {
                 if (newConfigStr != null) {

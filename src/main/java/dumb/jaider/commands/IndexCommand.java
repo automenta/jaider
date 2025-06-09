@@ -5,7 +5,8 @@ import dev.langchain4j.data.document.splitter.DocumentSplitters;
 import dev.langchain4j.data.message.AiMessage;
 import dev.langchain4j.store.embedding.inmemory.InMemoryEmbeddingStore;
 import java.util.concurrent.CompletableFuture;
-import dumb.jaider.Jaider; // For Jaider.App.State
+import dumb.jaider.app.App; // For App.State
+import java.nio.file.Path; // Added for clarity, though might be implicitly available
 
 public class IndexCommand implements Command {
     @Override
@@ -19,7 +20,7 @@ public class IndexCommand implements Command {
             return;
         }
 
-        context.getAppInstance().setStatePublic(Jaider.App.State.AGENT_THINKING); // Needs to be public or called via a public method in App
+        context.getAppInstance().setStatePublic(App.State.AGENT_THINKING); // Needs to be public or called via a public method in App
         context.getModel().statusBarText = "Indexing project...";
         context.getUi().redraw(context.getModel());
 
