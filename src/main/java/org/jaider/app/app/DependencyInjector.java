@@ -1,4 +1,4 @@
-package dumb.jaider.app;
+package org.jaider.app.app;
 
 import org.json.JSONArray;
 import org.json.JSONObject;

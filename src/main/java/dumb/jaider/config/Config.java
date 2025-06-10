@@ -1,6 +1,6 @@
 package dumb.jaider.config;
 
-import dumb.jaider.app.DependencyInjector;
+import org.jaider.app.app.DependencyInjector;
 import org.json.JSONArray;
 import org.json.JSONObject;
 

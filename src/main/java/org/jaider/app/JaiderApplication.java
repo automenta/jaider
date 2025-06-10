@@ -1,4 +1,4 @@
-package dumb.jaider;
+package org.jaider.app;
 
 import dumb.jaider.model.JaiderModel;
 import dumb.jaider.tools.JaiderTools;

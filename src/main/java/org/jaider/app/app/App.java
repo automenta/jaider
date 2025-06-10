@@ -1,4 +1,4 @@
-package dumb.jaider.app;
+package org.jaider.app.app;
 
 import dev.langchain4j.agent.tool.ToolExecutionRequest;
 import dev.langchain4j.data.message.AiMessage;
@@ -34,7 +34,7 @@ import org.jaider.service.BuildManagerService;
 import org.jaider.service.GitService; // For self-update
 import org.jaider.service.RestartService;
 import org.jaider.service.SelfUpdateOrchestratorService;
-import dumb.jaider.app.StartupService;
+import org.jaider.app.app.StartupService;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.slf4j.Logger;

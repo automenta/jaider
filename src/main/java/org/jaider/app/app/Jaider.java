@@ -1,4 +1,4 @@
-package dumb.jaider.app;
+package org.jaider.app.app;
 
 // Assuming TUI is the concrete UI implementation for now.
 // If UI interface is used more broadly, then UI import would be needed.
