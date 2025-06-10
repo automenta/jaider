@@ -53,12 +53,13 @@ public class StandardTools {
 
     @Tool("Searches the web for the given query using Tavily.")
     public String searchWeb(String query) {
-        if (config.tavilyApiKey == null || config.tavilyApiKey.isBlank() || config.tavilyApiKey.contains("YOUR_")) {
-            return "Error: Tavily API key not configured. Please set tavilyApiKey in .jaider.json.";
+        String tavilyApiKey = config.getTavilyApiKey();
+        if (tavilyApiKey == null || tavilyApiKey.isBlank() || tavilyApiKey.contains("YOUR_")) {
+            return "Error: Tavily API key not configured. Please set TAVILY_API_KEY environment variable or tavilyApiKey in .jaider.json.";
         }
         try {
             WebSearchEngine tavilySearchEngine = TavilyWebSearchEngine.builder()
-                    .apiKey(config.tavilyApiKey)
+                    .apiKey(tavilyApiKey)
                     .build();
             WebSearchResults results = tavilySearchEngine.search(query);
             if (results == null || results.results() == null || results.results().isEmpty()) {

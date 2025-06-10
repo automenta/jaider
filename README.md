@@ -28,6 +28,11 @@ Jaider is an interactive, command-line AI programming assistant designed to help
 
 Jaider uses a `.jaider.json` file in the root of your project directory for configuration. If this file doesn't exist, Jaider will create one with default values upon first run.
 
+**API Key Configuration Precedence:** For services like Tavily, Gemini, and OpenAI (including Generic OpenAI), API keys are resolved in the following order:
+1. Environment Variable (e.g., `TAVILY_API_KEY`, `GEMINI_API_KEY`, `GENERIC_OPENAI_API_KEY`, `OPENAI_API_KEY`)
+2. Specific top-level key in `.jaider.json` (e.g., `tavilyApiKey`, `geminiApiKey`, `genericOpenaiApiKey`, `openaiApiKey`)
+3. Key within the `apiKeys` map in `.jaider.json` (e.g., `"tavily": "your_key"`, `"google": "your_key"` for Gemini, `"genericOpenai": "your_key"`, `"openai": "your_key"`)
+
 Key configurable fields include:
 
 *   `llmProvider`: Specifies the LLM provider to use.
@@ -37,15 +42,18 @@ Key configurable fields include:
 *   `ollamaModelName`: (for `ollama` provider) The name of the Ollama model to use (e.g., `"llamablit"`).
 *   `genericOpenaiBaseUrl`: (for `genericOpenai` provider) The base URL of the OpenAI-compatible API (e.g., `"http://localhost:8080/v1"`).
 *   `genericOpenaiModelName`: (for `genericOpenai` provider) The model name for the generic API.
-*   `genericOpenaiApiKey`: (for `genericOpenai` provider) The API key, if required by your generic endpoint. (Current integration is basic and may not fully support complex auth headers).
+*   `genericOpenaiApiKey`: (Legacy, in `.jaider.json`) (for `genericOpenai` provider) The API key, if required. Preferred: `GENERIC_OPENAI_API_KEY` env var.
+*   `openaiApiKey`: (Legacy, in `.jaider.json`) API key for OpenAI. Preferred: `OPENAI_API_KEY` env var.
 *   `geminiModelName`: (for `gemini` provider) The Gemini model name (e.g., `"gemini-1.5-flash-latest"`).
-*   `geminiApiKey`: (for `gemini` provider, if using direct Gemini API - Vertex AI typically uses ADC).
-*   `tavilyApiKey`: API key for Tavily web search.
+*   `geminiApiKey`: (Legacy, in `.jaider.json`) (for `gemini` provider, if using direct Gemini API - Vertex AI typically uses ADC). Preferred: `GEMINI_API_KEY` env var.
+*   `tavilyApiKey`: (Legacy, in `.jaider.json`) API key for Tavily web search. Preferred: `TAVILY_API_KEY` env var.
 *   `runCommand`: The command to execute for validation (e.g., tests, linter, build). Example: `"mvn test"`, `"npm run lint"`.
-*   `apiKeys`: A JSON object to store API keys for specific services (though some, like Gemini and Tavily, have their own top-level keys for simplicity).
+*   `apiKeys`: A JSON object to store API keys for specific services. This is a fallback if specific keys or environment variables are not set.
     *   `"openai": "YOUR_OPENAI_API_KEY"`
     *   `"anthropic": "YOUR_ANTHROPIC_API_KEY"`
     *   `"google": "YOUR_GOOGLE_API_KEY"` (Note: This is a generic Google key; Gemini via Vertex AI uses ADC or its specific key).
+    *   `"tavily": "YOUR_TAVILY_KEY_VIA_MAP"`
+    *   `"genericOpenai": "YOUR_GENERIC_OPENAI_KEY_VIA_MAP"`
 
 **Example `.jaider.json`:**
 
@@ -56,15 +64,18 @@ Key configurable fields include:
   "ollamaModelName": "llama3",
   "genericOpenaiBaseUrl": "http://localhost:8080/v1",
   "genericOpenaiModelName": "local-gpt",
-  "genericOpenaiApiKey": "sk-yourkey",
-  "geminiApiKey": "YOUR_GEMINI_API_KEY",
+  "genericOpenaiApiKey": "", // Can be set here, but GENERIC_OPENAI_API_KEY env var is preferred
+  "openaiApiKey": "", // Can be set here, but OPENAI_API_KEY env var is preferred
+  "geminiApiKey": "", // Can be set here, but GEMINI_API_KEY env var is preferred
   "geminiModelName": "gemini-1.5-flash-latest",
-  "tavilyApiKey": "YOUR_TAVILY_API_KEY",
+  "tavilyApiKey": "", // Can be set here, but TAVILY_API_KEY env var is preferred
   "runCommand": "mvn clean test",
-  "apiKeys": {
-    "openai": "YOUR_OPENAI_API_KEY",
-    "anthropic": "YOUR_ANTHROPIC_API_KEY",
-    "google": "YOUR_GOOGLE_API_KEY"
+  "apiKeys": { // Fallback map
+    "openai": "YOUR_OPENAI_API_KEY_VIA_MAP",
+    "anthropic": "YOUR_ANTHROPIC_API_KEY_VIA_MAP",
+    "google": "YOUR_GOOGLE_API_KEY_FOR_GEMINI_VIA_MAP",
+    "tavily": "YOUR_TAVILY_KEY_VIA_MAP",
+    "genericOpenai": "YOUR_GENERIC_OPENAI_KEY_VIA_MAP"
   }
 }
 ```

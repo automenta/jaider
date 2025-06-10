@@ -15,6 +15,7 @@ import dumb.jaider.agents.ArchitectAgent;
 import dumb.jaider.agents.AskAgent;
 import dumb.jaider.agents.CoderAgent;
 import dumb.jaider.commands.*;
+import dumb.jaider.commands.SummarizeCommand;
 import dumb.jaider.config.Config;
 import dumb.jaider.llm.LlmProviderFactory;
 import dumb.jaider.model.JaiderModel;
@@ -86,6 +87,7 @@ public class App {
         commands.put("/mode", new ModeCommand());
         commands.put("/help", new HelpCommand());
         commands.put("/exit", new ExitCommand());
+        commands.put("/summarize", new SummarizeCommand());
     }
 
     public synchronized void update() {
@@ -210,9 +212,100 @@ public class App {
             return;
         }
         model.addLog(UserMessage.from(input));
-        if (input.startsWith("/")) execute(input);
-        else processAgentTurn();
-        ui.redraw(model);
+        if (input.startsWith("!")) { // New condition for direct tool invocation
+            handleDirectToolInvocation(input);
+        } else if (input.startsWith("/")) {
+            execute(input);
+        } else {
+            processAgentTurn();
+        }
+        ui.redraw(model); // This might need to be handled within handleDirectToolInvocation if it becomes async
+    }
+
+    private void handleDirectToolInvocation(String input) {
+        String[] parts = input.substring(1).split("\\s+", 2); // Remove "!" and split tool name from args
+        String toolName = parts[0];
+        String toolArgsJson = (parts.length > 1) ? parts[1] : "{}"; // Assume args are JSON, default to empty JSON object
+
+        if (agent == null || agent.tools() == null || agent.tools().isEmpty()) {
+            model.addLog(AiMessage.from("[Jaider] No agent active or agent has no tools. Cannot execute: " + toolName));
+            finishTurn(null); // Or some other way to refresh UI if needed
+            return;
+        }
+
+        // Find the tool
+        // dev.langchain4j.agent.tool.Tool toolSpec = agent.tools().stream()
+        //     .filter(t -> t.toolSpecification().name().equals(toolName))
+        //     .map(t -> (dev.langchain4j.agent.tool.Tool) t) // Cast to the correct Tool type if necessary, depends on what agent.tools() returns
+        //     .findFirst()
+        //     .orElse(null);
+
+        // The above mapping might be tricky if agent.tools() returns a mix.
+        // A safer way if agent.tools() returns Collection<Object> where some are Tool:
+        // Object toolInstance = agent.tools().stream()
+        //     .filter(t -> t.getClass().isAnnotationPresent(dev.langchain4j.service.tool.Tool.class)) // This is not how tools are structured in LC4J typically
+        //     // We need to get ToolSpecification, so let's assume agent.tools() returns something that DefaultToolExecutor can work with.
+        //     // The StandardTools class, for example, has methods annotated with @Tool.
+        //     // DefaultToolExecutor works with a collection of objects that have @Tool methods.
+
+        // Let's simplify the search assuming agent.tools() returns a list of objects
+        // where each object might contain multiple @Tool annotated methods.
+        // We need to find the right object and then build ToolExecutionRequest.
+
+        // DefaultToolExecutor is usually constructed with a list of POJOs containing @Tool methods.
+        // We need to check if any of these POJOs can execute the `toolName`.
+        // This direct invocation is a bit more complex than when the LLM provides the full ToolExecutionRequest.
+
+        // For now, let's assume the `toolName` directly matches a method name in one of the tool objects.
+        // And that `toolArgsJson` is a JSON string of arguments.
+        // This is a simplification. A robust solution would involve inspecting ToolSpecifications.
+
+        try {
+            ToolExecutionRequest toolExecutionRequest = ToolExecutionRequest.builder()
+                .name(toolName)
+                .arguments(toolArgsJson) // Arguments must be a JSON string
+                .build();
+
+            // Check if this tool name is actually available via the agent's ToolSpecifications
+            // boolean toolExists = agent.tools().stream()
+            //     .anyMatch(toolCandidate -> {
+            //         // This check is not straightforward as agent.tools() returns a list of Objects,
+            //         // and DefaultToolExecutor inspects them for methods annotated with @Tool.
+            //         // A simpler check for now:
+            //         // This logic needs to be robust based on how tools are registered and identified.
+            //         // For a first pass, we'll try to execute and catch errors.
+            //         // A proper implementation would parse tool specifications.
+            //         return true; // Placeholder: Assume if we try to build it, it might exist.
+            //                      // This needs refinement.
+            //     });
+
+            // A more robust way to check if a tool by this name exists:
+            // This requires knowing the structure of what agent.tools() returns.
+            // If agent.tools() returns a list of objects, and each object has methods annotated with @Tool,
+            // then DefaultToolExecutor will find them. We don't have an easy way here to pre-validate `toolName`
+            // without inspecting annotations on all methods of all tool objects.
+
+            // Let's proceed with execution and handle errors.
+            model.addLog(AiMessage.from(String.format("[Jaider] User directly invoked tool: %s with args: %s", toolName, toolArgsJson)));
+            ui.redraw(model); // Show that we are attempting it
+
+            state = State.AGENT_THINKING; // Or a new state like State.TOOL_EXECUTING
+            model.statusBarText = "Executing tool: " + toolName + "...";
+            ui.redraw(model);
+
+            // Execute the tool. The executeTool method should be reusable.
+            String result = executeTool(toolExecutionRequest); // Assumes executeTool is accessible and works
+
+            model.addLog(AiMessage.from(String.format("[Tool Result: %s]\n%s", toolName, result)));
+            finishTurn(null); // This will set state to IDLE and redraw
+
+        } catch (Exception e) {
+            // This catch block is crucial. If the tool doesn't exist or args are bad,
+            // DefaultToolExecutor will likely throw an exception.
+            model.addLog(AiMessage.from(String.format("[Jaider] Error invoking tool '%s': %s. Ensure the tool name is correct and arguments are a valid JSON string if needed.", toolName, e.getMessage())));
+            e.printStackTrace(); // Log to console for debugging
+            finishTurn(null); // Go back to IDLE state
+        }
     }
 
     private void processAgentTurn() {

@@ -12,6 +12,7 @@ import java.util.Map;
 
 public class Config {
     final Path file;
+    private JSONObject loadedJsonConfig; // Store the raw JSON
     private final Map<String, JSONObject> def = new HashMap<>();
     private transient DependencyInjector injector;
     private static final String COMPONENTS_KEY = "components";
@@ -70,8 +71,10 @@ public class Config {
         boolean loadedSuccessfully = false;
         if (Files.exists(file)) {
             try {
-                JSONObject j = new JSONObject(Files.readString(file));
-                populateFieldsFromJson(j); // Populate fields from loaded JSON
+                String content = Files.readString(file);
+                JSONObject j = new JSONObject(content);
+                this.loadedJsonConfig = j; // Store it
+                populateFieldsFromJson(j);
                 loadedSuccessfully = true;
             } catch (Exception e) {
                 System.err.println("Error parsing existing config file (" + file + "): " + e.getMessage() + ". Applying defaults.");
@@ -80,12 +83,14 @@ public class Config {
 
         if (!loadedSuccessfully) {
             System.err.println("Config not loaded from file, or file was partial/invalid. Applying full default configuration.");
-            populateFieldsFromJson(getDefaultConfigAsJsonObject()); // Apply in-memory defaults
+            JSONObject defaultConfigJson = getDefaultConfigAsJsonObject();
+            this.loadedJsonConfig = defaultConfigJson; // Store default JSON
+            populateFieldsFromJson(defaultConfigJson);
 
-            // Attempt to write the default config to disk for user convenience
             try {
                 Files.createDirectories(file.getParent());
-                Files.writeString(file, getDefaultConfigAsJsonObject().toString(2));
+                // Use the stored loadedJsonConfig (which is defaultConfigJson here) for saving
+                Files.writeString(file, this.loadedJsonConfig.toString(2));
                 System.err.println("Written default config to: " + file);
             } catch (IOException e) {
                 System.err.println("Warning: Failed to write default config to file: " + file + " - " + e.getMessage());
@@ -105,12 +110,15 @@ public class Config {
         defaultConfig.put("geminiApiKey", this.geminiApiKey);
         defaultConfig.put("geminiModelName", this.geminiModelName);
         defaultConfig.put("tavilyApiKey", this.tavilyApiKey);
+        defaultConfig.put("openaiApiKey", ""); // Add this for the new getOpenaiApiKey specific key
         defaultConfig.put("runCommand", this.runCommand); // Will be "" by default
 
         JSONObject defaultKeys = new JSONObject();
-        defaultKeys.put("openai", "YOUR_OPENAI_API_KEY");
+        defaultKeys.put("openai", "YOUR_OPENAI_API_KEY"); // Stays for general "openai" map access
         defaultKeys.put("anthropic", "YOUR_ANTHROPIC_API_KEY");
-        defaultKeys.put("google", "YOUR_GOOGLE_API_KEY");
+        defaultKeys.put("google", "YOUR_GOOGLE_API_KEY"); // Stays for general "google" map access (Gemini)
+        defaultKeys.put("tavily", ""); // Add to map for consistency if getKeyValue uses it
+        defaultKeys.put("genericOpenai", ""); // Add to map for consistency
         defaultConfig.put("apiKeys", defaultKeys);
 
         JSONArray componentDefsJsonArray = new JSONArray();
@@ -220,7 +228,7 @@ public class Config {
             this.injector.clearCache();
         }
         load(); // Reload config and reinitialize/clear injector
-         // Ensure injector is re-initialized with new definitions if it became null
+        // Ensure injector is re-initialized with new definitions if it became null
         if (this.injector == null) {
             if (this.def.isEmpty()) {
                 populateFieldsFromJson(getDefaultConfigAsJsonObject());
@@ -230,8 +238,52 @@ public class Config {
         }
     }
 
-    public String getApiKey(String provider) {
-        return apiKeys.getOrDefault(provider, System.getenv(provider.toUpperCase() + "_API_KEY"));
+    private String getKeyValue(String envVarName, String specificJsonKey, String genericApiKeyMapKey) {
+        String value = System.getenv(envVarName);
+        if (value != null && !value.isEmpty()) {
+            return value;
+        }
+        // Check specific top-level key in the loaded JSON
+        if (this.loadedJsonConfig != null && this.loadedJsonConfig.has(specificJsonKey)) {
+            value = this.loadedJsonConfig.optString(specificJsonKey, null);
+            if (value != null && !value.isEmpty()) {
+                return value;
+            }
+        }
+        // Fallback to apiKeys map (which is already populated from loadedJsonConfig or defaults)
+        if (genericApiKeyMapKey != null) {
+            value = this.apiKeys.get(genericApiKeyMapKey);
+            if (value != null && !value.isEmpty()) {
+                return value;
+            }
+        }
+        return null; // Or return "" if empty string is preferred over null
+    }
+
+    public String getTavilyApiKey() {
+        return getKeyValue("TAVILY_API_KEY", "tavilyApiKey", "tavily");
+    }
+
+    public String getGeminiApiKey() {
+        return getKeyValue("GEMINI_API_KEY", "geminiApiKey", "google");
+    }
+
+    public String getGenericOpenaiApiKey() {
+        return getKeyValue("GENERIC_OPENAI_API_KEY", "genericOpenaiApiKey", "genericOpenai");
+    }
+
+    public String getOpenaiApiKey() {
+        return getKeyValue("OPENAI_API_KEY", "openaiApiKey", "openai");
+    }
+
+    // Simpler version, prioritizing env, then the apiKeys map.
+    public String getApiKey(String providerKeyInMap) {
+        String envVarName = providerKeyInMap.toUpperCase() + "_API_KEY";
+        String value = System.getenv(envVarName);
+        if (value != null && !value.isEmpty()) {
+            return value;
+        }
+        return this.apiKeys.getOrDefault(providerKeyInMap, null); // return null if not found
     }
 
     public String readForEditing() {
