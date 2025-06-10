@@ -2,9 +2,13 @@ package org.jaider.service;
 
 import dumb.jaider.model.JaiderModel;
 import dumb.jaider.model.StagedUpdate;
+import dumb.jaider.ui.UI; // Changed import
 
 import java.io.File; // Added for project root
 import java.util.concurrent.locks.ReentrantLock;
+import java.nio.file.Files; // New import
+import java.nio.file.Path;   // New import
+import org.json.JSONObject; // New import
 // import org.slf4j.Logger; // Future: Add logging
 // import org.slf4j.LoggerFactory; // Future: Add logging
 
@@ -17,14 +21,14 @@ public class SelfUpdateOrchestratorService {
     private final ReentrantLock lock = new ReentrantLock();
 
     private final JaiderModel jaiderModel;
-    private final UserInterfaceService uiService;
+    private final UI uiService; // Changed type
     private final BuildManagerService buildManagerService;
     private final GitService gitService;
     private final RestartService restartService;
 
     public SelfUpdateOrchestratorService(
             JaiderModel jaiderModel,
-            UserInterfaceService uiService,
+            UI uiService, // Changed type
             BuildManagerService buildManagerService,
             GitService gitService,
             RestartService restartService) {
@@ -110,13 +114,17 @@ public class SelfUpdateOrchestratorService {
         }
 
         System.out.println("SelfUpdateOrchestratorService: Triggering user confirmation for update on file: " + updateToConfirm.getFilePath());
-        String confirmationMessage = String.format(
-                "A self-update is proposed for file: %s\nCommit message: %s\n\nDiff:\n---\n%s\n---\n\nDo you want to apply this update? (yes/no)",
-                updateToConfirm.getFilePath(),
-                updateToConfirm.getCommitMessage(),
-                updateToConfirm.getDiffContent()
+        // Construct title and text for the confirm dialog based on updateToConfirm details
+        String title = "Confirm Self-Update";
+        String text = String.format(
+            "A self-update is proposed for file: %s%nCommit message: %s%n%nDiff:%n---%n%s%n---%n%nDo you want to apply this update?",
+            updateToConfirm.getFilePath(),
+            updateToConfirm.getCommitMessage(),
+            updateToConfirm.getDiffContent()
         );
-        uiService.askYesNoQuestion(confirmationMessage, this::processUserApproval);
+
+        uiService.confirm(title, text)
+                 .thenAccept(this::processUserApproval);
     }
 
     private void processUserApproval(boolean userApproved) {
@@ -131,13 +139,17 @@ public class SelfUpdateOrchestratorService {
 
             if (updateToApply == null) {
                 System.err.println("SelfUpdateOrchestratorService: User approval processed, but no staged update found. This should not happen if updateInProgress was true.");
-                uiService.showError("Error: No update found to process.");
+                // Assuming uiService.showError is part of the UI interface if needed, or handle differently
+                // For now, TUI uses model.addLog for errors shown to user.
+                // uiService.showError("Error: No update found to process.");
+                System.err.println("[SelfUpdateOrchestratorService] Error: No update found to process. (UI informed via log)");
                 this.updateInProgress = false; // Reset flag
                 return;
             }
             if (projectRoot == null || !projectRoot.isDirectory()) {
                 System.err.println("SelfUpdateOrchestratorService: Project root directory is not configured or invalid.");
-                uiService.showError("Error: Project root directory is not configured or invalid. Cannot apply update.");
+                // uiService.showError("Error: Project root directory is not configured or invalid. Cannot apply update.");
+                System.err.println("[SelfUpdateOrchestratorService] Error: Project root directory is not configured or invalid. Cannot apply update. (UI informed via log)");
                 this.currentStagedUpdate = null; // Clear the problematic update
                 this.updateInProgress = false;   // Reset flag
                 return;
@@ -148,7 +160,8 @@ public class SelfUpdateOrchestratorService {
         // End of initial critical section, updateToApply and projectRoot are now local references.
 
         if (!userApproved) {
-            uiService.showMessage("User rejected the self-update for " + updateToApply.getFilePath());
+            // uiService.showMessage("User rejected the self-update for " + updateToApply.getFilePath());
+            System.out.println("[SelfUpdateOrchestratorService] User rejected the self-update for " + updateToApply.getFilePath() + " (UI informed via log)");
             System.out.println("SelfUpdateOrchestratorService: User rejected self-update for file: " + updateToApply.getFilePath());
             lock.lock();
             try {
@@ -160,13 +173,15 @@ public class SelfUpdateOrchestratorService {
             return;
         }
 
-        uiService.showMessage("User approved self-update. Applying changes for: " + updateToApply.getFilePath());
+        // uiService.showMessage("User approved self-update. Applying changes for: " + updateToApply.getFilePath());
+        System.out.println("[SelfUpdateOrchestratorService] User approved self-update. Applying changes for: " + updateToApply.getFilePath() + " (UI informed via log)");
         System.out.println("SelfUpdateOrchestratorService: User approved self-update. Applying changes for: " + updateToApply.getFilePath());
 
         // Step 1: Apply Diff
         boolean diffApplied = gitService.applyDiff(projectRoot, updateToApply.getFilePath(), updateToApply.getDiffContent());
         if (!diffApplied) {
-            uiService.showError("Failed to apply diff for " + updateToApply.getFilePath() + ". Update aborted. Check logs for details from GitService.");
+            // uiService.showError("Failed to apply diff for " + updateToApply.getFilePath() + ". Update aborted. Check logs for details from GitService.");
+            System.err.println("[SelfUpdateOrchestratorService] Failed to apply diff for " + updateToApply.getFilePath() + ". Update aborted. (UI informed via log)");
             System.err.println("SelfUpdateOrchestratorService: GitService failed to apply diff.");
             // No revert needed as diff application itself failed.
             lock.lock();
@@ -179,21 +194,25 @@ public class SelfUpdateOrchestratorService {
             }
             return;
         }
-        uiService.showMessage("Diff applied successfully for " + updateToApply.getFilePath());
+        // uiService.showMessage("Diff applied successfully for " + updateToApply.getFilePath());
+        System.out.println("[SelfUpdateOrchestratorService] Diff applied successfully for " + updateToApply.getFilePath() + " (UI informed via log)");
         System.out.println("SelfUpdateOrchestratorService: Diff applied successfully.");
 
         // Step 2: Compile Project
         BuildManagerService.BuildResult compileResult = buildManagerService.compileProject(jaiderModel);
         if (!compileResult.isSuccess()) {
-            uiService.showError("Failed to compile project after update. Output:\n" + compileResult.getOutput() + "\nAttempting to revert changes...");
+            // uiService.showError("Failed to compile project after update. Output:\n" + compileResult.getOutput() + "\nAttempting to revert changes...");
+            System.err.println("[SelfUpdateOrchestratorService] Failed to compile project after update. Output:\n" + compileResult.getOutput() + "\nAttempting to revert changes... (UI informed via log)");
             System.err.println("SelfUpdateOrchestratorService: Project compilation failed.");
 
             boolean revertSuccess = gitService.revertChanges(projectRoot, updateToApply.getFilePath());
             if (revertSuccess) {
-                uiService.showMessage("Changes successfully reverted for " + updateToApply.getFilePath());
+                // uiService.showMessage("Changes successfully reverted for " + updateToApply.getFilePath());
+                System.out.println("[SelfUpdateOrchestratorService] Changes successfully reverted for " + updateToApply.getFilePath() + " (UI informed via log)");
                 System.out.println("SelfUpdateOrchestratorService: Changes reverted successfully.");
             } else {
-                uiService.showError("Critical: Failed to revert changes for " + updateToApply.getFilePath() + " after failed compilation. Manual intervention required.");
+                // uiService.showError("Critical: Failed to revert changes for " + updateToApply.getFilePath() + " after failed compilation. Manual intervention required.");
+                System.err.println("[SelfUpdateOrchestratorService] Critical: Failed to revert changes for " + updateToApply.getFilePath() + " after failed compilation. Manual intervention required. (UI informed via log)");
                 System.err.println("SelfUpdateOrchestratorService: CRITICAL - Failed to revert changes.");
             }
             lock.lock();
@@ -205,7 +224,8 @@ public class SelfUpdateOrchestratorService {
             }
             return;
         }
-        uiService.showMessage("Project compiled successfully after update.");
+        // uiService.showMessage("Project compiled successfully after update.");
+        System.out.println("[SelfUpdateOrchestratorService] Project compiled successfully after update. (UI informed via log)");
         System.out.println("SelfUpdateOrchestratorService: Project compiled successfully.");
 
         // Step 3: Package Project (Optional but recommended)
@@ -213,10 +233,12 @@ public class SelfUpdateOrchestratorService {
         if (!packageResult.isSuccess()) {
             // This is not necessarily a critical failure if compilation worked.
             // The application might still run from compiled classes.
-            uiService.showError("Warning: Failed to package project after update. Output:\n" + packageResult.getOutput() + "\nUpdate was applied and compiled, but packaging failed. Manual check recommended. Proceeding with restart using compiled classes.");
+            // uiService.showError("Warning: Failed to package project after update. Output:\n" + packageResult.getOutput() + "\nUpdate was applied and compiled, but packaging failed. Manual check recommended. Proceeding with restart using compiled classes.");
+            System.err.println("[SelfUpdateOrchestratorService] Warning: Failed to package project after update. Output:\n" + packageResult.getOutput() + "\nUpdate was applied and compiled, but packaging failed. Manual check recommended. Proceeding with restart using compiled classes. (UI informed via log)");
             System.err.println("SelfUpdateOrchestratorService: Project packaging failed. Proceeding as compile was successful.");
         } else {
-            uiService.showMessage("Project packaged successfully.");
+            // uiService.showMessage("Project packaged successfully.");
+            System.out.println("[SelfUpdateOrchestratorService] Project packaged successfully. (UI informed via log)");
             System.out.println("SelfUpdateOrchestratorService: Project packaged successfully.");
         }
 
@@ -226,23 +248,53 @@ public class SelfUpdateOrchestratorService {
         if (attemptCommit) {
             boolean commitSuccess = gitService.commitChanges(projectRoot, updateToApply.getFilePath(), updateToApply.getCommitMessage());
             if (!commitSuccess) {
-                uiService.showError("Warning: Failed to commit changes for " + updateToApply.getFilePath() + ". Update is applied and built. Manual commit recommended.");
+                // uiService.showError("Warning: Failed to commit changes for " + updateToApply.getFilePath() + ". Update is applied and built. Manual commit recommended.");
+                System.err.println("[SelfUpdateOrchestratorService] Warning: Failed to commit changes for " + updateToApply.getFilePath() + ". Update is applied and built. Manual commit recommended. (UI informed via log)");
                 System.err.println("SelfUpdateOrchestratorService: Failed to commit changes. Proceeding with restart.");
             } else {
-                uiService.showMessage("Changes committed successfully with message: " + updateToApply.getCommitMessage());
+                // uiService.showMessage("Changes committed successfully with message: " + updateToApply.getCommitMessage());
+                System.out.println("[SelfUpdateOrchestratorService] Changes committed successfully with message: " + updateToApply.getCommitMessage() + " (UI informed via log)");
                 System.out.println("SelfUpdateOrchestratorService: Changes committed successfully.");
             }
         }
 
         // Step 5: Prepare for Restart
         String[] originalArgs = (jaiderModel != null) ? jaiderModel.getOriginalArgs() : new String[]{};
-        uiService.showMessage("Update applied and built. Preparing to restart the application...");
+        // uiService.showMessage("Update applied and built. Preparing to restart the application...");
+        System.out.println("[SelfUpdateOrchestratorService] Update applied and built. Preparing to restart the application... (UI informed via log)");
         System.out.println("SelfUpdateOrchestratorService: Preparing to restart application.");
+
+        // Add this block before calling restartService.restartApplication()
+        if (jaiderModel != null && jaiderModel.getDir() != null) {
+            try {
+                Path jaiderDir = jaiderModel.getDir().resolve(".jaider");
+                Files.createDirectories(jaiderDir); // Ensure .jaider directory exists
+                Path sentinelFile = jaiderDir.resolve("self_update_pending_validation.json");
+
+                JSONObject sentinelData = new JSONObject();
+                sentinelData.put("filePath", updateToApply.getFilePath());
+                sentinelData.put("commitMessage", updateToApply.getCommitMessage());
+                sentinelData.put("timestamp", System.currentTimeMillis());
+                sentinelData.put("attempt", 1);
+
+                Files.writeString(sentinelFile, sentinelData.toString(2)); // Write JSON string
+                System.out.println("SelfUpdateOrchestratorService: Created sentinel file for post-restart validation: " + sentinelFile.toString());
+                uiService.showMessage("Sentinel file for post-restart validation created at " + sentinelFile.toString()); // For TUI, this needs routing via JaiderModel
+            } catch (Exception e) {
+                System.err.println("SelfUpdateOrchestratorService: CRITICAL - Failed to write sentinel file for self-update validation: " + e.getMessage());
+                uiService.showError("CRITICAL: Failed to write sentinel file: " + e.getMessage() + ". Post-restart validation may not occur."); // For TUI, route via JaiderModel
+                // Decide if restart should be aborted if sentinel cannot be written. For now, proceed with restart.
+            }
+        } else {
+            System.err.println("SelfUpdateOrchestratorService: CRITICAL - JaiderModel or project directory is null. Cannot write sentinel file.");
+            uiService.showError("CRITICAL: JaiderModel or project directory is null. Cannot write sentinel file."); // For TUI, route via JaiderModel
+        }
 
         // Step 6: Restart Application
         boolean restartInitiated = restartService.restartApplication(originalArgs);
         if (!restartInitiated) {
-            uiService.showError("Critical: Failed to initiate application restart. The update has been applied and built (and possibly committed). Please restart manually.");
+            // uiService.showError("Critical: Failed to initiate application restart. The update has been applied and built (and possibly committed). Please restart manually.");
+            System.err.println("[SelfUpdateOrchestratorService] Critical: Failed to initiate application restart. The update has been applied and built (and possibly committed). Please restart manually. (UI informed via log)");
             System.err.println("SelfUpdateOrchestratorService: CRITICAL - Failed to initiate restart. Manual restart required.");
             // Even if restart fails, the update is "done". Clear current update and flag.
             lock.lock();
@@ -253,7 +305,8 @@ public class SelfUpdateOrchestratorService {
                 lock.unlock();
             }
         } else {
-            uiService.showMessage("Application restart initiated. Jaider will now attempt to shut down.");
+            // uiService.showMessage("Application restart initiated. Jaider will now attempt to shut down.");
+            System.out.println("[SelfUpdateOrchestratorService] Application restart initiated. Jaider will now attempt to shut down. (UI informed via log)");
             System.out.println("SelfUpdateOrchestratorService: Application restart initiated. System will exit if RestartService doesn't handle it.");
             // If restart service is expected to terminate the current JVM, no further action needed here.
             // If not, System.exit might be called. For now, assume RestartService handles exit.

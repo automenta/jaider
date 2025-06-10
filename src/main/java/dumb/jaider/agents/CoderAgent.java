@@ -3,10 +3,23 @@ package dumb.jaider.agents;
 import dev.langchain4j.memory.ChatMemory;
 import dev.langchain4j.model.chat.ChatLanguageModel;
 import dumb.jaider.tools.StandardTools;
+import dumb.jaider.tools.JaiderTools;
+import java.util.HashSet;
+import java.util.Set;
 
 public class CoderAgent extends AbstractAgent {
-    public CoderAgent(ChatLanguageModel model, ChatMemory memory, StandardTools availableTools) {
-        super(model, memory, availableTools.getReadOnlyTools(),
+    private final JaiderTools jaiderTools;
+
+    public CoderAgent(ChatLanguageModel model, ChatMemory memory, StandardTools standardTools, JaiderTools jaiderTools) {
+        this.jaiderTools = jaiderTools;
+        Set<Object> allTools = new HashSet<>();
+        if (standardTools != null) {
+            allTools.add(standardTools);
+        }
+        if (jaiderTools != null) {
+            allTools.add(jaiderTools);
+        }
+        super(model, memory, allTools,
                 """
                         You are Jaider, an expert AI programmer. Your goal is to fully complete the user's request.
                         Follow this sequence rigidly:
@@ -27,8 +40,23 @@ public class CoderAgent extends AbstractAgent {
     }
 
     // Constructor for testing
-    protected CoderAgent(ChatLanguageModel model, ChatMemory memory, StandardTools availableTools, JaiderAiService aiService) {
-        super(model, memory, availableTools.getReadOnlyTools(), aiService, null);
+    protected CoderAgent(ChatLanguageModel model, ChatMemory memory, StandardTools standardTools, JaiderTools jaiderTools, JaiderAiService aiService) {
+        // Note: The system prompt for this constructor was null in the original. Keeping it that way.
+        // The jaiderTools field is not assigned here as this constructor is typically for specialized test setups
+        // where the superclass's tool handling might be sufficient, or tools are mocked/verified differently.
+        // If direct access to this.jaiderTools were needed in tests using this constructor, it should be assigned.
+        this.jaiderTools = jaiderTools; // Assign if needed for consistency or direct use in tests.
+                                        // If super() is the only consumer, it might not be strictly necessary to assign to field.
+                                        // However, for clarity and potential future use, assigning it.
+
+        Set<Object> allTools = new HashSet<>();
+        if (standardTools != null) {
+            allTools.add(standardTools);
+        }
+        if (jaiderTools != null) {
+            allTools.add(jaiderTools);
+        }
+        super(model, memory, allTools, aiService, null);
     }
 
     @Override

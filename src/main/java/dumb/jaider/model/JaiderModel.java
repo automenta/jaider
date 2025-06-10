@@ -35,6 +35,8 @@ public class JaiderModel {
     public String lastAppliedDiff = null;
     public String mode = "Coder";
 
+    private String[] originalArgs;
+
     public JaiderModel() {
         this.dir = Paths.get("").toAbsolutePath();
     }
@@ -79,5 +81,13 @@ public class JaiderModel {
         } catch (IOException e) {
             return String.format("Error reading file %s: %s", path, e.getMessage());
         }
+    }
+
+    public String[] getOriginalArgs() {
+        return originalArgs;
+    }
+
+    public void setOriginalArgs(String[] originalArgs) {
+        this.originalArgs = originalArgs;
     }
 }

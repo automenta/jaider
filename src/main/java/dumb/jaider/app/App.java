@@ -22,6 +22,7 @@ import dumb.jaider.model.JaiderModel;
 import dumb.jaider.tools.StandardTools;
 import dumb.jaider.ui.UI;
 import dumb.jaider.vcs.GitService;
+import org.jaider.service.SelfUpdateOrchestratorService;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
@@ -47,12 +48,14 @@ public class App {
     private Tokenizer tokenizer;
     private Agent agent;
     private Boolean lastValidationPreference = null; // Added for remembering validation preference
+    private org.jaider.service.SelfUpdateOrchestratorService selfUpdateOrchestratorService;
 
     public enum State {IDLE, AGENT_THINKING, WAITING_USER_CONFIRMATION}
 
-    public App(UI ui) {
+    public App(UI ui, String[] originalArgs) {
         this.ui = ui;
         this.config = new Config(model.dir); // Config loads DI definitions
+        this.model.setOriginalArgs(originalArgs);
 
         var injector = config.getInjector();
         if (injector != null) {
@@ -130,9 +133,20 @@ public class App {
 
 
                 agents.clear(); // Clear old agent instances
+                agents.clear(); // Clear old agent instances
                 agents.put("Coder", config.getComponent("coderAgent", Agent.class));
                 agents.put("Architect", config.getComponent("architectAgent", Agent.class));
                 agents.put("Ask", config.getComponent("askAgent", Agent.class));
+
+                if (config.getInjector() != null) { // Re-check injector just in case
+                    try {
+                        this.selfUpdateOrchestratorService = config.getComponent("selfUpdateOrchestratorService", org.jaider.service.SelfUpdateOrchestratorService.class);
+                    } catch (Exception e) {
+                        System.err.println("Error fetching SelfUpdateOrchestratorService from DI: " + e.getMessage());
+                        this.model.addLog(AiMessage.from("[Jaider] CRITICAL ERROR: Failed to initialize SelfUpdateOrchestratorService. Self-update features will be unavailable. " + e.getClass().getSimpleName() + ": " + e.getMessage()));
+                    }
+                }
+
             } catch (Exception e) {
                 System.err.println("Error updating components from DI: " + e.getMessage());
                 model.addLog(AiMessage.from("[Jaider] CRITICAL ERROR: Failed to update components using DI. Application might be unstable. Check config. " + e.getClass().getSimpleName() + ": " + e.getMessage()));
@@ -391,7 +405,21 @@ public class App {
         state = State.IDLE;
         model.statusBarText = "Awaiting input.";
         saveSession();
+        checkAndTriggerSelfUpdateConfirmation();
         ui.redraw(model);
+    }
+
+    private void checkAndTriggerSelfUpdateConfirmation() {
+        if (this.selfUpdateOrchestratorService != null &&
+            this.selfUpdateOrchestratorService.getPendingUpdate() != null &&
+            !this.selfUpdateOrchestratorService.isUpdateInProgress() &&
+            this.state == State.IDLE) {
+            // TODO: Integrate properly with TUI for user confirmation.
+            // For now, this call assumes UserInterfaceService handles interaction.
+            // The actual confirmation UI flow will be addressed in Step 1.4.
+            System.out.println("[App] Triggering self-update confirmation process via orchestrator..."); // Temporary log
+            this.selfUpdateOrchestratorService.triggerUserConfirmationProcess();
+        }
     }
 
     private void execute(String input) {

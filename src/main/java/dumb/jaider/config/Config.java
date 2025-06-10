@@ -151,6 +151,43 @@ public class Config {
         standardToolsDef.put("constructorArgs", standardToolsArgs);
         componentDefsJsonArray.put(standardToolsDef);
 
+        // New component definitions for self-update services
+        componentDefsJsonArray.put(new JSONObject()
+            .put("id", "userInterfaceService")
+            .put("class", "org.jaider.ui.CommandLineUserInterfaceService")
+        );
+        componentDefsJsonArray.put(new JSONObject()
+            .put("id", "gitService")
+            .put("class", "org.jaider.service.LocalGitService")
+        );
+        componentDefsJsonArray.put(new JSONObject()
+            .put("id", "buildManagerService")
+            .put("class", "org.jaider.service.BuildManagerService")
+        );
+        componentDefsJsonArray.put(new JSONObject()
+            .put("id", "restartService")
+            .put("class", "org.jaider.service.BasicRestartService")
+        );
+        componentDefsJsonArray.put(new JSONObject()
+            .put("id", "selfUpdateOrchestratorService")
+            .put("class", "org.jaider.service.SelfUpdateOrchestratorService")
+            .put("constructorArgs", new JSONArray()
+                .put(new JSONObject().put("ref", "jaiderModel"))
+                .put(new JSONObject().put("ref", "userInterfaceService"))
+                .put(new JSONObject().put("ref", "buildManagerService"))
+                .put(new JSONObject().put("ref", "gitService"))
+                .put(new JSONObject().put("ref", "restartService"))
+            )
+        );
+        componentDefsJsonArray.put(new JSONObject()
+            .put("id", "jaiderTools")
+            .put("class", "dumb.jaider.tools.JaiderTools")
+            .put("constructorArgs", new JSONArray()
+                .put(new JSONObject().put("ref", "jaiderModel"))
+                .put(new JSONObject().put("ref", "selfUpdateOrchestratorService"))
+            )
+        );
+
         JSONObject coderAgentDef = new JSONObject();
         coderAgentDef.put("id", "coderAgent");
         coderAgentDef.put("class", "dumb.jaider.agents.CoderAgent");
@@ -158,6 +195,7 @@ public class Config {
         coderAgentArgs.put(new JSONObject().put("ref", "appChatLanguageModel"));
         coderAgentArgs.put(new JSONObject().put("ref", "chatMemory"));
         coderAgentArgs.put(new JSONObject().put("ref", "standardTools"));
+        coderAgentArgs.put(new JSONObject().put("ref", "jaiderTools")); // Added jaiderTools
         coderAgentDef.put("constructorArgs", coderAgentArgs);
         componentDefsJsonArray.put(coderAgentDef);
 
@@ -168,6 +206,7 @@ public class Config {
         architectAgentArgs.put(new JSONObject().put("ref", "appChatLanguageModel"));
         architectAgentArgs.put(new JSONObject().put("ref", "chatMemory"));
         architectAgentArgs.put(new JSONObject().put("ref", "standardTools"));
+        // Note: architectAgent does not get jaiderTools by default, consistent with original structure
         architectAgentDef.put("constructorArgs", architectAgentArgs);
         componentDefsJsonArray.put(architectAgentDef);
 
@@ -177,6 +216,7 @@ public class Config {
         JSONArray askAgentArgs = new JSONArray();
         askAgentArgs.put(new JSONObject().put("ref", "appChatLanguageModel"));
         askAgentArgs.put(new JSONObject().put("ref", "chatMemory"));
+        // Note: askAgent does not get jaiderTools by default
         askAgentDef.put("constructorArgs", askAgentArgs);
         componentDefsJsonArray.put(askAgentDef);
 
