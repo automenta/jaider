@@ -6,5 +6,7 @@ import java.io.File;
 public interface GitService {
     boolean applyDiff(File projectRoot, String filePath, String diffContent);
     boolean revertChanges(File projectRoot, String filePath);
-    boolean commitChanges(File projectRoot, String filePath, String commitMessage);
+    String commitChanges(File projectRoot, String filePath, String commitMessage); // Return type changed
+    boolean isWorkingDirectoryClean(File projectRoot);
+    boolean revertLastCommittedUpdate(File projectRoot, String commitHashToRevert);
 }

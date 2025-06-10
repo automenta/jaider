@@ -8,13 +8,12 @@ import java.util.Scanner;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.function.Consumer;
-
-// import org.slf4j.Logger; // Future: Add logging
-// import org.slf4j.LoggerFactory; // Future: Add logging
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class CommandLineUserInterfaceService implements UserInterfaceService {
 
-    // private static final Logger logger = LoggerFactory.getLogger(CommandLineUserInterfaceService.class); // Future
+    private static final Logger logger = LoggerFactory.getLogger(CommandLineUserInterfaceService.class);
     private final PrintStream out;
     private final BufferedReader inReader;
     private final ExecutorService executorService; // For handling asynchronous input for askYesNoQuestion
@@ -47,11 +46,13 @@ public class CommandLineUserInterfaceService implements UserInterfaceService {
 
     @Override
     public void showMessage(String message) {
+        logger.info("Showing message to user: {}", message);
         out.println("[INFO] " + message);
     }
 
     @Override
     public void showError(String message) {
+        logger.error("Showing error to user: {}", message);
         // Using System.err for errors is common practice
         System.err.println("[ERROR] " + message);
     }
@@ -70,13 +71,11 @@ public class CommandLineUserInterfaceService implements UserInterfaceService {
                     callback.accept(response);
                 } else {
                     // End of stream or error
-                    // logger.warn("No input received for yes/no question (null line). Defaulting to 'no'."); // Future
-                    System.err.println("CommandLineUserInterfaceService: No input received (null line). Defaulting to 'no'.");
+                    logger.warn("No input received for yes/no question (null line). Defaulting to 'no'.");
                     callback.accept(false); // Default to no on EOF or error
                 }
             } catch (IOException e) {
-                // logger.error("IOException reading user input for yes/no question. Defaulting to 'no'.", e); // Future
-                System.err.println("CommandLineUserInterfaceService: IOException reading user input. Defaulting to 'no'. Error: " + e.getMessage());
+                logger.error("IOException reading user input for yes/no question. Defaulting to 'no'.", e);
                 callback.accept(false); // Default to no on exception
             }
         });
@@ -84,8 +83,7 @@ public class CommandLineUserInterfaceService implements UserInterfaceService {
 
     // Call this method when the application is shutting down to clean up the executor.
     public void shutdown() {
-        // logger.info("Shutting down CommandLineUserInterfaceService executor."); // Future
-        System.out.println("CommandLineUserInterfaceService: Shutting down input executor.");
+        logger.info("Shutting down input executor.");
         executorService.shutdown();
         try {
             if (!executorService.awaitTermination(5, java.util.concurrent.TimeUnit.SECONDS)) {

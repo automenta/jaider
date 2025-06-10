@@ -7,12 +7,12 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.Arrays;
 import java.util.concurrent.TimeUnit;
-// import org.slf4j.Logger; // Future: Add logging
-// import org.slf4j.LoggerFactory; // Future: Add logging
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class BuildManagerService {
 
-    // private static final Logger logger = LoggerFactory.getLogger(BuildManagerService.class); // Future
+    private static final Logger logger = LoggerFactory.getLogger(BuildManagerService.class);
     private static final long MAVEN_TIMEOUT_SECONDS = 120; // 2 minutes timeout for Maven commands
 
     public static class BuildResult {
@@ -45,14 +45,12 @@ public class BuildManagerService {
 
     public BuildResult compileProject(JaiderModel jaiderModel) {
         if (jaiderModel == null || jaiderModel.getDir() == null) {
-            // logger.error("JaiderModel or its project directory is null. Cannot compile."); // Future
-            System.err.println("BuildManagerService: JaiderModel or its project directory is null. Cannot compile.");
+            logger.error("JaiderModel or its project directory is null. Cannot compile.");
             return new BuildResult(false, "Project directory is not configured.", -1);
         }
         File projectDir = jaiderModel.getDir();
         if (!projectDir.isDirectory()) {
-            // logger.error("Project directory does not exist or is not a directory: {}", projectDir.getAbsolutePath()); // Future
-            System.err.println("BuildManagerService: Project directory does not exist or is not a directory: " + projectDir.getAbsolutePath());
+            logger.error("Project directory does not exist or is not a directory: {}", projectDir.getAbsolutePath());
             return new BuildResult(false, "Project directory is invalid: " + projectDir.getAbsolutePath(), -1);
         }
         return executeMavenCommand(new String[]{"mvn", "compile"}, projectDir);
@@ -60,22 +58,19 @@ public class BuildManagerService {
 
     public BuildResult packageProject(JaiderModel jaiderModel) {
         if (jaiderModel == null || jaiderModel.getDir() == null) {
-            // logger.error("JaiderModel or its project directory is null. Cannot package."); // Future
-            System.err.println("BuildManagerService: JaiderModel or its project directory is null. Cannot package.");
+            logger.error("JaiderModel or its project directory is null. Cannot package.");
             return new BuildResult(false, "Project directory is not configured.", -1);
         }
         File projectDir = jaiderModel.getDir();
         if (!projectDir.isDirectory()) {
-            // logger.error("Project directory does not exist or is not a directory: {}", projectDir.getAbsolutePath()); // Future
-            System.err.println("BuildManagerService: Project directory does not exist or is not a directory: " + projectDir.getAbsolutePath());
+            logger.error("Project directory does not exist or is not a directory: {}", projectDir.getAbsolutePath());
             return new BuildResult(false, "Project directory is invalid: " + projectDir.getAbsolutePath(), -1);
         }
         return executeMavenCommand(new String[]{"mvn", "package"}, projectDir);
     }
 
     private BuildResult executeMavenCommand(String[] command, File projectDir) {
-        // logger.info("Executing Maven command: {} in directory: {}", Arrays.toString(command), projectDir.getAbsolutePath()); // Future
-        System.out.println("BuildManagerService: Executing Maven command: " + Arrays.toString(command) + " in directory: " + projectDir.getAbsolutePath());
+        logger.info("Executing Maven command: {} in directory: {}", Arrays.toString(command), projectDir.getAbsolutePath());
         StringBuilder output = new StringBuilder();
         ProcessBuilder processBuilder = new ProcessBuilder(command);
         processBuilder.directory(projectDir);
@@ -88,7 +83,7 @@ public class BuildManagerService {
                 String line;
                 while ((line = reader.readLine()) != null) {
                     output.append(line).append(System.lineSeparator());
-                    // logger.debug("Maven output: {}", line); // Future: Log line-by-line if needed
+                    logger.debug("Maven output: {}", line); // Log line-by-line at DEBUG
                 }
             }
 
@@ -97,11 +92,9 @@ public class BuildManagerService {
 
             if (completed) {
                 exitCode = process.exitValue();
-                // logger.info("Maven command {} completed with exit code: {}", Arrays.toString(command), exitCode); // Future
-                System.out.println("BuildManagerService: Maven command " + Arrays.toString(command) + " completed with exit code: " + exitCode);
+                logger.info("Maven command {} completed with exit code: {}", Arrays.toString(command), exitCode);
             } else {
-                // logger.warn("Maven command {} timed out after {} seconds.", Arrays.toString(command), MAVEN_TIMEOUT_SECONDS); // Future
-                System.err.println("BuildManagerService: Maven command " + Arrays.toString(command) + " timed out after " + MAVEN_TIMEOUT_SECONDS + " seconds.");
+                logger.warn("Maven command {} timed out after {} seconds.", Arrays.toString(command), MAVEN_TIMEOUT_SECONDS);
                 output.append("\nERROR: Maven command timed out after ").append(MAVEN_TIMEOUT_SECONDS).append(" seconds.");
                 process.destroyForcibly(); // Ensure the process is killed
                 return new BuildResult(false, output.toString(), -1); // Use a special exit code for timeout
@@ -110,13 +103,11 @@ public class BuildManagerService {
             return new BuildResult(exitCode == 0, output.toString(), exitCode);
 
         } catch (IOException e) {
-            // logger.error("IOException during Maven command execution: {}. Command: {}, Directory: {}", e.getMessage(), Arrays.toString(command), projectDir.getAbsolutePath(), e); // Future
-            System.err.println("BuildManagerService: IOException during Maven command execution: " + e.getMessage() + ". Command: " + Arrays.toString(command));
+            logger.error("IOException during Maven command execution: {}. Command: {}, Directory: {}", e.getMessage(), Arrays.toString(command), projectDir.getAbsolutePath(), e);
             output.append("\nERROR: IOException occurred: ").append(e.getMessage());
             return new BuildResult(false, output.toString(), -1);
         } catch (InterruptedException e) {
-            // logger.warn("Maven command execution was interrupted: {}. Command: {}, Directory: {}", e.getMessage(), Arrays.toString(command), projectDir.getAbsolutePath(), e); // Future
-            System.err.println("BuildManagerService: Maven command execution was interrupted: " + e.getMessage() + ". Command: " + Arrays.toString(command));
+            logger.warn("Maven command execution was interrupted: {}. Command: {}, Directory: {}", e.getMessage(), Arrays.toString(command), projectDir.getAbsolutePath(), e);
             Thread.currentThread().interrupt(); // Restore interrupted status
             output.append("\nERROR: Execution interrupted: ").append(e.getMessage());
             return new BuildResult(false, output.toString(), -1);

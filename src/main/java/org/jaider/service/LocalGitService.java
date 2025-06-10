@@ -11,13 +11,12 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
-
-// import org.slf4j.Logger; // Future: Add logging
-// import org.slf4j.LoggerFactory; // Future: Add logging
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class LocalGitService implements GitService {
 
-    // private static final Logger logger = LoggerFactory.getLogger(LocalGitService.class); // Future
+    private static final Logger logger = LoggerFactory.getLogger(LocalGitService.class);
     private static final long GIT_TIMEOUT_SECONDS = 30;
 
     private static class CommandResult {
@@ -37,8 +36,7 @@ public class LocalGitService implements GitService {
     }
 
     private CommandResult executeGitCommand(File workingDirectory, List<String> commandParts) {
-        // logger.info("Executing Git command: {} in directory: {}", String.join(" ", commandParts), workingDirectory.getAbsolutePath()); // Future
-        System.out.println("LocalGitService: Executing Git command: " + String.join(" ", commandParts) + " in directory: " + workingDirectory.getAbsolutePath());
+        logger.info("Executing Git command: {} in directory: {}", String.join(" ", commandParts), workingDirectory.getAbsolutePath());
 
         ProcessBuilder pb = new ProcessBuilder(commandParts);
         pb.directory(workingDirectory);
@@ -63,22 +61,18 @@ public class LocalGitService implements GitService {
             }
 
             if (!process.waitFor(GIT_TIMEOUT_SECONDS, TimeUnit.SECONDS)) {
-                // logger.warn("Git command timed out: {}", String.join(" ", commandParts)); // Future
-                System.err.println("LocalGitService: Git command timed out: " + String.join(" ", commandParts));
+                logger.warn("Git command timed out: {}", String.join(" ", commandParts));
                 process.destroyForcibly();
                 return new CommandResult(-1, stdOutput.toString(), stdError.toString() + "\nError: Git command timed out.");
             }
             exitCode = process.exitValue();
-            // logger.info("Git command finished with exit code {}. Output: '{}', Error: '{}'", exitCode, stdOutput, stdError); // Future
-             System.out.println("LocalGitService: Git command finished with exit code " + exitCode + ". Output: '" + stdOutput + "', Error: '" + stdError + "'");
+            logger.debug("Git command finished with exit code {}. Output: '{}', Error: '{}'", exitCode, stdOutput.toString().trim(), stdError.toString().trim());
 
         } catch (IOException e) {
-            // logger.error("IOException during Git command execution: {}. Command: {}", e.getMessage(), String.join(" ", commandParts), e); // Future
-            System.err.println("LocalGitService: IOException during Git command: " + e.getMessage());
+            logger.error("IOException during Git command execution: {}. Command: {}", e.getMessage(), String.join(" ", commandParts), e);
             return new CommandResult(-1, stdOutput.toString(), stdError.toString() + "\nError: IOException - " + e.getMessage());
         } catch (InterruptedException e) {
-            // logger.warn("Git command execution interrupted: {}. Command: {}", e.getMessage(), String.join(" ", commandParts), e); // Future
-             System.err.println("LocalGitService: Git command interrupted: " + e.getMessage());
+            logger.warn("Git command execution interrupted: {}. Command: {}", e.getMessage(), String.join(" ", commandParts), e);
             Thread.currentThread().interrupt();
             return new CommandResult(-1, stdOutput.toString(), stdError.toString() + "\nError: Interrupted - " + e.getMessage());
         }
@@ -87,8 +81,7 @@ public class LocalGitService implements GitService {
 
     @Override
     public boolean applyDiff(File projectRoot, String filePath, String diffContent) {
-        // logger.info("Attempting to apply diff to file: {} in project root: {}", filePath, projectRoot.getAbsolutePath()); // Future
-        System.out.println("LocalGitService: Attempting to apply diff to file: " + filePath + " in project root: " + projectRoot.getAbsolutePath());
+        logger.info("Attempting to apply diff to file: {} in project root: {}", filePath, projectRoot.getAbsolutePath());
 
         File tempDiffFile = null;
         try {
@@ -96,81 +89,60 @@ public class LocalGitService implements GitService {
             tempDiffFile = File.createTempFile("jaider_diff_", ".patch", projectRoot); // Create in project root for simpler paths if git requires
             Path tempDiffPath = tempDiffFile.toPath();
             Files.writeString(tempDiffPath, diffContent, StandardOpenOption.WRITE);
-            // logger.debug("Diff content written to temporary file: {}", tempDiffPath.toString()); // Future
-            System.out.println("LocalGitService: Diff content written to temporary file: " + tempDiffPath.toString());
+            logger.debug("Diff content written to temporary file: {}", tempDiffPath.toString());
 
             // 2. Check if the diff applies cleanly (optional but good practice)
-            // `git apply --check --verbose <patch_file_path>`
-            // The path to the patch file should be relative to the projectRoot or absolute.
             List<String> checkCommand = new ArrayList<>(Arrays.asList("git", "apply", "--check", "--verbose", tempDiffPath.toString()));
             CommandResult checkResult = executeGitCommand(projectRoot, checkCommand);
             if (!checkResult.isSuccess()) {
-                // logger.error("Git apply --check failed for diff on {}. Exit code: {}. Error: {}", filePath, checkResult.exitCode, checkResult.error); // Future
-                System.err.println("LocalGitService: Git apply --check failed for diff on " + filePath + ". Error: " + checkResult.error + checkResult.output);
+                logger.error("Git apply --check failed for diff on {}. Exit code: {}. Error: {}. Output: {}", filePath, checkResult.exitCode, checkResult.error, checkResult.output);
                 return false;
             }
-            // logger.info("Git apply --check successful for diff on {}", filePath); // Future
-            System.out.println("LocalGitService: Git apply --check successful for diff on " + filePath);
+            logger.info("Git apply --check successful for diff on {}", filePath);
 
             // 3. Apply the diff
-            // `git apply --verbose <patch_file_path>`
             List<String> applyCommand = new ArrayList<>(Arrays.asList("git", "apply", "--verbose", tempDiffPath.toString()));
             CommandResult applyResult = executeGitCommand(projectRoot, applyCommand);
 
             if (!applyResult.isSuccess()) {
-                // logger.error("Git apply failed for diff on {}. Exit code: {}. Error: {}", filePath, applyResult.exitCode, applyResult.error); // Future
-                System.err.println("LocalGitService: Git apply failed for diff on " + filePath + ". Error: " + applyResult.error + applyResult.output);
-                // Attempt to reverse the patch if it partially applied, though git apply usually doesn't do partials without specific flags
-                // List<String> reverseCommand = new ArrayList<>(Arrays.asList("git", "apply", "--reverse", tempDiffPath.toString()));
-                // executeGitCommand(projectRoot, reverseCommand); // Best effort reverse
+                logger.error("Git apply failed for diff on {}. Exit code: {}. Error: {}. Output: {}", filePath, applyResult.exitCode, applyResult.error, applyResult.output);
                 return false;
             }
-            // logger.info("Git apply successful for diff on {}", filePath); // Future
-            System.out.println("LocalGitService: Git apply successful for diff on " + filePath);
+            logger.info("Git apply successful for diff on {}", filePath);
             return true;
 
         } catch (IOException e) {
-            // logger.error("IOException during applyDiff operation for {}: {}", filePath, e.getMessage(), e); // Future
-            System.err.println("LocalGitService: IOException during applyDiff for " + filePath + ": " + e.getMessage());
+            logger.error("IOException during applyDiff operation for {}: {}", filePath, e.getMessage(), e);
             return false;
         } finally {
             if (tempDiffFile != null && !tempDiffFile.delete()) {
-                // logger.warn("Failed to delete temporary diff file: {}", tempDiffFile.getAbsolutePath()); // Future
-                 System.err.println("LocalGitService: Failed to delete temporary diff file: " + tempDiffFile.getAbsolutePath());
+                logger.warn("Failed to delete temporary diff file: {}", tempDiffFile.getAbsolutePath());
             }
         }
     }
 
     @Override
     public boolean revertChanges(File projectRoot, String filePath) {
-        // logger.info("Attempting to revert " + filePath + " to its state at HEAD~1 in project root: " + projectRoot.getAbsolutePath()); // Future
-        System.out.println("LocalGitService: Attempting to revert " + filePath + " to its state at HEAD~1.");
+        logger.info("Attempting to revert {} to its state at HEAD~1 in project root: {}", filePath, projectRoot.getAbsolutePath());
 
         // 1. Checkout the file from the commit before HEAD
         List<String> checkoutCommand = new ArrayList<>(Arrays.asList("git", "checkout", "HEAD~1", "--", filePath));
         CommandResult checkoutResult = executeGitCommand(projectRoot, checkoutCommand);
 
         if (!checkoutResult.isSuccess()) {
-            // logger.error("Failed to checkout " + filePath + " from HEAD~1. Exit code: {}. Error: {}", checkoutResult.exitCode, checkoutResult.error + checkoutResult.output); // Future
-            System.err.println("LocalGitService: Failed to checkout " + filePath + " from HEAD~1. Error: " + checkoutResult.error + checkoutResult.output);
+            logger.error("Failed to checkout {} from HEAD~1. Exit code: {}. Error: {}. Output: {}", filePath, checkoutResult.exitCode, checkoutResult.error, checkoutResult.output);
             return false;
         }
-        // logger.info("Successfully checked out " + filePath + " from HEAD~1."); // Future
-        System.out.println("LocalGitService: Successfully checked out " + filePath + " from HEAD~1.");
+        logger.info("Successfully checked out {} from HEAD~1.", filePath);
 
         // 2. Stage the reverted file
         List<String> addCommand = new ArrayList<>(Arrays.asList("git", "add", filePath));
         CommandResult addResult = executeGitCommand(projectRoot, addCommand);
         if (!addResult.isSuccess()) {
-            // logger.error("Failed to stage reverted file " + filePath + ". Exit code: {}. Error: {}", addResult.exitCode, addResult.error + addResult.output); // Future
-            System.err.println("LocalGitService: Failed to stage reverted file " + filePath + ". Error: " + addResult.error + addResult.output);
-            // Consider attempting to clean up the working directory from the checkout if staging fails.
-            // e.g., git checkout HEAD -- <filePath> to restore to original HEAD if possible, though this might also fail.
-            // For now, just report failure.
+            logger.error("Failed to stage reverted file {}. Exit code: {}. Error: {}. Output: {}", filePath, addResult.exitCode, addResult.error, addResult.output);
             return false;
         }
-        // logger.info("Successfully staged reverted file " + filePath + "."); // Future
-        System.out.println("LocalGitService: Successfully staged reverted file " + filePath + ".");
+        logger.info("Successfully staged reverted file {}.", filePath);
 
         // 3. Commit the revert
         String commitMessage = "Rollback: Reverted changes to " + filePath + " due to failed validation";
@@ -178,44 +150,92 @@ public class LocalGitService implements GitService {
         CommandResult commitResult = executeGitCommand(projectRoot, commitCommand);
 
         if (!commitResult.isSuccess()) {
-            // logger.error("Failed to commit reverted file " + filePath + ". Exit code: {}. Error: {}", commitResult.exitCode, commitResult.error + commitResult.output); // Future
-            System.err.println("LocalGitService: Failed to commit reverted file " + filePath + ". Error: " + commitResult.error + commitResult.output);
-            // If commit fails, the file is staged with its HEAD~1 content. This might be an acceptable state for manual recovery.
+            logger.error("Failed to commit reverted file {}. Exit code: {}. Error: {}. Output: {}", filePath, commitResult.exitCode, commitResult.error, commitResult.output);
             return false;
         }
-        // logger.info("Successfully committed revert of " + filePath + "."); // Future
-        System.out.println("LocalGitService: Successfully committed revert of " + filePath + ".");
+        logger.info("Successfully committed revert of {}.", filePath);
         return true;
     }
 
     @Override
-    public boolean commitChanges(File projectRoot, String filePath, String commitMessage) {
-        // logger.info("Attempting to commit changes for file: {} with message: '{}' in project root: {}", filePath, commitMessage, projectRoot.getAbsolutePath()); // Future
-        System.out.println("LocalGitService: Attempting to commit changes for file: " + filePath + " with message: '" + commitMessage + "' in project root: " + projectRoot.getAbsolutePath());
+    public String commitChanges(File projectRoot, String filePath, String commitMessage) {
+        logger.info("Attempting to commit changes for file: {} with message: '{}' in project root: {}", filePath, commitMessage, projectRoot.getAbsolutePath());
 
         // 1. Stage the file: `git add <filePath>`
         List<String> addCommand = new ArrayList<>(Arrays.asList("git", "add", filePath));
         CommandResult addResult = executeGitCommand(projectRoot, addCommand);
         if (!addResult.isSuccess()) {
-            // logger.error("Failed to stage file {} for commit. Exit code: {}. Error: {}", filePath, addResult.exitCode, addResult.error); // Future
-            System.err.println("LocalGitService: Failed to stage file " + filePath + " for commit. Error: " + addResult.error + addResult.output);
-            return false;
+            logger.error("Failed to stage file {} for commit. Exit code: {}. Error: {}. Output: {}", filePath, addResult.exitCode, addResult.error, addResult.output);
+            return null;
         }
-        // logger.info("File {} staged successfully.", filePath); // Future
-        System.out.println("LocalGitService: File " + filePath + " staged successfully.");
+        logger.info("File {} staged successfully.", filePath);
 
         // 2. Commit the staged changes: `git commit -m "<commitMessage>"`
         List<String> commitCommand = new ArrayList<>(Arrays.asList("git", "commit", "-m", commitMessage));
         CommandResult commitResult = executeGitCommand(projectRoot, commitCommand);
 
         if (!commitResult.isSuccess()) {
-            // logger.error("Failed to commit changes for {} with message '{}'. Exit code: {}. Error: {}", filePath, commitMessage, commitResult.exitCode, commitResult.error); // Future
-            System.err.println("LocalGitService: Failed to commit changes for " + filePath + ". Error: " + commitResult.error + commitResult.output);
-            // Note: file is staged. User might need to manually unstage or commit.
+            logger.error("Failed to commit changes for {} with message '{}'. Exit code: {}. Error: {}. Output: {}", filePath, commitMessage, commitResult.exitCode, commitResult.error, commitResult.output);
+            return null;
+        }
+        // logger.info("Successfully committed changes for {} with message '{}'", filePath, commitMessage); // Logged below with hash
+
+        // 3. Get the commit hash
+        List<String> revParseCommand = new ArrayList<>(Arrays.asList("git", "rev-parse", "HEAD"));
+        CommandResult revParseResult = executeGitCommand(projectRoot, revParseCommand);
+        if (revParseResult.isSuccess() && revParseResult.output != null && !revParseResult.output.trim().isEmpty()) {
+            String commitHash = revParseResult.output.trim();
+            logger.info("Successfully committed changes for {} with message '{}'. Commit hash: {}", filePath, commitMessage, commitHash);
+            return commitHash; // Return the commit hash
+        } else {
+            logger.error("Committed changes for {} but failed to retrieve commit hash. Error (rev-parse): {}. Output: {}", filePath, revParseResult.error, revParseResult.output);
+            return null; // Indicate commit might have happened but hash retrieval failed
+        }
+    }
+
+    @Override
+    public boolean isWorkingDirectoryClean(File projectRoot) {
+        logger.info("Checking if working directory is clean in: {}", projectRoot.getAbsolutePath());
+        List<String> command = new ArrayList<>(Arrays.asList("git", "status", "--porcelain"));
+        CommandResult result = executeGitCommand(projectRoot, command);
+
+        if (!result.isSuccess()) {
+            logger.error("Failed to execute 'git status --porcelain'. Exit code: {}. Error: {}. Output: {}",
+                         result.exitCode, result.error, result.output);
+            // Treat as not clean if status command fails, to be safe
             return false;
         }
-        // logger.info("Successfully committed changes for {} with message '{}'", filePath, commitMessage); // Future
-        System.out.println("LocalGitService: Successfully committed changes for " + filePath + " with message '" + commitMessage + "'");
-        return true;
+
+        if (result.output == null || result.output.trim().isEmpty()) {
+            logger.info("Working directory is clean.");
+            return true;
+        } else {
+            logger.warn("Working directory is not clean. Status output:\n{}", result.output.trim());
+            return false;
+        }
+    }
+
+    @Override
+    public boolean revertLastCommittedUpdate(File projectRoot, String commitHashToRevert) {
+        if (commitHashToRevert == null || commitHashToRevert.trim().isEmpty()) {
+            logger.error("commitHashToRevert cannot be null or empty for revertLastCommittedUpdate.");
+            return false;
+        }
+        logger.info("Attempting to revert commit: {} in project root: {}", commitHashToRevert, projectRoot.getAbsolutePath());
+
+        // Ensure working directory is clean before 'git revert' might be a good idea,
+        // but StartupService should call this on a clean state post-restart.
+        // For now, proceed directly with revert.
+
+        List<String> revertCommand = new ArrayList<>(Arrays.asList("git", "revert", commitHashToRevert, "--no-edit"));
+        CommandResult result = executeGitCommand(projectRoot, revertCommand);
+
+        if (!result.isSuccess()) {
+            logger.error("Failed to revert commit {}. Exit code: {}. Error: {}. Output: {}",
+                         commitHashToRevert, result.exitCode, result.error, result.output);
+        } else {
+            logger.info("Successfully reverted commit {}.", commitHashToRevert);
+        }
+        return result.isSuccess();
     }
 }

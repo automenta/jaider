@@ -6,24 +6,21 @@ import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-
-// import org.slf4j.Logger; // Future: Add logging
-// import org.slf4j.LoggerFactory; // Future: Add logging
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class BasicRestartService implements RestartService {
 
-    // private static final Logger logger = LoggerFactory.getLogger(BasicRestartService.class); // Future
+    private static final Logger logger = LoggerFactory.getLogger(BasicRestartService.class);
 
     @Override
     public boolean restartApplication(String[] originalArgs) {
-        // logger.info("Attempting to restart application with arguments: {}", Arrays.toString(originalArgs)); // Future
-        System.out.println("BasicRestartService: Attempting to restart application with arguments: " + Arrays.toString(originalArgs));
+        logger.info("Attempting to restart application with arguments: {}", Arrays.toString(originalArgs));
 
         try {
             // Get the path to the currently running Java executable
             String javaBin = System.getProperty("java.home") + File.separator + "bin" + File.separator + "java";
-            // logger.debug("Java executable found at: {}", javaBin); // Future
-            System.out.println("BasicRestartService: Java executable found at: " + javaBin);
+            logger.debug("Java executable found at: {}", javaBin);
 
             // Get the path to the currently running JAR file or main class
             // This is the tricky part and can be unreliable.
@@ -31,8 +28,7 @@ public class BasicRestartService implements RestartService {
             try {
                 currentExecutable = new File(BasicRestartService.class.getProtectionDomain().getCodeSource().getLocation().toURI());
             } catch (URISyntaxException e) {
-                // logger.error("Failed to determine current executable path due to URISyntaxException.", e); // Future
-                System.err.println("BasicRestartService: Failed to determine current executable path: " + e.getMessage());
+                logger.error("Failed to determine current executable path due to URISyntaxException: {}", e.getMessage(), e);
                 return false;
             }
 
@@ -41,25 +37,21 @@ public class BasicRestartService implements RestartService {
 
             // Check if running from a JAR or from compiled classes (e.g., in an IDE)
             if (currentExecutable.isFile() && currentExecutable.getName().toLowerCase().endsWith(".jar")) {
-                // logger.info("Application appears to be running from JAR: {}", currentExecutable.getPath()); // Future
-                System.out.println("BasicRestartService: Application running from JAR: " + currentExecutable.getPath());
+                logger.info("Application appears to be running from JAR: {}", currentExecutable.getPath());
                 command.add("-jar");
                 command.add(currentExecutable.getPath());
             } else {
-                // logger.info("Application appears to be running from compiled classes (e.g., IDE). Main class restart is complex and not fully supported by this basic service."); // Future
+                logger.info("Application appears to be running from compiled classes (e.g., IDE). Attempting main class restart.");
                 // Attempting to use classpath and main class - this is more fragile.
-                // This requires knowing the main class. Let's assume it's passed or configured.
-                // For now, this path will likely fail or require more configuration.
-                // A common way is to get main class from a system property:
                 String mainClass = System.getProperty("sun.java.command"); // This can be "MainClass arg1 arg2" or just "MainClass" or "path/to/jar.jar"
                 if (mainClass == null || mainClass.trim().isEmpty()) {
-                     System.err.println("BasicRestartService: Cannot determine main class (sun.java.command is empty). Cannot restart from compiled classes.");
+                     logger.error("Cannot determine main class (sun.java.command is empty). Cannot restart from compiled classes.");
                      return false;
                 }
                 // Attempt to parse the main class from sun.java.command
                 String[] commandParts = mainClass.split("\\s+");
                 if (commandParts[0].toLowerCase().endsWith(".jar")) { // It was actually a jar
-                     System.out.println("BasicRestartService: sun.java.command indicates JAR: " + commandParts[0] + ". Switching to JAR restart.");
+                     logger.info("sun.java.command indicates JAR: {}. Switching to JAR restart.", commandParts[0]);
                      command.set(command.size() -1, "-jar"); // remove javaBin, add -jar
                      command.add(commandParts[0]); // jar path
                      // Add other args from sun.java.command if any, before originalArgs
@@ -68,7 +60,7 @@ public class BasicRestartService implements RestartService {
                      }
                 } else {
                     // Assuming commandParts[0] is the main class
-                    System.out.println("BasicRestartService: Attempting restart with main class: " + commandParts[0] + " (requires classpath to be set correctly).");
+                    logger.info("Attempting restart with main class: {} (requires classpath to be set correctly).", commandParts[0]);
                     command.add("-cp");
                     command.add(System.getProperty("java.class.path"));
                     command.add(commandParts[0]); // Main class
@@ -83,8 +75,7 @@ public class BasicRestartService implements RestartService {
                 command.addAll(Arrays.asList(originalArgs));
             }
 
-            // logger.info("Restart command: {}", String.join(" ", command)); // Future
-            System.out.println("BasicRestartService: Restart command: " + String.join(" ", command));
+            logger.info("Restart command: {}", String.join(" ", command));
 
             ProcessBuilder processBuilder = new ProcessBuilder(command);
             // Optionally, redirect output/error streams of the new process
@@ -92,14 +83,12 @@ public class BasicRestartService implements RestartService {
 
             processBuilder.start(); // Start the new process
 
-            // logger.info("New process started. Exiting current process."); // Future
-            System.out.println("BasicRestartService: New process started. Exiting current process.");
+            logger.info("New process started. Exiting current process.");
             System.exit(0); // Exit the current application
             return true; // Should not be reached if System.exit(0) works
 
         } catch (IOException e) {
-            // logger.error("IOException during application restart attempt.", e); // Future
-            System.err.println("BasicRestartService: IOException during restart: " + e.getMessage());
+            logger.error("IOException during application restart attempt.", e);
             return false;
         }
     }
