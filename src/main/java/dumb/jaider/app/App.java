@@ -95,6 +95,7 @@ public class App {
         commandMap.put("/mode", new ModeCommand());
         commandMap.put("/help", new HelpCommand());
         commandMap.put("/exit", new ExitCommand());
+        commandMap.put("/code", new CodeCommand(new AppContext(this.model, this.config, this.ui, this)));
     }
 
     public synchronized void update() {
