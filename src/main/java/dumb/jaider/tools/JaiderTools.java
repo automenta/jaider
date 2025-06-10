@@ -1,0 +1,94 @@
+package dumb.jaider.tools;
+
+import dev.langchain4j.agent.tool.Tool;
+import dumb.jaider.model.JaiderModel;
+import dumb.jaider.model.StagedUpdate; // New import
+import org.jaider.service.SelfUpdateOrchestratorService; // New import
+
+// No longer needed for basic path validation if JaiderModel isn't used directly here yet
+// import java.io.File;
+import java.util.regex.Pattern;
+
+public class JaiderTools {
+
+    private final JaiderModel jaiderModel; // Retained for future use, though not directly used in this version of proposeSelfUpdate
+    private final SelfUpdateOrchestratorService selfUpdateOrchestratorService; // New dependency
+
+    private static final Pattern GIT_MERGE_DIFF_FORMAT_PATTERN = Pattern.compile(
+            "(?s).*<<<<<<< SEARCH.*=======.*>>>>>>> REPLACE.*");
+
+    /**
+     * Constructor for JaiderTools.
+     * @param jaiderModel The JaiderModel instance.
+     * @param selfUpdateOrchestratorService The service to orchestrate self-updates.
+     */
+    public JaiderTools(JaiderModel jaiderModel, SelfUpdateOrchestratorService selfUpdateOrchestratorService) {
+        if (jaiderModel == null) {
+            throw new IllegalArgumentException("JaiderModel cannot be null.");
+        }
+        if (selfUpdateOrchestratorService == null) {
+            throw new IllegalArgumentException("SelfUpdateOrchestratorService cannot be null.");
+        }
+        this.jaiderModel = jaiderModel;
+        this.selfUpdateOrchestratorService = selfUpdateOrchestratorService;
+    }
+
+    /**
+     * Proposes a self-update to Jaider's own codebase by providing a file path (relative to the project root),
+     * a diff in the git merge-driver format (<<<<<<< SEARCH ... ======= ... >>>>>>> REPLACE),
+     * and an optional commit message. This stages the update for user review via the SelfUpdateOrchestratorService.
+     *
+     * @param filePath The relative path to the file to be updated.
+     * @param diffContent The diff content in git merge-driver format.
+     * @param commitMessage An optional commit message for the change.
+     * @return A message indicating whether the proposal was successfully staged.
+     */
+    @Tool(name = "proposeSelfUpdate",
+          description = "Proposes a self-update to Jaider's own codebase by providing a file path (relative to the project root), a diff in the git merge-driver format (<<<<<<< SEARCH ... ======= ... >>>>>>> REPLACE), and an optional commit message. This stages the update for user review and approval before application.")
+    public String proposeSelfUpdate(String filePath, String diffContent, String commitMessage) {
+        if (filePath == null || filePath.trim().isEmpty()) {
+            return "Error: filePath cannot be blank.";
+        }
+        if (diffContent == null || diffContent.trim().isEmpty()) {
+            return "Error: diffContent cannot be blank.";
+        }
+
+        if (!GIT_MERGE_DIFF_FORMAT_PATTERN.matcher(diffContent).matches()) {
+            return "Error: Invalid diff format. Ensure the content includes '<<<<<<< SEARCH', '=======', and '>>>>>>> REPLACE' markers in the correct order.";
+        }
+
+        String effectiveCommitMessage = (commitMessage == null || commitMessage.trim().isEmpty())
+                                        ? "Jaider proposed self-update for " + filePath
+                                        : commitMessage;
+
+        StagedUpdate update = new StagedUpdate(filePath, diffContent, effectiveCommitMessage);
+
+        boolean stagedSuccessfully = selfUpdateOrchestratorService.stageUpdate(update);
+
+        if (stagedSuccessfully) {
+            // System.err no longer primary, orchestrator handles logging of staging.
+            // System.err.println("SELF-UPDATE PROPOSED VIA ORCHESTRATOR:");
+            // System.err.println("  File Path: " + filePath);
+            // System.err.println("  Commit Message: " + effectiveCommitMessage);
+            // System.err.println("  Diff Content:\n---\n" + diffContent + "\n---");
+            return "Update for file '" + filePath + "' has been successfully staged with commit message: '" + effectiveCommitMessage + "'. Please await user confirmation to apply this change.";
+        } else {
+            return "Error: Could not stage the update for '" + filePath + "'. The system might be busy or an internal error occurred (e.g., another update already in progress or pending).";
+        }
+    }
+
+    /**
+     * Proposes a self-update to Jaider's own codebase by providing a file path and a diff.
+     * A default commit message will be used.
+     * This stages the update for user review via the SelfUpdateOrchestratorService.
+     *
+     * @param filePath The relative path to the file to be updated.
+     * @param diffContent The diff content in git merge-driver format.
+     * @return A message indicating whether the proposal was successfully staged.
+     */
+    @Tool(name = "proposeSelfUpdate",
+          description = "Proposes a self-update to Jaider's own codebase by providing a file path (relative to the project root) and a diff in the git merge-driver format (<<<<<<< SEARCH ... ======= ... >>>>>>> REPLACE). A default commit message will be generated. This stages the update for user review and approval before application.")
+    public String proposeSelfUpdate(String filePath, String diffContent) {
+        return proposeSelfUpdate(filePath, diffContent, null); // Call the main method with a null commit message
+    }
+}
