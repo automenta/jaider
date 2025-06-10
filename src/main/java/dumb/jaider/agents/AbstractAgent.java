@@ -8,6 +8,7 @@ import dev.langchain4j.model.chat.ChatLanguageModel;
 import dev.langchain4j.service.AiServices;
 import java.util.List;
 import java.util.Set;
+import java.util.function.Consumer; // Added import
 
 public abstract class AbstractAgent implements Agent {
     protected final ChatLanguageModel model;
@@ -44,5 +45,14 @@ public abstract class AbstractAgent implements Agent {
     @Override
     public Set<Object> getTools() {
         return this.tools;
+    }
+
+    public void streamAct(String userQuery, Consumer<String> tokenConsumer) {
+        if (this.ai != null) {
+            this.ai.streamChat(userQuery, tokenConsumer);
+        } else {
+            // Fallback or error handling if ai service is null
+            tokenConsumer.accept("Error: AI service is not available for streaming.");
+        }
     }
 }

@@ -34,19 +34,29 @@ public class CodeCommand implements Command {
 
         try {
             CoderAgent coderAgent = appContext.getDependencyInjector().getComponent(CoderAgent.class);
-            // Stream CoderAgent responses back to the sender
-            // For now, just send a message indicating the agent would be invoked.
-            // Actual streaming invocation will be like:
-            // coderAgent.act(userRequest, responseChunk -> sender.sendMessage(responseChunk), () -> sender.sendMessage("CoderAgent finished."));
-            // For simplicity in this step, we'll use a synchronous call and a placeholder message.
 
-            String agentResponse = coderAgent.act(userRequest); // This is a synchronous call
-            sender.sendMessage("CoderAgent response: " + agentResponse);
+            // Indicate that streaming is starting
+            // sender.sendMessage("CoderAgent processing stream..."); // Optional: if you want an initial message
+
+            coderAgent.streamAct(userRequest, responseChunk -> {
+                sender.sendMessage(responseChunk);
+            });
+
+            // Optionally, send a message indicating streaming is complete if the streamAct method is blocking
+            // or if there's a separate callback for completion.
+            // For now, assume streamAct handles the full interaction or is non-blocking
+            // and separate completion message might be handled by the agent if needed.
+            // sender.sendMessage("CoderAgent stream finished.");
+
 
         } catch (Exception e) {
             sender.sendMessage("Error interacting with CoderAgent: " + e.getMessage());
             // Log the full stack trace for debugging
-            // e.printStackTrace(); // Consider a proper logging framework
+            // Consider using a proper logging framework:
+            // import org.slf4j.Logger;
+            // import org.slf4j.LoggerFactory;
+            // private static final Logger logger = LoggerFactory.getLogger(CodeCommand.class);
+            // logger.error("Error in CodeCommand", e);
         }
     }
 }

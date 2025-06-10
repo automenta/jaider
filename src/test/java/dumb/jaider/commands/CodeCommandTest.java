@@ -4,6 +4,7 @@ import dumb.jaider.app.AppContext;
 import dumb.jaider.agents.CoderAgent;
 import dumb.jaider.app.DependencyInjector;
 import dumb.jaider.ui.CommandSender;
+import java.util.function.Consumer; // Added import
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -49,37 +50,65 @@ class CodeCommandTest {
         codeCommand.execute(new String[]{}, mockCommandSender);
         verify(mockCommandSender).sendMessage("Please provide a description of the code changes you want to make. Usage: /code <your request>");
         verify(mockCoderAgent, never()).act(anyString());
+        verify(mockCoderAgent, never()).streamAct(anyString(), any(Consumer.class)); // Added this line
     }
 
     @Test
-    void execute_withArguments_invokesCoderAgent() {
+    void execute_withArguments_invokesCoderAgentStreaming() {
         String userRequest = "refactor this class";
-        String agentResponse = "Refactoring complete.";
-        when(mockCoderAgent.act(userRequest)).thenReturn(agentResponse);
+        String[] requestArgs = {"refactor", "this", "class"};
 
-        codeCommand.execute(new String[]{"refactor", "this", "class"}, mockCommandSender);
+        // Use doAnswer to simulate the CoderAgent calling the consumer
+        doAnswer(invocation -> {
+            Consumer<String> consumer = invocation.getArgument(1);
+            consumer.accept("Chunk 1 ");
+            consumer.accept("Chunk 2 ");
+            consumer.accept("Chunk 3");
+            return null; // void method
+        }).when(mockCoderAgent).streamAct(eq(userRequest), any(Consumer.class));
 
+        codeCommand.execute(requestArgs, mockCommandSender);
+
+        // Verify initial message
+        verify(mockCommandSender).sendMessage("Engaging CoderAgent with request: " + userRequest);
+
+        // Capture messages sent to CommandSender
         ArgumentCaptor<String> messageCaptor = ArgumentCaptor.forClass(String.class);
-        verify(mockCommandSender, times(2)).sendMessage(messageCaptor.capture());
+        // The first message is "Engaging...", then 3 chunks
+        verify(mockCommandSender, times(4)).sendMessage(messageCaptor.capture());
 
-        assertEquals("Engaging CoderAgent with request: " + userRequest, messageCaptor.getAllValues().get(0));
-        assertEquals("CoderAgent response: " + agentResponse, messageCaptor.getAllValues().get(1));
+        // Assert that the streamAct method was called on the agent
+        verify(mockCoderAgent).streamAct(eq(userRequest), any(Consumer.class));
 
-        verify(mockCoderAgent).act(userRequest);
+        // Check the streamed messages (after the initial "Engaging..." message)
+        assertEquals("Chunk 1 ", messageCaptor.getAllValues().get(1));
+        assertEquals("Chunk 2 ", messageCaptor.getAllValues().get(2));
+        assertEquals("Chunk 3", messageCaptor.getAllValues().get(3));
+
+        // Ensure the old act method is no longer called
+        verify(mockCoderAgent, never()).act(anyString());
     }
 
     @Test
-    void execute_coderAgentThrowsException_sendsErrorMessage() {
+    void execute_coderAgentStreamingThrowsException_sendsErrorMessage() {
         String userRequest = "implement feature X";
-        String errorMessage = "Something went wrong";
-        when(mockCoderAgent.act(userRequest)).thenThrow(new RuntimeException(errorMessage));
+        String[] requestArgs = {"implement", "feature", "X"};
+        String errorMessage = "Something went wrong with streaming";
 
-        codeCommand.execute(new String[]{"implement", "feature", "X"}, mockCommandSender);
+        // Simulate streamAct throwing an exception
+        doThrow(new RuntimeException(errorMessage))
+            .when(mockCoderAgent).streamAct(eq(userRequest), any(Consumer.class));
+
+        codeCommand.execute(requestArgs, mockCommandSender);
 
         ArgumentCaptor<String> messageCaptor = ArgumentCaptor.forClass(String.class);
+        // Verify "Engaging..." message and then the error message
         verify(mockCommandSender, times(2)).sendMessage(messageCaptor.capture());
 
         assertEquals("Engaging CoderAgent with request: " + userRequest, messageCaptor.getAllValues().get(0));
         assertEquals("Error interacting with CoderAgent: " + errorMessage, messageCaptor.getAllValues().get(1));
+
+        // Ensure the old act method is no longer called
+        verify(mockCoderAgent, never()).act(anyString());
     }
 }

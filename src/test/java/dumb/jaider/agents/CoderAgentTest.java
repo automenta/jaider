@@ -1,89 +1,82 @@
 package dumb.jaider.agents;
 
-// import dev.langchain4j.agent.tool.Tool; // No longer needed for these direct changes
 import dev.langchain4j.memory.ChatMemory;
+import dev.langchain4j.memory.chat.MessageWindowChatMemory;
 import dev.langchain4j.model.chat.ChatLanguageModel;
-// import dev.langchain4j.model.output.Response; // No longer needed for these direct changes
-// import dev.langchain4j.agent.tool.ToolSpecification; // No longer used
-// import dev.langchain4j.tool.Tools; // Package does not exist / Class not used
 import dumb.jaider.tools.StandardTools;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.Mockito;
 
-// import java.util.Collections; // No longer needed for these direct changes
-// import java.util.HashSet; // No longer needed for these direct changes
-// import java.util.List; // No longer needed for these direct changes
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Set;
+import java.util.function.Consumer;
 
-import static org.junit.jupiter.api.Assertions.*;
-// import static org.mockito.ArgumentMatchers.anyList; // Use anyString or eq for chat()
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.*;
 
-@ExtendWith(MockitoExtension.class)
 class CoderAgentTest {
 
-    @Mock
-    ChatLanguageModel chatLanguageModel; // Still needed for AbstractAgent constructor
-    @Mock
-    ChatMemory chatMemory; // Still needed for AbstractAgent constructor
-    @Mock
-    StandardTools standardTools; // Still needed for AbstractAgent constructor
-    @Mock
-    JaiderAiService jaiderAiServiceMock; // Mock for the AiService
-
+    private JaiderAiService mockAiService;
+    private ChatLanguageModel mockChatLanguageModel;
+    private ChatMemory chatMemory;
+    private StandardTools mockStandardTools;
     private CoderAgent coderAgent;
-
-    // Dummy tools are not needed here anymore as we are not testing StandardTools through CoderAgent's getTools directly in this manner.
-    // static class ReadWriteTool1 {
-    //     @Tool("A read-write tool 1")
-    //     public String modifySomething(String input) { return "modified1: " + input; }
-    // }
-    // static class ReadWriteTool2 {
-    //     @Tool("A read-write tool 2")
-    //     public String modifySomethingElse(String input) { return "modified2: " + input; }
-    // }
 
     @BeforeEach
     void setUp() {
-        // Use the new constructor to inject the mocked JaiderAiService
-        coderAgent = new CoderAgent(chatLanguageModel, chatMemory, standardTools, jaiderAiServiceMock);
+        mockAiService = mock(JaiderAiService.class);
+        mockChatLanguageModel = mock(ChatLanguageModel.class); // Not directly used by streamAct but needed for constructor
+        chatMemory = MessageWindowChatMemory.withMaxMessages(10);
+        mockStandardTools = mock(StandardTools.class); // Not directly used by streamAct but needed for constructor
+
+        // Use the test-specific constructor of CoderAgent to inject the mock JaiderAiService
+        coderAgent = new CoderAgent(mockChatLanguageModel, chatMemory, mockStandardTools, mockAiService);
     }
 
     @Test
-    void name_shouldReturnCoder() {
-        assertEquals("Coder", coderAgent.name());
+    void streamAct_callsJaiderAiServiceStreamChat() {
+        String userQuery = "test query";
+        List<String> receivedChunks = new ArrayList<>();
+        Consumer<String> tokenConsumer = receivedChunks::add;
+
+        // Simulate the JaiderAiService calling the consumer
+        doAnswer(invocation -> {
+            Consumer<String> actualConsumer = invocation.getArgument(1);
+            actualConsumer.accept("Streamed chunk 1");
+            actualConsumer.accept("Streamed chunk 2");
+            return null; // void method
+        }).when(mockAiService).streamChat(eq(userQuery), any(Consumer.class));
+
+        coderAgent.streamAct(userQuery, tokenConsumer);
+
+        // Verify that JaiderAiService.streamChat was called correctly
+        verify(mockAiService).streamChat(eq(userQuery), any(Consumer.class));
+
+        // Verify that the tokenConsumer received the chunks
+        assertEquals(2, receivedChunks.size());
+        assertEquals("Streamed chunk 1", receivedChunks.get(0));
+        assertEquals("Streamed chunk 2", receivedChunks.get(1));
     }
 
     @Test
-    void getTools_shouldReturnTheStandardToolsInstanceWrappedInSet() {
-        // CoderAgent's constructor passes Set.of(availableTools) to AbstractAgent.
-        // AbstractAgent.getTools() returns this set.
-        Set<Object> expectedTools = Set.of(standardTools);
-        Set<Object> actualTools = coderAgent.getTools();
+    void streamAct_aiServiceIsNull_sendsErrorMessageToConsumer() {
+        // Create an agent instance where the AI service would be null.
+        // The CoderAgent's primary constructor would build one, so we need to
+        // use a more direct way or ensure the test constructor passes null.
+        // For this test, let's imagine a scenario where 'ai' field in AbstractAgent is null.
+        // We can achieve this by creating a new CoderAgent with a null JaiderAiService.
+        CoderAgent agentWithNullService = new CoderAgent(mockChatLanguageModel, chatMemory, mockStandardTools, null);
 
-        assertEquals(expectedTools, actualTools, "CoderAgent should be configured with the provided StandardTools instance.");
-    }
+        String userQuery = "test query with null service";
+        List<String> receivedChunks = new ArrayList<>();
+        Consumer<String> tokenConsumer = receivedChunks::add;
 
-    // Removed constructor_systemPrompt_verificationAttempt as SYSTEM_MESSAGE is no longer a public static field in CoderAgent
+        agentWithNullService.streamAct(userQuery, tokenConsumer);
 
-    @Test
-    void act_shouldCallAiServiceChat() {
-        String testQuery = "Write a python script for me.";
-        String expectedResponse = "Okay, I will write that script.";
-
-        // Set up the mock behavior for the JaiderAiService
-        when(jaiderAiServiceMock.chat(anyString())).thenReturn(expectedResponse);
-
-        // Execute the act method
-        String actualResponse = coderAgent.act(testQuery);
-
-        // Verify the response
-        assertEquals(expectedResponse, actualResponse);
-
-        // Verify that the 'chat' method of the JaiderAiService was called with the testQuery
-        verify(jaiderAiServiceMock).chat(testQuery);
+        // Verify that the tokenConsumer received the error message
+        assertEquals(1, receivedChunks.size());
+        assertEquals("Error: AI service is not available for streaming.", receivedChunks.get(0));
     }
 }

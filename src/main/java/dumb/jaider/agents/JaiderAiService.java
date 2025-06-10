@@ -4,8 +4,10 @@ import dev.langchain4j.data.message.AiMessage;
 import dev.langchain4j.data.message.ChatMessage;
 import dev.langchain4j.model.output.Response;
 import java.util.List;
+import java.util.function.Consumer; // Added import
 
 public interface JaiderAiService {
     Response<AiMessage> act(List<ChatMessage> messages);
     String chat(String userMessage); // Added for direct String interaction
+    void streamChat(String userMessage, Consumer<String> tokenConsumer); // Added method
 }
