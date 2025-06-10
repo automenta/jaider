@@ -1,6 +1,5 @@
 package dumb.jaider.commands;
 
-import dev.langchain4j.data.document.Document; // Added for direct loadDocument debugging
 import dev.langchain4j.data.embedding.Embedding;
 import dev.langchain4j.data.message.AiMessage;
 import dev.langchain4j.data.segment.TextSegment;
@@ -14,16 +13,14 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.io.TempDir;
-import org.mockito.ArgumentCaptor; // Added import
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
-import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -137,7 +134,7 @@ class IndexCommandIntegrationTest {
 
         // Assertions
         assertTrue(testJaiderModel.isIndexed, "Model should be marked as indexed.");
-        assertNotNull(testJaiderModel.embeddingStore, "Embedding store should be initialized in the model.");
+        assertNotNull(testJaiderModel.embeddings, "Embedding store should be initialized in the model.");
 
         // Verify the message logged by finishTurnPublic
         AiMessage loggedMessage = messageCaptor.getValue();

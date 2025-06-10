@@ -2,18 +2,12 @@ package dumb.jaider.tools;
 
 import com.github.difflib.DiffUtils;
 import com.github.difflib.patch.Patch;
-import com.github.difflib.unifieddiff.UnifiedDiff;
-import com.github.difflib.unifieddiff.UnifiedDiffFile; // Added import
-import com.github.difflib.unifieddiff.UnifiedDiffReader;
 import dumb.jaider.model.JaiderModel;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
-import java.io.ByteArrayInputStream;
-import java.io.File; // Added import
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Arrays;
@@ -37,13 +31,13 @@ class DiffApplierTest {
         // Create a dummy file in context for testing
         Path existingFile = tempDir.resolve("existingFile.txt");
         Files.write(existingFile, Arrays.asList("line1", "line2", "line3"));
-        model.filesInContext.add(existingFile);
+        model.files.add(existingFile);
     }
 
     @Test
     void testApplyDiffToExistingFile() throws IOException {
         // Create a diff
-        List<String> originalLines = Files.readAllLines(model.projectDir.resolve("existingFile.txt"));
+        List<String> originalLines = Files.readAllLines(model.dir.resolve("existingFile.txt"));
         List<String> changedLines = Arrays.asList("line1", "line2_changed", "line3");
         Patch<String> patch = DiffUtils.diff(originalLines, changedLines);
         // UnifiedDiffFile fileDiff = UnifiedDiffFile.from("existingFile.txt", "existingFile.txt", patch);
@@ -54,7 +48,7 @@ class DiffApplierTest {
         assertEquals("Diff applied successfully to file existingFile.txt.", result);
 
         // Verify file content
-        List<String> actualLines = Files.readAllLines(model.projectDir.resolve("existingFile.txt"));
+        List<String> actualLines = Files.readAllLines(model.dir.resolve("existingFile.txt"));
         assertEquals(changedLines, actualLines);
     }
 
@@ -72,17 +66,17 @@ class DiffApplierTest {
         assertTrue(result.startsWith("Diff applied successfully to file newFile.txt."), "Result was: " + result);
 
         // Verify file content and context
-        Path newFilePath = model.projectDir.resolve("newFile.txt");
+        Path newFilePath = model.dir.resolve("newFile.txt");
         assertTrue(Files.exists(newFilePath));
         List<String> actualLines = Files.readAllLines(newFilePath);
         assertEquals(newFileLines, actualLines);
-        assertTrue(model.filesInContext.contains(newFilePath));
+        assertTrue(model.files.contains(newFilePath));
     }
 
     @Test
     void testApplyDiffToDeleteFile() throws IOException {
         // Create a diff for deleting a file (empty target)
-        List<String> originalLines = Files.readAllLines(model.projectDir.resolve("existingFile.txt"));
+        List<String> originalLines = Files.readAllLines(model.dir.resolve("existingFile.txt"));
         Patch<String> patch = DiffUtils.diff(originalLines, Collections.emptyList());
         // UnifiedDiffFile fileDiff = UnifiedDiffFile.from("existingFile.txt", "existingFile.txt", patch);
         // UnifiedDiff unifiedDiff = UnifiedDiff.from(null, null, new UnifiedDiffFile[]{fileDiff}); // Explicit array for varargs
@@ -92,8 +86,8 @@ class DiffApplierTest {
         assertEquals("File existingFile.txt deleted successfully.", result);
 
         // Verify file is deleted
-        assertFalse(Files.exists(model.projectDir.resolve("existingFile.txt")));
-        assertFalse(model.filesInContext.contains(model.projectDir.resolve("existingFile.txt")));
+        assertFalse(Files.exists(model.dir.resolve("existingFile.txt")));
+        assertFalse(model.files.contains(model.dir.resolve("existingFile.txt")));
     }
 
     @Test
@@ -103,7 +97,7 @@ class DiffApplierTest {
         // Let's simulate a case where getFromFile points to a non-existent file,
         // but it's not /dev/null, which might be an edge case.
         List<String> originalLines = Collections.emptyList(); // Pretend it was empty or non-existent
-        List<String> changedLines = Arrays.asList("some content");
+        List<String> changedLines = List.of("some content");
         Patch<String> patch = DiffUtils.diff(originalLines, changedLines);
         // UnifiedDiffFile fileDiff = UnifiedDiffFile.from("/dev/null", "nonExistentFile.txt", patch);
         // UnifiedDiff unifiedDiff = UnifiedDiff.from(null, null, new UnifiedDiffFile[]{fileDiff}); // Explicit array for varargs
@@ -112,20 +106,20 @@ class DiffApplierTest {
         String result = diffApplier.apply(model, patch, "/dev/null", "nonExistentFile.txt");
         assertEquals("Diff applied successfully to file nonExistentFile.txt.", result);
 
-        Path newFilePath = model.projectDir.resolve("nonExistentFile.txt");
+        Path newFilePath = model.dir.resolve("nonExistentFile.txt");
         assertTrue(Files.exists(newFilePath));
         assertEquals(changedLines, Files.readAllLines(newFilePath));
-        assertTrue(model.filesInContext.contains(newFilePath));
+        assertTrue(model.files.contains(newFilePath));
     }
 
     @Test
     void testApplyDiffToExistingFileNotInContext() throws IOException {
         // Create a file that exists but is not in context
         Path notInContextFile = tempDir.resolve("notInContext.txt");
-        Files.write(notInContextFile, Arrays.asList("original line"));
+        Files.write(notInContextFile, List.of("original line"));
 
         List<String> originalLines = Files.readAllLines(notInContextFile);
-        List<String> changedLines = Arrays.asList("changed line");
+        List<String> changedLines = List.of("changed line");
         Patch<String> patch = DiffUtils.diff(originalLines, changedLines);
         // Critical: Ensure getFromFile is the actual filename, not /dev/null
         // UnifiedDiffFile fileDiff = UnifiedDiffFile.from("notInContext.txt", "notInContext.txt", patch);
@@ -154,20 +148,20 @@ class DiffApplierTest {
         Patch<String> emptyPatch = new Patch<>(); // Create an empty patch
         String originalFileName = "existingFile.txt";
         String revisedFileName = "existingFile.txt";
-        List<String> originalContent = Files.readAllLines(model.projectDir.resolve(originalFileName));
+        List<String> originalContent = Files.readAllLines(model.dir.resolve(originalFileName));
 
         String result = diffApplier.apply(model, emptyPatch, originalFileName, revisedFileName);
         assertEquals("Diff applied successfully to file " + revisedFileName + ".", result);
 
         // Verify file content remains unchanged
-        List<String> contentAfterApply = Files.readAllLines(model.projectDir.resolve(revisedFileName));
+        List<String> contentAfterApply = Files.readAllLines(model.dir.resolve(revisedFileName));
         assertEquals(originalContent, contentAfterApply);
     }
 
     @Test
     void testApplyDiffWithPatchFailedException() throws IOException {
         // 1. Prepare an existing file (or use the one from setUp)
-        Path targetFilePath = model.projectDir.resolve("existingFile.txt");
+        Path targetFilePath = model.dir.resolve("existingFile.txt");
         List<String> actualOriginalLines = Files.readAllLines(targetFilePath); // e.g., ["line1", "line2", "line3"]
 
         // 2. Create a patch that will fail.
@@ -199,7 +193,7 @@ class DiffApplierTest {
         Path unreadableFilePath = tempDir.resolve("unreadableFile.txt");
         List<String> originalLines = Arrays.asList("line1", "line2");
         Files.write(unreadableFilePath, originalLines);
-        model.filesInContext.add(unreadableFilePath); // Add to context
+        model.files.add(unreadableFilePath); // Add to context
 
         // 2. Make the file unreadable
         java.io.File fileToMakeUnreadable = unreadableFilePath.toFile();
@@ -235,7 +229,7 @@ class DiffApplierTest {
 
         // Clean up the test file
         Files.delete(unreadableFilePath);
-        model.filesInContext.remove(unreadableFilePath);
+        model.files.remove(unreadableFilePath);
     }
 
     @Test
@@ -274,7 +268,7 @@ class DiffApplierTest {
     }
 
     @Test
-    void testApplyDiffWithInvalidFileNamesInDiff() throws IOException {
+    void testApplyDiffWithInvalidFileNamesInDiff() {
         Patch<String> emptyPatch = DiffUtils.diff(Collections.emptyList(), Collections.emptyList());
 
         // Test cases for invalid filename combinations

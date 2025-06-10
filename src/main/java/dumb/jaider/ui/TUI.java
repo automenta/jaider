@@ -1,19 +1,18 @@
 package dumb.jaider.ui;
 
-import com.googlecode.lanterna.*;
+import com.googlecode.lanterna.TerminalSize;
+import com.googlecode.lanterna.TextColor;
 import com.googlecode.lanterna.gui2.*;
 import com.googlecode.lanterna.gui2.dialogs.MessageDialog;
 import com.googlecode.lanterna.gui2.dialogs.MessageDialogButton;
 import com.googlecode.lanterna.input.KeyType;
-import com.googlecode.lanterna.screen.Screen;
 import com.googlecode.lanterna.screen.TerminalScreen;
 import com.googlecode.lanterna.terminal.DefaultTerminalFactory;
+import dev.langchain4j.data.message.AiMessage;
+import dev.langchain4j.data.message.UserMessage;
 import dumb.jaider.app.App;
 import dumb.jaider.model.JaiderModel;
-import dev.langchain4j.data.message.AiMessage;
-import dev.langchain4j.data.message.ChatMessage;
-import dev.langchain4j.data.message.UserMessage;
-import dumb.jaider.utils.Util;
+
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.concurrent.CompletableFuture;
@@ -62,9 +61,9 @@ public class TUI implements UI {
         if (gui == null) return;
         gui.getGUIThread().invokeLater(() -> {
             contextListBox.clearItems();
-            model.filesInContext.forEach(p -> contextListBox.addItem(model.projectDir.relativize(p).toString(), null));
+            model.files.forEach(p -> contextListBox.addItem(model.dir.relativize(p).toString(), null));
             logListBox.removeAllComponents();
-            for (var msg : model.logMessages) {
+            for (var msg : model.log) {
                 var text = dumb.jaider.utils.Util.chatMessageToText(msg);
                 if (text == null || text.isBlank()) continue;
 
@@ -80,12 +79,12 @@ public class TUI implements UI {
                 }
                 logListBox.addComponent(l);
             }
-            statusBar.setText(String.format(" | Mode: %s | %s | Tokens: %d", model.agentMode, model.statusBarText, model.currentTokenCount));
+            statusBar.setText(String.format(" | Mode: %s | %s | Tokens: %d", model.mode, model.statusBarText, model.currentTokenCount));
         });
     }
 
     @Override
-    public CompletableFuture<Boolean> requestConfirmation(String title, String text) {
+    public CompletableFuture<Boolean> confirm(String title, String text) {
         var future = new CompletableFuture<Boolean>();
         gui.getGUIThread().invokeLater(() -> future.complete(
                 MessageDialog.showMessageDialog(gui, title, text, MessageDialogButton.Yes, MessageDialogButton.No) == MessageDialogButton.Yes));
@@ -93,7 +92,7 @@ public class TUI implements UI {
     }
 
     @Override
-    public CompletableFuture<DiffInteractionResult> requestDiffInteraction(String diff) {
+    public CompletableFuture<DiffInteractionResult> diffInteraction(String diff) {
         var future = new CompletableFuture<DiffInteractionResult>();
         gui.getGUIThread().invokeLater(() -> {
             var dialog = new BasicWindow("Apply Diff?");
@@ -121,7 +120,7 @@ public class TUI implements UI {
             }));
             buttonPanel.addComponent(new Button("Edit", () -> {
                 dialog.close();
-                requestConfigEdit(diff).thenAccept(editedDiff -> {
+                configEdit(diff).thenAccept(editedDiff -> {
                     if (editedDiff != null) future.complete(new DiffInteractionResult(true, true, editedDiff));
                     else future.complete(new DiffInteractionResult(false, false, null));
                 });
@@ -134,7 +133,7 @@ public class TUI implements UI {
     }
 
     @Override
-    public CompletableFuture<String> requestConfigEdit(String currentConfig) {
+    public CompletableFuture<String> configEdit(String currentConfig) {
         var future = new CompletableFuture<String>();
         gui.getGUIThread().invokeLater(() -> {
             var editorDialog = new BasicWindow("Editor");

@@ -7,7 +7,6 @@ import org.junit.jupiter.api.io.TempDir;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -63,7 +62,7 @@ class ConfigTest {
         assertEquals("YOUR_GOOGLE_API_KEY", apiKeysJson.getString("google"));
 
         // Also check the loaded config object's fields
-        assertEquals("ollama", config.llmProvider);
+        assertEquals("ollama", config.llm);
         assertEquals("http://localhost:11434", config.ollamaBaseUrl);
         assertEquals("llamablit", config.ollamaModelName);
         assertEquals("", config.runCommand);
@@ -98,7 +97,7 @@ class ConfigTest {
         Config config = new Config(projectDir);
 
         // Assertions
-        assertEquals("openai", config.llmProvider);
+        assertEquals("openai", config.llm);
         assertEquals("http://customhost:12345", config.ollamaBaseUrl);
         assertEquals("customllamit", config.ollamaModelName);
         assertEquals("http://customhost:8081/v1", config.genericOpenaiBaseUrl);
@@ -133,7 +132,7 @@ class ConfigTest {
         Config defaultConfigForComparison = new Config(tempDir.resolve("default-project")); // to get default values easily
 
         // Assertions for fields present in the partial config
-        assertEquals("gemini", config.llmProvider);
+        assertEquals("gemini", config.llm);
         assertEquals("gemini-pro", config.geminiModelName); // This was provided
         assertNotNull(config.apiKeys);
         assertEquals("g-partialkey", config.apiKeys.get("google"));
@@ -164,7 +163,7 @@ class ConfigTest {
         Config defaultConfigForComparison = new Config(tempDir.resolve("default-project-empty"));
 
         // Assertions: All fields should have their default values
-        assertEquals(defaultConfigForComparison.llmProvider, config.llmProvider);
+        assertEquals(defaultConfigForComparison.llm, config.llm);
         assertEquals(defaultConfigForComparison.ollamaBaseUrl, config.ollamaBaseUrl);
         assertEquals(defaultConfigForComparison.ollamaModelName, config.ollamaModelName);
         assertEquals(defaultConfigForComparison.genericOpenaiBaseUrl, config.genericOpenaiBaseUrl);
@@ -248,7 +247,7 @@ class ConfigTest {
         assertEquals(expectedJson.toString(2), actualJson.toString(2), "Saved file content should match the new configuration");
 
         // Assertions for the current config object (should be updated by save->load)
-        assertEquals("openai", config.llmProvider);
+        assertEquals("openai", config.llm);
         assertEquals("http://newhost:54321", config.ollamaBaseUrl);
         assertEquals("newllamit", config.ollamaModelName);
         assertEquals("npm test", config.runCommand);
@@ -258,7 +257,7 @@ class ConfigTest {
 
         // Assertions for a new load
         Config reloadedConfig = new Config(projectDir);
-        assertEquals("openai", reloadedConfig.llmProvider);
+        assertEquals("openai", reloadedConfig.llm);
         assertEquals("http://newhost:54321", reloadedConfig.ollamaBaseUrl);
         assertEquals("newllamit", reloadedConfig.ollamaModelName);
         assertEquals("http://newhost:8082/v2", reloadedConfig.genericOpenaiBaseUrl);
@@ -472,7 +471,7 @@ class ConfigTest {
         org.json.JSONObject editedJson = new org.json.JSONObject(jsonForEditing);
 
         // Assertions: Check that all fields are present with their default values
-        assertEquals(config.llmProvider, editedJson.getString("llmProvider")); // Default "ollama"
+        assertEquals(config.llm, editedJson.getString("llmProvider")); // Default "ollama"
         assertEquals(config.ollamaBaseUrl, editedJson.getString("ollamaBaseUrl"));
         assertEquals(config.ollamaModelName, editedJson.getString("ollamaModelName"));
         assertEquals(config.genericOpenaiBaseUrl, editedJson.getString("genericOpenaiBaseUrl"));

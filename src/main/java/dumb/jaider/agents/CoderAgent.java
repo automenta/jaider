@@ -3,7 +3,6 @@ package dumb.jaider.agents;
 import dev.langchain4j.memory.ChatMemory;
 import dev.langchain4j.model.chat.ChatLanguageModel;
 import dumb.jaider.tools.StandardTools;
-import java.util.Set;
 
 public class CoderAgent extends AbstractAgent {
     public CoderAgent(ChatLanguageModel model, ChatMemory memory, StandardTools availableTools) {

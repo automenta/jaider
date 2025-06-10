@@ -5,6 +5,7 @@ import dev.langchain4j.data.message.ChatMessage;
 import dev.langchain4j.data.message.UserMessage;
 import dev.langchain4j.data.segment.TextSegment;
 import dev.langchain4j.store.embedding.EmbeddingStore;
+
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -18,22 +19,28 @@ import java.util.stream.Collectors;
 public class JaiderModel {
     public static final int LOG_CAPACITY = 200;
 
-    public final Path projectDir;
-    public final Set<Path> filesInContext = new HashSet<>();
-    public final List<ChatMessage> logMessages = new ArrayList<>();
+    public final Path dir;
+
+    /** active files in context */
+    public final Set<Path> files = new HashSet<>();
+
+    public final List<ChatMessage> log = new ArrayList<>();
+
     public String statusBarText = "Jaider initialized. /help for commands.";
     public int currentTokenCount = 0;
-    public EmbeddingStore<TextSegment> embeddingStore;
+
+    public EmbeddingStore<TextSegment> embeddings;
+
     public boolean isIndexed = false;
     public String lastAppliedDiff = null;
-    public String agentMode = "Coder";
+    public String mode = "Coder";
 
     public JaiderModel() {
-        this.projectDir = Paths.get("").toAbsolutePath();
+        this.dir = Paths.get("").toAbsolutePath();
     }
 
-    public JaiderModel(Path projectDir) {
-        this.projectDir = projectDir;
+    public JaiderModel(Path dir) {
+        this.dir = dir;
     }
 
     public void addLog(ChatMessage message) {
@@ -56,19 +63,19 @@ public class JaiderModel {
              if (textContent == null || textContent.isBlank()) return;
         }
 
-        logMessages.add(message);
-        if (logMessages.size() > LOG_CAPACITY) logMessages.removeFirst();
+        log.add(message);
+        if (log.size() > LOG_CAPACITY) log.removeFirst();
     }
 
     public String getFileContext() {
-        return filesInContext.isEmpty() ?
+        return files.isEmpty() ?
             "No files are in context. Use /add or the `findRelevantCode` tool." :
-            filesInContext.stream().map(this::readFileContent).collect(Collectors.joining("\n\n"));
+                files.stream().map(this::readFileContent).collect(Collectors.joining("\n\n"));
     }
 
     public String readFileContent(Path path) {
         try {
-            return String.format("--- %s ---\n%s", projectDir.relativize(path), Files.readString(path));
+            return String.format("--- %s ---\n%s", dir.relativize(path), Files.readString(path));
         } catch (IOException e) {
             return String.format("Error reading file %s: %s", path, e.getMessage());
         }

@@ -1,41 +1,28 @@
 package dumb.jaider.ui;
 
-import com.googlecode.lanterna.TextColor;
 import com.googlecode.lanterna.gui2.*;
 import com.googlecode.lanterna.gui2.dialogs.MessageDialog;
 import com.googlecode.lanterna.gui2.dialogs.MessageDialogButton;
-import com.googlecode.lanterna.input.KeyStroke;
-import com.googlecode.lanterna.input.KeyType;
-import com.googlecode.lanterna.screen.Screen;
-import com.googlecode.lanterna.terminal.Terminal;
-import com.googlecode.lanterna.TerminalSize; // Added for TextBox size
-import dev.langchain4j.data.message.AiMessage;
-import dev.langchain4j.data.message.ChatMessage;
-import dev.langchain4j.data.message.UserMessage;
-import dev.langchain4j.data.message.ChatMessageType;
 import dev.langchain4j.agent.tool.ToolExecutionRequest;
+import dev.langchain4j.data.message.AiMessage;
+import dev.langchain4j.data.message.UserMessage;
 import dumb.jaider.model.JaiderModel;
-import dumb.jaider.commands.AppContext;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.*;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.io.IOException;
-import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 
-
-import static org.mockito.Mockito.*;
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class TUITest {
@@ -70,8 +57,7 @@ class TUITest {
 
         lenient().when(gui.getGUIThread()).thenReturn(textGUIThread);
         doAnswer(invocation -> {
-            Runnable runnable = invocation.getArgument(0);
-            runnable.run();
+            invocation.<Runnable>getArgument(0).run();
             return null;
         }).when(textGUIThread).invokeLater(any(Runnable.class));
     }
@@ -79,19 +65,19 @@ class TUITest {
     // --- redraw tests ---
     @Test
     void redraw_shouldClearAndRepopulateListsAndSetStatusBar() {
-        model.filesInContext.clear();
-        model.filesInContext.addAll(new HashSet<>(Arrays.asList(
+        model.files.clear();
+        model.files.addAll(new HashSet<>(Arrays.asList(
                 Paths.get("/test/project/file1.txt"),
                 Paths.get("/test/project/subdir/file2.java")
         )));
 
-        model.logMessages.clear();
+        model.log.clear();
         UserMessage userMsg = UserMessage.from("User query");
         AiMessage aiMsgPlain = AiMessage.from("AI response");
         AiMessage aiMsgWithTool = AiMessage.from(ToolExecutionRequest.builder().name("testTool").id("123").arguments("{}").build());
-        model.logMessages.addAll(Arrays.asList(userMsg, aiMsgPlain, aiMsgWithTool));
+        model.log.addAll(Arrays.asList(userMsg, aiMsgPlain, aiMsgWithTool));
 
-        model.agentMode = "Coder";
+        model.mode = "Coder";
         model.statusBarText = "Ready";
         model.currentTokenCount = 123;
 
@@ -124,8 +110,8 @@ class TUITest {
 
     @Test
     void redraw_withEmptyFilesInContext_shouldAddNoItemsToContextList() {
-        model.filesInContext.clear();
-        model.logMessages.clear();
+        model.files.clear();
+        model.log.clear();
         tui.redraw(model);
         verify(contextListBox).clearItems();
         verify(contextListBox, never()).addItem(anyString(), any(Runnable.class));
@@ -133,8 +119,8 @@ class TUITest {
 
     @Test
     void redraw_withEmptyLogMessages_shouldAddNoComponentsToLogList() {
-        model.filesInContext.clear();
-        model.logMessages.clear();
+        model.files.clear();
+        model.log.clear();
         tui.redraw(model);
         verify(logListBoxPanel).removeAllComponents();
         verify(logListBoxPanel, never()).addComponent(any(Component.class));
@@ -142,10 +128,10 @@ class TUITest {
 
     @Test
     void redraw_withNullOrBlankLogMessageText_shouldSkipMessage() {
-        model.filesInContext.clear();
-        model.logMessages.clear();
-        model.logMessages.add(UserMessage.from("Valid message"));
-        model.logMessages.add(AiMessage.from(ToolExecutionRequest.builder().name("skippedTool").id("456").arguments("{}").build()));
+        model.files.clear();
+        model.log.clear();
+        model.log.add(UserMessage.from("Valid message"));
+        model.log.add(AiMessage.from(ToolExecutionRequest.builder().name("skippedTool").id("456").arguments("{}").build()));
         tui.redraw(model);
         verify(logListBoxPanel).removeAllComponents();
         ArgumentCaptor<Label> labelCaptor = ArgumentCaptor.forClass(Label.class);
@@ -155,32 +141,32 @@ class TUITest {
 
     // --- requestConfirmation tests ---
     @Test
-    void requestConfirmation_whenYesClicked_completesFutureWithTrue() throws ExecutionException, InterruptedException {
+    void confirm_whenYesClicked_completesFutureWithTrue() throws ExecutionException, InterruptedException {
         String title = "Confirm?";
         String text = "Are you sure?";
         try (MockedStatic<MessageDialog> mockedMessageDialog = mockStatic(MessageDialog.class)) {
             mockedMessageDialog.when(() -> MessageDialog.showMessageDialog(any(WindowBasedTextGUI.class), eq(title), eq(text), eq(MessageDialogButton.Yes), eq(MessageDialogButton.No)))
                 .thenReturn(MessageDialogButton.Yes);
-            CompletableFuture<Boolean> future = tui.requestConfirmation(title, text);
+            CompletableFuture<Boolean> future = tui.confirm(title, text);
             assertTrue(future.isDone() && future.get());
         }
     }
 
     @Test
-    void requestConfirmation_whenNoClicked_completesFutureWithFalse() throws ExecutionException, InterruptedException {
+    void confirm_whenNoClicked_completesFutureWithFalse() throws ExecutionException, InterruptedException {
         String title = "Confirm?";
         String text = "Are you sure?";
         try (MockedStatic<MessageDialog> mockedMessageDialog = mockStatic(MessageDialog.class)) {
             mockedMessageDialog.when(() -> MessageDialog.showMessageDialog(any(WindowBasedTextGUI.class), eq(title), eq(text), eq(MessageDialogButton.Yes), eq(MessageDialogButton.No)))
                 .thenReturn(MessageDialogButton.No);
-            CompletableFuture<Boolean> future = tui.requestConfirmation(title, text);
+            CompletableFuture<Boolean> future = tui.confirm(title, text);
             assertTrue(future.isDone() && !future.get());
         }
     }
 
     // --- requestDiffInteraction tests ---
     @Test
-    void requestDiffInteraction_addsWindowAndAcceptReturnsCorrectly() throws ExecutionException, InterruptedException {
+    void diffInteraction_addsWindowAndAcceptReturnsCorrectly() throws ExecutionException, InterruptedException {
         String diff = "--- a/file.txt\n+++ b/file.txt\n@@ -1 +1 @@\n-old\n+new";
         List<Runnable> capturedActions = new ArrayList<>();
         try (MockedConstruction<Button> mockedButton = mockConstruction(Button.class, (mock, context) -> {
@@ -188,12 +174,12 @@ class TUITest {
                 capturedActions.add((Runnable) context.arguments().get(1));
             }
         })) {
-            CompletableFuture<DiffInteractionResult> future = tui.requestDiffInteraction(diff);
+            CompletableFuture<DiffInteractionResult> future = tui.diffInteraction(diff);
             verify(gui).addWindow(windowCaptor.capture());
             assertNotNull(windowCaptor.getValue());
             assertEquals("Apply Diff?", windowCaptor.getValue().getTitle());
-            assertTrue(capturedActions.size() >= 1);
-            capturedActions.get(0).run(); // Accept action
+            assertFalse(capturedActions.isEmpty());
+            capturedActions.getFirst().run(); // Accept action
             assertTrue(future.isDone());
             DiffInteractionResult result = future.get();
             assertTrue(result.accepted());
@@ -203,7 +189,7 @@ class TUITest {
     }
 
     @Test
-    void requestDiffInteraction_rejectReturnsCorrectly() throws ExecutionException, InterruptedException {
+    void diffInteraction_rejectReturnsCorrectly() throws ExecutionException, InterruptedException {
         String diff = "diff content";
         List<Runnable> capturedActions = new ArrayList<>();
         try (MockedConstruction<Button> mockedButton = mockConstruction(Button.class, (mock, context) -> {
@@ -211,7 +197,7 @@ class TUITest {
                 capturedActions.add((Runnable) context.arguments().get(1));
             }
         })) {
-            CompletableFuture<DiffInteractionResult> future = tui.requestDiffInteraction(diff);
+            CompletableFuture<DiffInteractionResult> future = tui.diffInteraction(diff);
             assertTrue(capturedActions.size() >= 2);
             capturedActions.get(1).run(); // Reject action
             assertTrue(future.isDone());
@@ -223,18 +209,18 @@ class TUITest {
     }
 
     @Test
-    void requestDiffInteraction_editCallsRequestConfigEditAndCompletesFuture() throws ExecutionException, InterruptedException {
+    void requestDiffInteraction_editCallsConfigEditAndCompletesFuture() throws ExecutionException, InterruptedException {
         String originalDiff = "original diff";
         String editedDiff = "edited diff";
         CompletableFuture<String> editFuture = CompletableFuture.completedFuture(editedDiff);
-        doReturn(editFuture).when(tui).requestConfigEdit(originalDiff);
+        doReturn(editFuture).when(tui).configEdit(originalDiff);
         List<Runnable> capturedActions = new ArrayList<>();
         try (MockedConstruction<Button> mockedButton = mockConstruction(Button.class, (mock, context) -> {
             if (context.arguments().size() > 1 && context.arguments().get(1) instanceof Runnable) {
                 capturedActions.add((Runnable) context.arguments().get(1));
             }
         })) {
-            CompletableFuture<DiffInteractionResult> interactionFuture = tui.requestDiffInteraction(originalDiff);
+            CompletableFuture<DiffInteractionResult> interactionFuture = tui.diffInteraction(originalDiff);
             assertTrue(capturedActions.size() >= 3);
             capturedActions.get(2).run(); // Edit action
             assertTrue(interactionFuture.isDone());
@@ -242,22 +228,22 @@ class TUITest {
             assertTrue(result.accepted());
             assertTrue(result.edited());
             assertEquals(editedDiff, result.newDiff());
-            verify(tui).requestConfigEdit(originalDiff);
+            verify(tui).configEdit(originalDiff);
         }
     }
 
      @Test
-    void requestDiffInteraction_editCallsRequestConfigEditAndHandlesNullReturn() throws ExecutionException, InterruptedException {
+     void requestDiffInteraction_editCallsConfigEditAndHandlesNullReturn() throws ExecutionException, InterruptedException {
         String originalDiff = "original diff";
         CompletableFuture<String> editFuture = CompletableFuture.completedFuture(null);
-        doReturn(editFuture).when(tui).requestConfigEdit(originalDiff);
+         doReturn(editFuture).when(tui).configEdit(originalDiff);
         List<Runnable> capturedActions = new ArrayList<>();
         try (MockedConstruction<Button> mockedButton = mockConstruction(Button.class, (mock, context) -> {
             if (context.arguments().size() > 1 && context.arguments().get(1) instanceof Runnable) {
                 capturedActions.add((Runnable) context.arguments().get(1));
             }
         })) {
-            CompletableFuture<DiffInteractionResult> interactionFuture = tui.requestDiffInteraction(originalDiff);
+            CompletableFuture<DiffInteractionResult> interactionFuture = tui.diffInteraction(originalDiff);
             assertTrue(capturedActions.size() >= 3);
             capturedActions.get(2).run(); // Edit action
             assertTrue(interactionFuture.isDone());
@@ -265,13 +251,13 @@ class TUITest {
             assertFalse(result.accepted());
             assertFalse(result.edited());
             assertNull(result.newDiff());
-            verify(tui).requestConfigEdit(originalDiff);
+            verify(tui).configEdit(originalDiff);
         }
     }
 
     // --- requestConfigEdit tests ---
     @Test
-    void requestConfigEdit_addsWindowAndTextBoxShowsCurrentConfig() {
+    void config() {
         String currentConfig = "{\"key\": \"value\"}";
         List<TextBox> capturedTextBoxes = new ArrayList<>();
 
@@ -282,7 +268,7 @@ class TUITest {
             assertEquals(currentConfig, context.arguments().get(0));
             assertEquals(TextBox.Style.MULTI_LINE, context.arguments().get(1));
         })) {
-            tui.requestConfigEdit(currentConfig);
+            tui.configEdit(currentConfig);
             verify(gui).addWindow(windowCaptor.capture());
             BasicWindow window = (BasicWindow) windowCaptor.getValue();
             assertNotNull(window);
@@ -292,7 +278,7 @@ class TUITest {
     }
 
     @Test
-    void requestConfigEdit_saveButtonCompletesFutureWithTextBoxContent() throws ExecutionException, InterruptedException {
+    void configEdit_saveButtonCompletesFutureWithTextBoxContent() throws ExecutionException, InterruptedException {
         String currentConfig = "initial config";
         String newConfig = "new edited config";
         List<Runnable> capturedActions = new ArrayList<>();
@@ -307,21 +293,21 @@ class TUITest {
             capturedTextBoxes.add(mock);
             when(mock.getText()).thenReturn(newConfig); // Stub getText() on the mocked TextBox
         })) {
-            CompletableFuture<String> future = tui.requestConfigEdit(currentConfig);
+            CompletableFuture<String> future = tui.configEdit(currentConfig);
 
-            assertTrue(capturedActions.size() >= 1, "Save button action should have been captured.");
+            assertFalse(capturedActions.isEmpty(), "Save button action should have been captured.");
             // Assuming "Save" is the first button
-            capturedActions.get(0).run();
+            capturedActions.getFirst().run();
 
             assertTrue(future.isDone());
             assertEquals(newConfig, future.get());
             assertFalse(capturedTextBoxes.isEmpty());
-            verify(capturedTextBoxes.get(0)).getText(); // Verify getText was called by the Save button's lambda
+            verify(capturedTextBoxes.getFirst()).getText(); // Verify getText was called by the Save button's lambda
         }
     }
 
     @Test
-    void requestConfigEdit_cancelButtonCompletesFutureWithNull() throws ExecutionException, InterruptedException {
+    void configEdit_cancelButtonCompletesFutureWithNull() throws ExecutionException, InterruptedException {
         String currentConfig = "initial config";
         List<Runnable> capturedActions = new ArrayList<>();
 
@@ -330,7 +316,7 @@ class TUITest {
                 capturedActions.add((Runnable) context.arguments().get(1));
             }
         })) {
-            CompletableFuture<String> future = tui.requestConfigEdit(currentConfig);
+            CompletableFuture<String> future = tui.configEdit(currentConfig);
 
             assertTrue(capturedActions.size() >= 2, "Cancel button action should have been captured.");
             // Assuming "Cancel" is the second button

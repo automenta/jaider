@@ -2,20 +2,17 @@ package dumb.jaider.agents;
 
 import dev.langchain4j.memory.ChatMemory;
 import dev.langchain4j.model.chat.ChatLanguageModel;
-// Imports for AiMessage, ChatMessage, UserMessage, Response are no longer needed for the revised act test
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-// import java.util.Collections; // No longer needed
-// import java.util.List; // No longer needed for this test's direct interactions
 import java.util.Set;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.anyString;
-// import static org.mockito.ArgumentMatchers.eq; // Not needed for anyString
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -43,8 +40,8 @@ class AskAgentTest {
     }
 
     @Test
-    void getTools_shouldReturnEmptySet() {
-        Set<Object> actualTools = askAgent.getTools(); // From AbstractAgent
+    void tools_shouldReturnEmptySet() {
+        Set<Object> actualTools = askAgent.tools(); // From AbstractAgent
         assertTrue(actualTools.isEmpty(), "AskAgent should have no tools by default.");
     }
 

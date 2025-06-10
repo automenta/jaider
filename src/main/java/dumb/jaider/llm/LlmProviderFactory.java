@@ -1,19 +1,14 @@
 package dumb.jaider.llm;
 
 import dev.langchain4j.data.message.AiMessage;
-import dev.langchain4j.data.message.ChatMessage;
 import dev.langchain4j.model.Tokenizer;
 import dev.langchain4j.model.chat.ChatLanguageModel;
 import dev.langchain4j.model.embedding.EmbeddingModel;
 import dev.langchain4j.model.ollama.OllamaChatModel;
-// Removed incorrect import for NoopEmbeddingModel from langchain4j
+import dev.langchain4j.model.ollama.OllamaEmbeddingModel;
 import dumb.jaider.config.Config;
 import dumb.jaider.model.JaiderModel;
-import dev.langchain4j.model.ollama.OllamaEmbeddingModel; // Moved import
 
-import java.util.Collection;
-import java.util.Collections;
-import java.util.List;
 
 public class LlmProviderFactory {
     private final Config config;
@@ -29,14 +24,14 @@ public class LlmProviderFactory {
     }
 
     public ChatLanguageModel createChatModel() {
-        if ("ollama".equalsIgnoreCase(config.llmProvider)) {
+        if ("ollama".equalsIgnoreCase(config.llm)) {
             setupOllama();
-        } else if ("genericOpenai".equalsIgnoreCase(config.llmProvider)) {
+        } else if ("genericOpenai".equalsIgnoreCase(config.llm)) {
             setupGenericOpenAI();
-        } else if ("openai".equalsIgnoreCase(config.llmProvider)) {
+        } else if ("openai".equalsIgnoreCase(config.llm)) {
             model.addLog(AiMessage.from("[Jaider] OpenAI provider selected but setupOpenAI() is currently commented out. No model initialized."));
         } else {
-            model.addLog(AiMessage.from(String.format("[Jaider] WARNING: Unknown llmProvider '%s' in config. Defaulting to Ollama.", config.llmProvider)));
+            model.addLog(AiMessage.from(String.format("[Jaider] WARNING: Unknown llmProvider '%s' in config. Defaulting to Ollama.", config.llm)));
             setupOllama();
         }
 
@@ -56,9 +51,9 @@ public class LlmProviderFactory {
 
     public EmbeddingModel createEmbeddingModel() {
         if (this.embeddingModel == null) { // Create only if not already created
-            if ("ollama".equalsIgnoreCase(config.llmProvider)) {
+            if ("ollama".equalsIgnoreCase(config.llm)) {
                 setupOllamaEmbeddingModel();
-            } else if ("genericOpenai".equalsIgnoreCase(config.llmProvider)) {
+            } else if ("genericOpenai".equalsIgnoreCase(config.llm)) {
                 // Assuming genericOpenai might use a similar setup for embeddings if available
                 // This part might need a specific GenericOpenAiEmbeddingModel or configuration
                 // For now, let's try to adapt OllamaEmbeddingModel if the API is compatible
@@ -66,11 +61,11 @@ public class LlmProviderFactory {
                 // Setting to null or a specific implementation if available.
                 // For demonstration, trying OllamaEmbeddingModel, but this might not be correct for all generic OpenAI endpoints.
                 setupGenericOpenAIEmbeddingModel();
-            } else if ("openai".equalsIgnoreCase(config.llmProvider)) {
+            } else if ("openai".equalsIgnoreCase(config.llm)) {
                 // setupOpenAIEmbeddingModel(); // Placeholder
                 model.addLog(AiMessage.from("[Jaider] OpenAI embedding model selected but setup is currently commented out. No embedding model initialized."));
             } else {
-                model.addLog(AiMessage.from(String.format("[Jaider] WARNING: Unknown llmProvider '%s' for embedding model. No embedding model initialized.", config.llmProvider)));
+                model.addLog(AiMessage.from(String.format("[Jaider] WARNING: Unknown llmProvider '%s' for embedding model. No embedding model initialized.", config.llm)));
             }
         }
         return this.embeddingModel;

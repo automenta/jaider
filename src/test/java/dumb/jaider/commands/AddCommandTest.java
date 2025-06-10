@@ -1,19 +1,17 @@
 package dumb.jaider.commands;
 
 import dev.langchain4j.data.message.AiMessage;
-import dev.langchain4j.data.message.ChatMessage;
 import dumb.jaider.app.App;
-import dumb.jaider.commands.AppContext; // Corrected
 import dumb.jaider.config.Config;
-import dumb.jaider.model.JaiderModel;   // Corrected
+import dumb.jaider.model.JaiderModel;
 import dumb.jaider.ui.UI;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.junit.jupiter.api.io.TempDir; // For temporary project directory
+import org.junit.jupiter.api.io.TempDir;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
-import org.mockito.Spy; // Import Spy
+import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.io.IOException;
@@ -21,8 +19,9 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.Mockito.*;
-import static org.junit.jupiter.api.Assertions.*;
 
 @ExtendWith(MockitoExtension.class)
 class AddCommandTest {
@@ -48,12 +47,12 @@ class AddCommandTest {
     void setUp() {
         // Ensure the test project directory exists
         try {
-            Files.createDirectories(model.projectDir);
+            Files.createDirectories(model.dir);
         } catch (IOException e) {
             throw new RuntimeException("Could not create test project directory", e);
         }
 
-        when(appContext.getModel()).thenReturn(model); // model is now a spy
+        when(appContext.model()).thenReturn(model); // model is now a spy
         // when(appContext.getConfig()).thenReturn(config); // Unnecessary stub
         // when(appContext.getUi()).thenReturn(ui); // Unnecessary stub
         // when(appContext.getAppInstance()).thenReturn(app); // Moved to specific tests
@@ -81,13 +80,13 @@ class AddCommandTest {
 
     @Test
     void execute_oneValidFilePath_shouldAddFileAndLogSuccess() {
-        when(appContext.getAppInstance()).thenReturn(app); // Added here
+        when(appContext.app()).thenReturn(app); // Added here
         String filePathStr = "src/main/java/dumb/jaider/Test.java"; // Relative to projectDir
-        Path expectedPath = model.projectDir.resolve(filePathStr);
+        Path expectedPath = model.dir.resolve(filePathStr);
 
         addCommand.execute(filePathStr, appContext);
 
-        assertTrue(model.filesInContext.contains(expectedPath.normalize()));
+        assertTrue(model.files.contains(expectedPath.normalize()));
         verify(app).updateTokenCountPublic();
         verify(model).addLog(argThat(msg -> {
             // Command logs the input string, not the resolved path for the success message content part
@@ -98,18 +97,18 @@ class AddCommandTest {
 
     @Test
     void execute_multipleValidFilePaths_shouldAddAllFilesAndLogSuccess() {
-        when(appContext.getAppInstance()).thenReturn(app); // Added here
+        when(appContext.app()).thenReturn(app); // Added here
         String filePathStr1 = "src/main/java/dumb/jaider/Test1.java";
         String filePathStr2 = "docs/README.md";
-        Path expectedPath1 = model.projectDir.resolve(filePathStr1);
-        Path expectedPath2 = model.projectDir.resolve(filePathStr2);
+        Path expectedPath1 = model.dir.resolve(filePathStr1);
+        Path expectedPath2 = model.dir.resolve(filePathStr2);
         String expectedLogMessage = "[Jaider] Added files to context: " + filePathStr1 + ", " + filePathStr2;
 
 
         addCommand.execute(filePathStr1 + " " + filePathStr2, appContext);
 
-        assertTrue(model.filesInContext.contains(expectedPath1.normalize()));
-        assertTrue(model.filesInContext.contains(expectedPath2.normalize()));
+        assertTrue(model.files.contains(expectedPath1.normalize()));
+        assertTrue(model.files.contains(expectedPath2.normalize()));
         verify(app, times(1)).updateTokenCountPublic(); // Called once after all files
         verify(model).addLog(argThat(msg -> { // Called once with all files
             if (msg instanceof AiMessage) return ((AiMessage) msg).text().equals(expectedLogMessage);
@@ -119,7 +118,7 @@ class AddCommandTest {
 
     @Test
     void execute_pathOutsideProject_shouldNotAddAndLogWarning() {
-        when(appContext.getAppInstance()).thenReturn(app); // Added here
+        when(appContext.app()).thenReturn(app); // Added here
         // Use a temporary directory for a controlled "outside" path
         Path outsideFile = tempDir.resolve("outside.txt");
         try {
@@ -131,7 +130,7 @@ class AddCommandTest {
 
         addCommand.execute(absolutePathStr, appContext);
         Path expectedAddedPath = Paths.get(absolutePathStr).normalize();
-        assertTrue(model.filesInContext.contains(expectedAddedPath));
+        assertTrue(model.files.contains(expectedAddedPath));
         verify(app).updateTokenCountPublic(); // It would still update tokens
         verify(model).addLog(argThat(msg -> {
             if (msg instanceof AiMessage) {

@@ -1,8 +1,9 @@
 package dumb.jaider.agents;
 
 // Removed unused imports: UserMessage, Response, AiMessage (directly)
-import dev.langchain4j.memory.ChatMemory; // Still needed for constructor
-import dev.langchain4j.model.chat.ChatLanguageModel; // Still needed for constructor
+
+import dev.langchain4j.memory.ChatMemory;
+import dev.langchain4j.model.chat.ChatLanguageModel;
 
 import java.util.Set;
 

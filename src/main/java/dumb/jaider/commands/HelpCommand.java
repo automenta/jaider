@@ -7,7 +7,7 @@ import java.util.stream.Collectors;
 public class HelpCommand implements Command {
     @Override
     public void execute(String args, AppContext context) {
-        String availableModes = context.getAppInstance().getAvailableAgentNames().stream()
+        String availableModes = context.app().getAvailableAgentNames().stream()
                                      .sorted()
                                      .collect(Collectors.joining(", "));
         if (availableModes.isEmpty()) {
@@ -32,6 +32,6 @@ public class HelpCommand implements Command {
             /help: Show this help message.
             /exit: Exit Jaider.
         """, availableModes);
-        context.getModel().addLog(AiMessage.from(helpTxt));
+        context.model().addLog(AiMessage.from(helpTxt));
     }
 }

@@ -7,13 +7,7 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 /**
  * Manages the instantiation and retrieval of components based on JSON definitions.
@@ -264,7 +258,7 @@ public class DependencyInjector {
                     throw new RuntimeException("Failed to parse value '" + value + "' to type '" + type + "' for component '" + componentId + "', argument " + i, e);
                 }
             } else {
-                throw new RuntimeException("Invalid argument definition for component '" + componentId + "': must have 'ref' or 'value'. Arg: " + argDef.toString());
+                throw new RuntimeException("Invalid argument definition for component '" + componentId + "': must have 'ref' or 'value'. Arg: " + argDef);
             }
         }
         return resolvedArgs.toArray();
@@ -340,7 +334,7 @@ public class DependencyInjector {
                 }
             } else {
                 // This case should not be reached if resolveArguments has validated the structure.
-                throw new RuntimeException("Invalid argument definition in getArgumentTypes for component '" + componentId + "'. Arg: " + argDef.toString());
+                throw new RuntimeException("Invalid argument definition in getArgumentTypes for component '" + componentId + "'. Arg: " + argDef);
             }
         }
         return argTypes;

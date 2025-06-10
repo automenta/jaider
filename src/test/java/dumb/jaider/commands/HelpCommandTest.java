@@ -1,10 +1,8 @@
 package dumb.jaider.commands;
 
-import dumb.jaider.app.App; // Import the App class
-import dumb.jaider.commands.AppContext;
+import dumb.jaider.app.App;
 import dumb.jaider.model.JaiderModel;
 import org.junit.jupiter.api.BeforeEach;
-import java.util.Collections; // Import Collections for emptySet
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -12,8 +10,12 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import static org.mockito.Mockito.*;
-import static org.junit.jupiter.api.Assertions.*;
+import java.util.Collections;
+
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class HelpCommandTest {
@@ -32,8 +34,8 @@ class HelpCommandTest {
 
     @BeforeEach
     void setUp() {
-        when(appContext.getModel()).thenReturn(model); // Corrected
-        when(appContext.getAppInstance()).thenReturn(app); // Configure appContext to return mocked app
+        when(appContext.model()).thenReturn(model); // Corrected
+        when(appContext.app()).thenReturn(app); // Configure appContext to return mocked app
         when(app.getAvailableAgentNames()).thenReturn(Collections.emptySet()); // Configure mocked app
     }
 

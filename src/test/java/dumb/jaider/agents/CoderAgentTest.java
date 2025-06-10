@@ -1,11 +1,9 @@
 package dumb.jaider.agents;
 
 // import dev.langchain4j.agent.tool.Tool; // No longer needed for these direct changes
+
 import dev.langchain4j.memory.ChatMemory;
 import dev.langchain4j.model.chat.ChatLanguageModel;
-// import dev.langchain4j.model.output.Response; // No longer needed for these direct changes
-// import dev.langchain4j.agent.tool.ToolSpecification; // No longer used
-// import dev.langchain4j.tool.Tools; // Package does not exist / Class not used
 import dumb.jaider.tools.StandardTools;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -13,13 +11,9 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-// import java.util.Collections; // No longer needed for these direct changes
-// import java.util.HashSet; // No longer needed for these direct changes
-// import java.util.List; // No longer needed for these direct changes
 import java.util.Set;
 
-import static org.junit.jupiter.api.Assertions.*;
-// import static org.mockito.ArgumentMatchers.anyList; // Use anyString or eq for chat()
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -63,11 +57,11 @@ class CoderAgentTest {
     }
 
     @Test
-    void getTools_shouldReturnTheStandardToolsInstanceWrappedInSet() {
+    void toolsInstanceWrappedInSet() {
         // CoderAgent's constructor passes Set.of(availableTools) to AbstractAgent.
         // AbstractAgent.getTools() returns this set.
         Set<Object> expectedTools = Set.of(standardTools);
-        Set<Object> actualTools = coderAgent.getTools();
+        Set<Object> actualTools = coderAgent.tools();
 
         assertEquals(expectedTools, actualTools, "CoderAgent should be configured with the provided StandardTools instance.");
     }

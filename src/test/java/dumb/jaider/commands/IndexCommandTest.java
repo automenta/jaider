@@ -1,18 +1,15 @@
 package dumb.jaider.commands;
 
-import dev.langchain4j.data.document.Document;
 import dev.langchain4j.data.embedding.Embedding;
+import dev.langchain4j.data.message.AiMessage;
 import dev.langchain4j.data.segment.TextSegment;
 import dev.langchain4j.model.embedding.EmbeddingModel;
-import dev.langchain4j.store.embedding.EmbeddingStore;
-import dev.langchain4j.data.message.AiMessage;
 import dev.langchain4j.model.output.Response;
+import dev.langchain4j.store.embedding.EmbeddingStore;
 import dumb.jaider.app.App;
 import dumb.jaider.model.JaiderModel;
 import dumb.jaider.ui.UI;
 import org.junit.jupiter.api.BeforeEach;
-import java.io.IOException;
-import java.nio.file.Files;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -21,18 +18,16 @@ import org.mockito.Mock;
 import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
-import java.util.HashSet;
 import java.util.List;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.Executor;
 
-import static org.mockito.Mockito.*;
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class IndexCommandTest {
@@ -48,14 +43,34 @@ class IndexCommandTest {
     @Mock
     private EmbeddingModel embeddingModel;
     @Spy
-    private EmbeddingStore<TextSegment> embeddingStoreSpy = new EmbeddingStore<TextSegment>() {
-        @Override public String add(Embedding embedding) { return "id"; }
-        @Override public void add(String id, Embedding embedding) {}
-        @Override public String add(Embedding embedding, TextSegment textSegment) { return "id"; }
-        @Override public List<String> addAll(List<Embedding> embeddings) { return Collections.nCopies(embeddings.size(), "id"); }
-        @Override public List<String> addAll(List<Embedding> embeddings, List<TextSegment> textSegments) { return Collections.nCopies(embeddings.size(), "id"); }
-        @Override public dev.langchain4j.store.embedding.EmbeddingSearchResult<TextSegment> search(dev.langchain4j.store.embedding.EmbeddingSearchRequest request) {
-            return new dev.langchain4j.store.embedding.EmbeddingSearchResult<>(Collections.<dev.langchain4j.store.embedding.EmbeddingMatch<TextSegment>>emptyList());
+    private EmbeddingStore<TextSegment> embeddingStoreSpy = new EmbeddingStore<>() {
+        @Override
+        public String add(Embedding embedding) {
+            return "id";
+        }
+
+        @Override
+        public void add(String id, Embedding embedding) {
+        }
+
+        @Override
+        public String add(Embedding embedding, TextSegment textSegment) {
+            return "id";
+        }
+
+        @Override
+        public List<String> addAll(List<Embedding> embeddings) {
+            return Collections.nCopies(embeddings.size(), "id");
+        }
+
+        @Override
+        public List<String> addAll(List<Embedding> embeddings, List<TextSegment> textSegments) {
+            return Collections.nCopies(embeddings.size(), "id");
+        }
+
+        @Override
+        public dev.langchain4j.store.embedding.EmbeddingSearchResult<TextSegment> search(dev.langchain4j.store.embedding.EmbeddingSearchRequest request) {
+            return new dev.langchain4j.store.embedding.EmbeddingSearchResult<>(Collections.emptyList());
         }
     };
 
@@ -65,12 +80,12 @@ class IndexCommandTest {
     @BeforeEach
     void setUp() {
         try {
-            Files.createDirectories(model.projectDir);
+            Files.createDirectories(model.dir);
         } catch (IOException e) {
             throw new RuntimeException("Could not create test project directory", e);
         }
 
-        when(appContext.getModel()).thenReturn(model);
+        when(appContext.model()).thenReturn(model);
 
         lenient().when(embeddingModel.embedAll(anyList())).thenAnswer(invocation -> {
             List<TextSegment> inputSegments = invocation.getArgument(0);
@@ -96,7 +111,7 @@ class IndexCommandTest {
     @Test
     void execute_noEmbeddingModel_shouldLogMessageAndNotIndex() {
         model.isIndexed = false;
-        when(appContext.getAppInstance()).thenReturn(app);
+        when(appContext.app()).thenReturn(app);
         when(app.getEmbeddingModel()).thenReturn(null);
         indexCommand.execute(null, appContext);
         verify(model).addLog(argThat(msg -> ((AiMessage)msg).text().contains("Embedding model not available.")));
@@ -106,10 +121,10 @@ class IndexCommandTest {
     @Test
     void execute_noFilesToLoad_shouldLogMessageAndNotIndex() {
         model.isIndexed = false;
-        when(appContext.getAppInstance()).thenReturn(app);
-        when(appContext.getUi()).thenReturn(ui);
+        when(appContext.app()).thenReturn(app);
+        when(appContext.ui()).thenReturn(ui);
         when(app.getEmbeddingModel()).thenReturn(embeddingModel);
-        model.filesInContext.clear(); // This line is irrelevant as IndexCommand scans projectDir
+        model.files.clear(); // This line is irrelevant as IndexCommand scans projectDir
 
         // To ensure no files are loaded, we'd need to ensure model.projectDir is empty
         // or all files within are filtered by the IndexCommand's pathMatcher.
@@ -129,13 +144,13 @@ class IndexCommandTest {
 
     @Test
     void execute_successfulIndexing_shouldUpdateModelAndFinishTurn() throws IOException {
-        when(appContext.getAppInstance()).thenReturn(app);
-        when(appContext.getUi()).thenReturn(ui);
-        Path testProjectDir = model.projectDir;
+        when(appContext.app()).thenReturn(app);
+        when(appContext.ui()).thenReturn(ui);
+        Path testProjectDir = model.dir;
         Path dummyFile = testProjectDir.resolve("dummy.txt");
         Files.writeString(dummyFile, "Test content for indexing.");
         try {
-            model.filesInContext.clear(); // Irrelevant for IndexCommand file discovery
+            model.files.clear(); // Irrelevant for IndexCommand file discovery
             model.isIndexed = false;
             when(app.getEmbeddingModel()).thenReturn(embeddingModel);
 
@@ -157,14 +172,14 @@ class IndexCommandTest {
 
     @Test
     void execute_exceptionDuringEmbedding_shouldLogErrorAndFinishTurn() throws IOException {
-        when(appContext.getAppInstance()).thenReturn(app);
-        when(appContext.getUi()).thenReturn(ui);
-        Path testProjectDir = model.projectDir;
+        when(appContext.app()).thenReturn(app);
+        when(appContext.ui()).thenReturn(ui);
+        Path testProjectDir = model.dir;
         Path dummyFile = testProjectDir.resolve("dummyException.txt");
         Files.writeString(dummyFile, "Content for exception test.");
 
         try {
-            model.filesInContext.clear(); // Irrelevant
+            model.files.clear(); // Irrelevant
             model.isIndexed = false;
             when(app.getEmbeddingModel()).thenReturn(embeddingModel);
 

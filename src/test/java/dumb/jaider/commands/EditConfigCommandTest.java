@@ -1,10 +1,9 @@
 package dumb.jaider.commands;
 
-import dumb.jaider.commands.AppContext;
-import dumb.jaider.model.JaiderModel;
+import dev.langchain4j.data.message.AiMessage;
 import dumb.jaider.app.App;
 import dumb.jaider.config.Config;
-import dev.langchain4j.data.message.AiMessage; // Corrected import
+import dumb.jaider.model.JaiderModel;
 import dumb.jaider.ui.UI;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -17,8 +16,9 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import java.io.IOException;
 import java.util.concurrent.CompletableFuture;
 
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.*;
-import static org.junit.jupiter.api.Assertions.*;
 
 @ExtendWith(MockitoExtension.class)
 class EditConfigCommandTest {
@@ -42,23 +42,23 @@ class EditConfigCommandTest {
 
     @BeforeEach
     void setUp() {
-        lenient().when(appContext.getModel()).thenReturn(model); // Made lenient
-        lenient().when(appContext.getConfig()).thenReturn(config); // Made lenient
+        lenient().when(appContext.model()).thenReturn(model); // Made lenient
+        lenient().when(appContext.config()).thenReturn(config); // Made lenient
         // when(appContext.getUi()).thenReturn(ui); // Moved to specific tests
-        lenient().when(appContext.getAppInstance()).thenReturn(app); // Made lenient
+        lenient().when(appContext.app()).thenReturn(app); // Made lenient
     }
 
     @Test
     void execute_successfulEdit_shouldUpdateConfigAndFinishTurn() throws IOException {
-        when(appContext.getUi()).thenReturn(ui); // Added here
+        when(appContext.ui()).thenReturn(ui); // Added here
         when(config.readForEditing()).thenReturn(sampleConfigJson);
-        when(ui.requestConfigEdit(sampleConfigJson)).thenReturn(CompletableFuture.completedFuture(newConfigJson));
+        when(ui.configEdit(sampleConfigJson)).thenReturn(CompletableFuture.completedFuture(newConfigJson));
 
         editConfigCommand.execute(null, appContext); // Corrected signature
 
         verify(app).setStatePublic(App.State.WAITING_USER_CONFIRMATION);
         verify(config).readForEditing();
-        verify(ui).requestConfigEdit(sampleConfigJson);
+        verify(ui).configEdit(sampleConfigJson);
         verify(app).updateAppConfigPublic(newConfigJson);
         verify(app).finishTurnPublic(null);
         verify(model, never()).addLog(any(AiMessage.class)); // Corrected verification
@@ -66,15 +66,15 @@ class EditConfigCommandTest {
 
     @Test
     void execute_userCancelsEdit_shouldNotUpdateConfigAndFinishTurn() throws IOException {
-        when(appContext.getUi()).thenReturn(ui); // Added here
+        when(appContext.ui()).thenReturn(ui); // Added here
         when(config.readForEditing()).thenReturn(sampleConfigJson);
-        when(ui.requestConfigEdit(sampleConfigJson)).thenReturn(CompletableFuture.completedFuture(null)); // User cancels
+        when(ui.configEdit(sampleConfigJson)).thenReturn(CompletableFuture.completedFuture(null)); // User cancels
 
         editConfigCommand.execute(null, appContext); // Corrected signature
 
         verify(app).setStatePublic(App.State.WAITING_USER_CONFIRMATION);
         verify(config).readForEditing();
-        verify(ui).requestConfigEdit(sampleConfigJson);
+        verify(ui).configEdit(sampleConfigJson);
         verify(app, never()).updateAppConfigPublic(anyString()); // Not called
         verify(app).finishTurnPublic(null);
         // EditConfigCommand's current implementation does not directly log "Config edit cancelled."
@@ -92,7 +92,7 @@ class EditConfigCommandTest {
 
         verify(app).setStatePublic(App.State.WAITING_USER_CONFIRMATION);
         verify(config).readForEditing();
-        verify(ui, never()).requestConfigEdit(anyString());
+        verify(ui, never()).configEdit(anyString());
         verify(app, never()).updateAppConfigPublic(anyString());
 
         ArgumentCaptor<AiMessage> messageCaptor = ArgumentCaptor.forClass(AiMessage.class);
@@ -104,16 +104,16 @@ class EditConfigCommandTest {
 
     @Test
     void execute_updateAppConfigThrowsIOException_shouldLogErrorAndFinishTurn() throws IOException {
-        when(appContext.getUi()).thenReturn(ui); // Added here as requestConfigEdit is called
+        when(appContext.ui()).thenReturn(ui); // Added here as requestConfigEdit is called
         when(config.readForEditing()).thenReturn(sampleConfigJson);
-        when(ui.requestConfigEdit(sampleConfigJson)).thenReturn(CompletableFuture.completedFuture(newConfigJson));
+        when(ui.configEdit(sampleConfigJson)).thenReturn(CompletableFuture.completedFuture(newConfigJson));
         doThrow(new IOException("Failed to save config")).when(app).updateAppConfigPublic(newConfigJson);
 
         editConfigCommand.execute(null, appContext);
 
         verify(app).setStatePublic(App.State.WAITING_USER_CONFIRMATION);
         verify(config).readForEditing();
-        verify(ui).requestConfigEdit(sampleConfigJson);
+        verify(ui).configEdit(sampleConfigJson);
         verify(app).updateAppConfigPublic(newConfigJson); // This call will throw the mocked exception
 
         ArgumentCaptor<AiMessage> logCaptor = ArgumentCaptor.forClass(AiMessage.class);

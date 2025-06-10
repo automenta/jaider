@@ -2,14 +2,12 @@ package dumb.jaider.vcs;
 
 import org.eclipse.jgit.api.Git;
 import org.eclipse.jgit.api.errors.GitAPIException;
-import org.eclipse.jgit.lib.Repository;
 import org.eclipse.jgit.revwalk.RevCommit;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
-import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -99,11 +97,11 @@ class GitServiceTest {
         String result = serviceForNonGit.commitChanges("Attempt commit in non-git dir");
 
         // Assertions
-        assertEquals("Error: " + nonGitDir.toString() + " is not a Git repository.", result, "Error message should match expected for non-git directory commit.");
+        assertEquals("Error: " + nonGitDir + " is not a Git repository.", result, "Error message should match expected for non-git directory commit.");
     }
 
     @Test
-    void commitChanges_noChanges_shouldHandleGracefully() throws IOException, GitAPIException {
+    void commitChanges_noChanges_shouldHandleGracefully() throws GitAPIException {
         // Setup: Repository is already clean due to @BeforeEach and initial commit.
         assertTrue(git.status().call().isClean(), "Repository should be clean before this test.");
         RevCommit initialHead = git.log().setMaxCount(1).call().iterator().next();
@@ -146,7 +144,7 @@ class GitServiceTest {
     }
 
     @Test
-    void isGitRepoClean_dirtyWithModifiedFile_shouldReturnFalse() throws IOException, GitAPIException {
+    void isGitRepoClean_dirtyWithModifiedFile_shouldReturnFalse() throws IOException {
         // Setup: Modify a committed file
         Path trackedFile = projectDir.resolve("initial.txt");
         Files.writeString(trackedFile, "This content has been modified.", StandardOpenOption.TRUNCATE_EXISTING);
@@ -171,7 +169,7 @@ class GitServiceTest {
         assertTrue(isClean, "isGitRepoClean should return true for a non-git directory as per current implementation.");
         // Note: Asserting System.err output is non-trivial in standard JUnit.
         // Manual verification or a custom stream capture would be needed if critical.
-        System.out.println("Note: For isGitRepoClean_nonGitDirectory_shouldReturnTrueAndPrintError, manual check of stderr for message '" + nonGitDir.toString() + " is not a Git repository. Reporting as clean.' might be needed if stderr capturing is not set up.");
+        System.out.println("Note: For isGitRepoClean_nonGitDirectory_shouldReturnTrueAndPrintError, manual check of stderr for message '" + nonGitDir + " is not a Git repository. Reporting as clean.' might be needed if stderr capturing is not set up.");
     }
 
     // --- Tests for undoFileChange(String relativeFilePath) ---
@@ -238,11 +236,11 @@ class GitServiceTest {
         String result = serviceForNonGit.undoFileChange("somefile.txt");
 
         // Assertions
-        assertEquals("Error: " + nonGitDir.toString() + " is not a Git repository.", result, "Error message should match expected for non-git directory undo.");
+        assertEquals("Error: " + nonGitDir + " is not a Git repository.", result, "Error message should match expected for non-git directory undo.");
     }
 
     @Test
-    void undoFileChange_nonExistentFileInRepo_shouldHandle() throws IOException {
+    void undoFileChange_nonExistentFileInRepo_shouldHandle() {
         // Setup: repo is initialized and clean.
         String nonExistentFilePath = "this_file_does_not_exist.txt";
         assertFalse(Files.exists(projectDir.resolve(nonExistentFilePath)), "File should not exist before test.");

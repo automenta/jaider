@@ -2,20 +2,21 @@ package dumb.jaider.vcs;
 
 import org.eclipse.jgit.api.Git;
 import org.eclipse.jgit.api.errors.GitAPIException;
+
 import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Files; // Ensure this is here
 
 public class GitService {
-    private final Path projectDir;
+    private final Path dir;
 
-    public GitService(Path projectDir) {
-        this.projectDir = projectDir;
+    public GitService(Path dir) {
+        this.dir = dir;
     }
 
     public String commitChanges(String message) {
-        try (Git git = Git.open(projectDir.resolve(".git").toFile())) {
-            org.eclipse.jgit.api.Status status = git.status().call();
+        try (var git = Git.open(dir.resolve(".git").toFile())) {
+            var status = git.status().call();
             if (status.isClean() && status.getUntracked().isEmpty() && status.getMissing().isEmpty()) {
                 return "No changes to commit.";
             }
@@ -32,14 +33,14 @@ public class GitService {
         } catch (IOException | GitAPIException e) {
             if (e instanceof org.eclipse.jgit.errors.RepositoryNotFoundException ||
                 (e.getMessage() != null && e.getMessage().toLowerCase().contains("not a git repository"))) {
-                return "Error: " + projectDir.toString() + " is not a Git repository.";
+                return "Error: " + dir + " is not a Git repository.";
             }
             return "Git commit failed: " + e.getMessage();
         }
     }
 
     public boolean isGitRepoClean() {
-        try (Git git = Git.open(projectDir.resolve(".git").toFile())) {
+        try (var git = Git.open(dir.resolve(".git").toFile())) {
             return git.status().call().isClean();
         } catch (IOException | GitAPIException e) {
             System.err.println("Not a git repository or git error during isClean check: " + e.getMessage());
@@ -51,11 +52,11 @@ public class GitService {
     }
 
     public String undoFileChange(String relativeFilePath) {
-        try (Git git = Git.open(projectDir.resolve(".git").toFile())) {
-            org.eclipse.jgit.api.Status status = git.status().call();
+        try (var git = Git.open(dir.resolve(".git").toFile())) {
+            var status = git.status().call();
             if (status.getAdded().contains(relativeFilePath)) {
                 git.reset().addPath(relativeFilePath).call();
-                Files.deleteIfExists(projectDir.resolve(relativeFilePath));
+                Files.deleteIfExists(dir.resolve(relativeFilePath));
                 return "Unstaged and deleted new file: " + relativeFilePath;
             } else {
                 git.checkout().addPath(relativeFilePath).call();
@@ -64,7 +65,7 @@ public class GitService {
         } catch (IOException | GitAPIException e) {
             if (e instanceof org.eclipse.jgit.errors.RepositoryNotFoundException ||
                 (e.getMessage() != null && e.getMessage().toLowerCase().contains("not a git repository"))) {
-                return "Error: " + projectDir.toString() + " is not a Git repository.";
+                return "Error: " + dir + " is not a Git repository.";
             }
             return "Failed to undo changes for file: " + relativeFilePath + " - " + e.getMessage();
         }

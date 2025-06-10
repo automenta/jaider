@@ -1,24 +1,25 @@
 package dumb.jaider.config;
 
+import dumb.jaider.app.DependencyInjector;
+import org.json.JSONArray;
+import org.json.JSONObject;
+
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.Map;
-import org.json.JSONArray;
-import org.json.JSONObject;
-import dumb.jaider.app.DependencyInjector;
 
 public class Config {
-    final Path configFile;
-    private Map<String, JSONObject> componentDefinitions = new HashMap<>();
+    final Path file;
+    private final Map<String, JSONObject> def = new HashMap<>();
     private transient DependencyInjector injector;
     private static final String COMPONENTS_KEY = "components";
 
     // Fields with their Java-level defaults
     // Ensure apiKeys is initialized to prevent NullPointerExceptions if load() fails early
     final Map<String, String> apiKeys = new HashMap<>();
-    public String llmProvider = "ollama";
+    public String llm = "ollama";
     public String runCommand = ""; // Default to empty string
     public String ollamaBaseUrl = "http://localhost:11434";
     public String ollamaModelName = "llamablit";
@@ -30,10 +31,10 @@ public class Config {
     public String tavilyApiKey = "";
 
     public Config(Path projectDir) {
-        this.configFile = projectDir.resolve(".jaider.json");
+        this.file = projectDir.resolve(".jaider.json");
         load(); // Loads all fields, including componentDefinitions if present in file, or sets all fields to default if no file/bad file.
 
-        Map<String, JSONObject> injectorDefs = this.componentDefinitions;
+        Map<String, JSONObject> injectorDefs = this.def;
         // If this.componentDefinitions is empty after load(), it means the config source
         // (either a successfully read file or the initial defaults if file load failed)
         // did not provide component definitions or they were empty.
@@ -58,7 +59,7 @@ public class Config {
                 if (componentDef.has("id")) {
                     defs.put(componentDef.getString("id"), componentDef);
                 } else {
-                    System.err.println("Component definition missing 'id' while extracting: " + componentDef.toString());
+                    System.err.println("Component definition missing 'id' while extracting: " + componentDef);
                 }
             }
         }
@@ -67,13 +68,13 @@ public class Config {
 
     void load() {
         boolean loadedSuccessfully = false;
-        if (Files.exists(configFile)) {
+        if (Files.exists(file)) {
             try {
-                JSONObject j = new JSONObject(Files.readString(configFile));
+                JSONObject j = new JSONObject(Files.readString(file));
                 populateFieldsFromJson(j); // Populate fields from loaded JSON
                 loadedSuccessfully = true;
             } catch (Exception e) {
-                System.err.println("Error parsing existing config file ("+ configFile +"): " + e.getMessage() + ". Applying defaults.");
+                System.err.println("Error parsing existing config file (" + file + "): " + e.getMessage() + ". Applying defaults.");
             }
         }
 
@@ -83,11 +84,11 @@ public class Config {
 
             // Attempt to write the default config to disk for user convenience
             try {
-                Files.createDirectories(configFile.getParent());
-                Files.writeString(configFile, getDefaultConfigAsJsonObject().toString(2));
-                System.err.println("Written default config to: " + configFile);
+                Files.createDirectories(file.getParent());
+                Files.writeString(file, getDefaultConfigAsJsonObject().toString(2));
+                System.err.println("Written default config to: " + file);
             } catch (IOException e) {
-                System.err.println("Warning: Failed to write default config to file: " + configFile + " - " + e.getMessage());
+                System.err.println("Warning: Failed to write default config to file: " + file + " - " + e.getMessage());
             }
         }
     }
@@ -95,7 +96,7 @@ public class Config {
     private JSONObject getDefaultConfigAsJsonObject() {
         JSONObject defaultConfig = new JSONObject();
         // Use class field defaults when constructing the default JSON object
-        defaultConfig.put("llmProvider", this.llmProvider);
+        defaultConfig.put("llmProvider", this.llm);
         defaultConfig.put("ollamaBaseUrl", this.ollamaBaseUrl);
         defaultConfig.put("ollamaModelName", this.ollamaModelName);
         defaultConfig.put("genericOpenaiBaseUrl", this.genericOpenaiBaseUrl);
@@ -177,7 +178,7 @@ public class Config {
 
     private void populateFieldsFromJson(JSONObject json) {
         // Use class field defaults as fallback for optString
-        this.llmProvider = json.optString("llmProvider", this.llmProvider);
+        this.llm = json.optString("llmProvider", this.llm);
         this.ollamaBaseUrl = json.optString("ollamaBaseUrl", this.ollamaBaseUrl);
         this.ollamaModelName = json.optString("ollamaModelName", this.ollamaModelName);
         this.genericOpenaiBaseUrl = json.optString("genericOpenaiBaseUrl", this.genericOpenaiBaseUrl);
@@ -199,32 +200,32 @@ public class Config {
             keys.keySet().forEach(key -> this.apiKeys.put(key, keys.getString(key)));
         }
 
-        this.componentDefinitions.clear(); // Clear before populating
+        this.def.clear(); // Clear before populating
         if (json.has(COMPONENTS_KEY)) {
             JSONArray componentDefsArray = json.getJSONArray(COMPONENTS_KEY);
             for (int i = 0; i < componentDefsArray.length(); i++) {
                 JSONObject componentDef = componentDefsArray.getJSONObject(i);
                 if (componentDef.has("id")) {
-                    this.componentDefinitions.put(componentDef.getString("id"), componentDef);
+                    this.def.put(componentDef.getString("id"), componentDef);
                 } else {
-                     System.err.println("Component definition missing 'id' in config: " + componentDef.toString());
+                    System.err.println("Component definition missing 'id' in config: " + componentDef);
                 }
             }
         }
     }
 
     public void save(String newConfig) throws IOException {
-        Files.writeString(configFile, new JSONObject(newConfig).toString(2));
+        Files.writeString(file, new JSONObject(newConfig).toString(2));
         if (this.injector != null) {
             this.injector.clearCache();
         }
         load(); // Reload config and reinitialize/clear injector
          // Ensure injector is re-initialized with new definitions if it became null
         if (this.injector == null) {
-            if (this.componentDefinitions.isEmpty()) {
+            if (this.def.isEmpty()) {
                 populateFieldsFromJson(getDefaultConfigAsJsonObject());
             }
-            this.injector = new DependencyInjector(new HashMap<>(this.componentDefinitions));
+            this.injector = new DependencyInjector(new HashMap<>(this.def));
             this.injector.registerSingleton("appConfig", this);
         }
     }
@@ -233,11 +234,11 @@ public class Config {
         return apiKeys.getOrDefault(provider, System.getenv(provider.toUpperCase() + "_API_KEY"));
     }
 
-    public String readForEditing() throws IOException {
+    public String readForEditing() {
         JSONObject configToEdit;
-        if (Files.exists(configFile)) {
+        if (Files.exists(file)) {
             try {
-                configToEdit = new JSONObject(Files.readString(configFile));
+                configToEdit = new JSONObject(Files.readString(file));
             } catch (Exception e) { // If file is corrupt, start with defaults
                 System.err.println("Warning: Couldn't read existing config for editing, starting with defaults: " + e.getMessage());
                 configToEdit = getDefaultConfigAsJsonObject();
@@ -250,9 +251,9 @@ public class Config {
         // This is slightly different from populateFieldsFromJson as it preserves existing file values
         JSONObject baseConfig = getDefaultConfigAsJsonObject(); // Start with all defaults
 
-        if (Files.exists(configFile)) {
+        if (Files.exists(file)) {
             try {
-                JSONObject fileConfig = new JSONObject(Files.readString(configFile));
+                JSONObject fileConfig = new JSONObject(Files.readString(file));
                 // Merge fileConfig into baseConfig. Keys in fileConfig will overwrite defaults.
                 for (String key : fileConfig.keySet()) {
                     // Special handling for "apiKeys" and "components" to merge intelligently if needed,
@@ -297,10 +298,10 @@ public class Config {
             // This might happen if constructor logic for injector init is bypassed or fails early.
             // Attempt a final re-init.
             System.err.println("Warning: Injector was null when getComponent was called. Re-initializing.");
-            if (this.componentDefinitions.isEmpty()) {
+            if (this.def.isEmpty()) {
                 populateFieldsFromJson(getDefaultConfigAsJsonObject());
             }
-            this.injector = new DependencyInjector(new HashMap<>(this.componentDefinitions));
+            this.injector = new DependencyInjector(new HashMap<>(this.def));
             this.injector.registerSingleton("appConfig", this);
             if (injector == null) { // If still null after re-attempt
                  throw new IllegalStateException("DependencyInjector critically failed to initialize.");
@@ -321,10 +322,10 @@ public class Config {
         // Ensure injector is initialized if accessed directly
         if (injector == null) {
              System.err.println("Warning: Injector was null when getInjector was called. Re-initializing.");
-            if (this.componentDefinitions.isEmpty()) {
+            if (this.def.isEmpty()) {
                 populateFieldsFromJson(getDefaultConfigAsJsonObject());
             }
-            this.injector = new DependencyInjector(new HashMap<>(this.componentDefinitions));
+            this.injector = new DependencyInjector(new HashMap<>(this.def));
             this.injector.registerSingleton("appConfig", this);
              if (injector == null) { // If still null after re-attempt
                  throw new IllegalStateException("DependencyInjector critically failed to initialize on getInjector().");

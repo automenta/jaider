@@ -1,9 +1,6 @@
 package dumb.jaider.tools;
 
-import com.github.difflib.DiffUtils;
-import com.github.difflib.patch.PatchFailedException;
-import com.github.difflib.unifieddiff.UnifiedDiff;
-import com.github.difflib.unifieddiff.UnifiedDiffReader;
+import com.github.difflib.patch.Patch;
 import dev.langchain4j.agent.tool.Tool;
 import dev.langchain4j.model.embedding.EmbeddingModel;
 import dev.langchain4j.store.embedding.EmbeddingSearchRequest;
@@ -13,32 +10,24 @@ import dev.langchain4j.web.search.tavily.TavilyWebSearchEngine;
 import dumb.jaider.config.Config;
 import dumb.jaider.model.JaiderModel;
 import dumb.jaider.utils.Util;
-import com.github.difflib.patch.Patch; // Added import
-import dumb.jaider.vcs.GitService; // Added import
-// org.eclipse.jgit.api.Git is no longer directly used here
+import dumb.jaider.vcs.GitService;
 import org.json.JSONObject;
-import dumb.jaider.tools.DiffApplier; // Added import
 
 import java.io.BufferedReader;
-import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
 public class StandardTools {
     private final JaiderModel model;
     private final Config config;
-    private final EmbeddingModel embeddingModel;
+    private final EmbeddingModel embedding;
 
-    public StandardTools(JaiderModel model, Config config, EmbeddingModel embeddingModel) {
+    public StandardTools(JaiderModel model, Config config, EmbeddingModel embedding) {
         this.model = model;
         this.config = config;
-        this.embeddingModel = embeddingModel;
+        this.embedding = embedding;
     }
 
     // Removed diffReader method
@@ -135,7 +124,7 @@ public class StandardTools {
 
     @Tool("Reads the complete content of a file.")
     public String readFile(String fileName) {
-        return model.readFileContent(model.projectDir.resolve(fileName));
+        return model.readFileContent(model.dir.resolve(fileName));
     }
 
     @Tool("Runs the project's configured validation command (e.g., tests, linter, build). Usage: runValidationCommand <optional_arguments_for_command>")
@@ -152,7 +141,7 @@ public class StandardTools {
 
         try {
             ProcessBuilder pb = new ProcessBuilder(commandToExecute.split("\\s+"))
-                    .directory(model.projectDir.toFile())
+                    .directory(model.dir.toFile())
                     .redirectErrorStream(true);
             Process process = pb.start();
 
@@ -185,22 +174,22 @@ public class StandardTools {
 
     @Tool("Commits all staged changes with a given message.")
     public String commitChanges(String message) {
-        GitService gitService = new GitService(this.model.projectDir);
+        GitService gitService = new GitService(this.model.dir);
         return gitService.commitChanges(message);
     }
 
     @Tool("Finds relevant code snippets from the entire indexed codebase.")
     public String findRelevantCode(String query) {
-        if (embeddingModel == null) {
+        if (embedding == null) {
             return "Error: Embedding model is not available. Cannot search code. Ensure LLM provider that supports embeddings is configured (e.g. OpenAI).";
         }
-        if (model.embeddingStore == null) {
+        if (model.embeddings == null) {
             return "Project not indexed. Run /index first.";
         }
         try {
-            var queryEmbedding = embeddingModel.embed(query).content();
+            var queryEmbedding = embedding.embed(query).content();
             var r = EmbeddingSearchRequest.builder().queryEmbedding(queryEmbedding).build();
-            var relevant = model.embeddingStore.search(r);
+            var relevant = model.embeddings.search(r);
             if (relevant == null || relevant.matches().isEmpty()) {
                 return "No relevant code found in the index for: " + query;
             }

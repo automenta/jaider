@@ -2,17 +2,12 @@ package dumb.jaider.commands;
 
 // import com.github.difflib.unifieddiff.UnifiedDiff; // Commented out
 // import dumb.jaider.utils.Util; // Util.diffReader is commented out
-import dumb.jaider.vcs.GitService;
 import dev.langchain4j.data.message.AiMessage;
-
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
 
 public class UndoCommand implements Command {
     @Override
     public void execute(String args, AppContext appContext) { // Changed context to appContext to match usage
-        appContext.getModel().addLog(AiMessage.from("[UndoCommand] Error: Undo functionality is temporarily disabled due to library issues."));
+        appContext.model().addLog(AiMessage.from("[UndoCommand] Error: Undo functionality is temporarily disabled due to library issues."));
         /*
         if (appContext.getModel().lastAppliedDiff == null) {
             appContext.getModel().addLog(AiMessage.from("[Jaider] No change to undo."));

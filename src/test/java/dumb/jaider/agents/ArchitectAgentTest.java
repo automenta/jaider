@@ -2,30 +2,17 @@ package dumb.jaider.agents;
 
 import dev.langchain4j.memory.ChatMemory;
 import dev.langchain4j.model.chat.ChatLanguageModel;
-// import dev.langchain4j.model.output.Response; // Not directly used in revised tests
-// import dev.langchain4j.service.AiServices; // Not directly used in revised tests
-// import dev.langchain4j.service.SystemMessage; // Not directly used in revised tests
-// import dev.langchain4j.agent.tool.ToolSpecification; // ToolSpecification itself might not be directly asserted
-// import dumb.jaider.agents.JaiderAiService; // Will be mocked
 import dumb.jaider.tools.StandardTools;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
-// import org.mockito.MockedStatic; // Not needed for these changes
-// import org.mockito.Mockito; // Covered by static import below
 import org.mockito.junit.jupiter.MockitoExtension;
-// import dev.langchain4j.agent.tool.Tool; // Not needed for these changes
 
-
-// import java.util.Collections; // No longer needed for these direct changes
-// import java.util.List; // No longer needed for these direct changes
+import java.util.Collections;
 import java.util.Set;
-import java.util.Collections; // Added import
 
-import static org.junit.jupiter.api.Assertions.*;
-// import static org.mockito.ArgumentMatchers.any; // Use anyString or eq
-import static org.mockito.ArgumentMatchers.anyString;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -65,7 +52,7 @@ class ArchitectAgentTest {
     }
 
     @Test
-    void getTools_shouldReturnWhatWasPassedToConstructor() {
+    void tools_shouldReturnWhatWasPassedToConstructor() {
         // ArchitectAgent's constructor passes standardTools.getReadOnlyTools() to AbstractAgent.
         // AbstractAgent.getTools() returns this set.
         // Here, standardTools is a mock. getReadOnlyTools() by default returns null for a mock.
@@ -87,7 +74,7 @@ class ArchitectAgentTest {
         // Let's stick to re-mocking and re-constructing for this specific test logic to be clear.
         architectAgent = new ArchitectAgent(chatLanguageModel, chatMemory, standardTools, jaiderAiServiceMock); // Re-construct with new mock behavior
 
-        Set<Object> actualTools = architectAgent.getTools();
+        Set<Object> actualTools = architectAgent.tools();
         assertEquals(expectedToolsSet, actualTools);
         verify(standardTools, times(2)).getReadOnlyTools(); // Called once in setUp, once in re-construction.
     }

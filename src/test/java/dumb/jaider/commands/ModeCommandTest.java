@@ -1,6 +1,5 @@
 package dumb.jaider.commands;
 
-import dumb.jaider.commands.AppContext;
 import dumb.jaider.app.App;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -9,7 +8,8 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class ModeCommandTest {
@@ -25,7 +25,7 @@ class ModeCommandTest {
 
     @BeforeEach
     void setUp() {
-        when(appContext.getAppInstance()).thenReturn(app); // Corrected
+        when(appContext.app()).thenReturn(app); // Corrected
     }
 
     @Test
