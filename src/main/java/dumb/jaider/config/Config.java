@@ -30,6 +30,7 @@ public class Config {
     public String geminiApiKey = "";
     public String geminiModelName = "gemini-1.5-flash-latest";
     public String tavilyApiKey = "";
+    public String toolManifestsDir = "src/main/resources/tool-descriptors"; // Added for ToolManager
 
     public Config(Path projectDir) {
         this.file = projectDir.resolve(".jaider.json");
@@ -120,6 +121,7 @@ public class Config {
         defaultKeys.put("tavily", ""); // Add to map for consistency if getKeyValue uses it
         defaultKeys.put("genericOpenai", ""); // Add to map for consistency
         defaultConfig.put("apiKeys", defaultKeys);
+        defaultConfig.put("toolManifestsDir", this.toolManifestsDir); // Added toolManifestsDir to JSON
 
         JSONArray componentDefsJsonArray = new JSONArray();
         JSONObject chatMemoryDef = new JSONObject();
@@ -195,7 +197,8 @@ public class Config {
         coderAgentArgs.put(new JSONObject().put("ref", "appChatLanguageModel"));
         coderAgentArgs.put(new JSONObject().put("ref", "chatMemory"));
         coderAgentArgs.put(new JSONObject().put("ref", "standardTools"));
-        coderAgentArgs.put(new JSONObject().put("ref", "jaiderTools")); // Added jaiderTools
+        coderAgentArgs.put(new JSONObject().put("ref", "jaiderTools"));
+        coderAgentArgs.put(new JSONObject().put("ref", "smartRenameTool")); // Added smartRenameTool
         coderAgentDef.put("constructorArgs", coderAgentArgs);
         componentDefsJsonArray.put(coderAgentDef);
 
@@ -220,6 +223,74 @@ public class Config {
         askAgentDef.put("constructorArgs", askAgentArgs);
         componentDefsJsonArray.put(askAgentDef);
 
+        // Definition for ToolManager
+        JSONObject toolManagerDef = new JSONObject();
+        toolManagerDef.put("id", "toolManager");
+        toolManagerDef.put("class", "dumb.jaider.toolmanager.ToolManager");
+        JSONArray toolManagerArgs = new JSONArray();
+        // ToolManager expects a Path. We need to convert the string from config to Path.
+        // The DI system currently supports "ref", "value" (simple types), and "list".
+        // It doesn't directly support creating Path objects from string config values.
+        // For now, let's assume ToolManager's constructor will handle String to Path,
+        // or we modify ToolManager to accept String and convert internally,
+        // or enhance DI. Simpler for now: assume ToolManager can take a String path.
+        // If ToolManager strictly needs Path, this needs more DI enhancement or a factory.
+        // Let's assume ToolManager is modified to take String, or DI is enhanced.
+        // For the purpose of this step, we'll define it as if DI can provide a Path directly
+        // from a configured string. This might require a custom factory or type converter in DI.
+        // As a simpler immediate step, let's assume ToolManager's constructor takes a String path.
+        // Path toolManifestsDir = Paths.get(this.toolManifestsDir); // This logic should be in ToolManager or DI
+        // ToolManager constructor now takes String, so DI can pass the string value directly.
+        toolManagerArgs.put(new JSONObject().put("value", this.toolManifestsDir).put("type", "java.lang.String"));
+        toolManagerDef.put("constructorArgs", toolManagerArgs);
+        componentDefsJsonArray.put(toolManagerDef);
+
+        // ParserRegistry definition
+        JSONObject parserRegistryDef = new JSONObject();
+        parserRegistryDef.put("id", "parserRegistry");
+        parserRegistryDef.put("class", "dumb.jaider.refactoring.ParserRegistry");
+        // No constructor args for now, parsers will be registered programmatically or via a later config mechanism
+        componentDefsJsonArray.put(parserRegistryDef);
+
+        // RefactoringService definition
+        JSONObject refactoringServiceDef = new JSONObject();
+        refactoringServiceDef.put("id", "refactoringService");
+        refactoringServiceDef.put("class", "dumb.jaider.refactoring.RefactoringService");
+        JSONArray refactoringServiceArgs = new JSONArray();
+        refactoringServiceArgs.put(new JSONObject().put("ref", "parserRegistry"));
+        refactoringServiceDef.put("constructorArgs", refactoringServiceArgs);
+        componentDefsJsonArray.put(refactoringServiceDef);
+
+        // SmartRenameTool definition (assuming it's added to JaiderTools or as a separate component)
+        // For now, let's define it as a separate component for clarity.
+        // If it becomes part of JaiderTools, this definition would change.
+        JSONObject smartRenameToolDef = new JSONObject();
+        smartRenameToolDef.put("id", "smartRenameTool");
+        smartRenameToolDef.put("class", "dumb.jaider.tools.SmartRenameTool");
+        JSONArray smartRenameToolArgs = new JSONArray();
+        smartRenameToolArgs.put(new JSONObject().put("ref", "refactoringService"));
+        smartRenameToolDef.put("constructorArgs", smartRenameToolArgs);
+        componentDefsJsonArray.put(smartRenameToolDef);
+
+        // StaticAnalysisService definition
+        JSONObject staticAnalysisServiceDef = new JSONObject();
+        staticAnalysisServiceDef.put("id", "staticAnalysisService");
+        staticAnalysisServiceDef.put("class", "dumb.jaider.staticanalysis.StaticAnalysisService");
+        JSONArray staticAnalysisServiceArgs = new JSONArray();
+        staticAnalysisServiceArgs.put(new JSONObject().put("ref", "toolManager"));
+        staticAnalysisServiceDef.put("constructorArgs", staticAnalysisServiceArgs);
+        componentDefsJsonArray.put(staticAnalysisServiceDef);
+
+        // AnalysisTools definition
+        JSONObject analysisToolsDef = new JSONObject();
+        analysisToolsDef.put("id", "analysisTools");
+        analysisToolsDef.put("class", "dumb.jaider.tools.AnalysisTools");
+        JSONArray analysisToolsArgs = new JSONArray();
+        analysisToolsArgs.put(new JSONObject().put("ref", "staticAnalysisService"));
+        analysisToolsArgs.put(new JSONObject().put("ref", "jaiderModel")); // AnalysisTools needs JaiderModel
+        analysisToolsDef.put("constructorArgs", analysisToolsArgs);
+        componentDefsJsonArray.put(analysisToolsDef);
+
         defaultConfig.put(COMPONENTS_KEY, componentDefsJsonArray);
         return defaultConfig;
     }
@@ -235,6 +306,7 @@ public class Config {
         this.geminiApiKey = json.optString("geminiApiKey", this.geminiApiKey);
         this.geminiModelName = json.optString("geminiModelName", this.geminiModelName);
         this.tavilyApiKey = json.optString("tavilyApiKey", this.tavilyApiKey);
+        this.toolManifestsDir = json.optString("toolManifestsDir", this.toolManifestsDir); // Populate toolManifestsDir
 
         // For runCommand, ensure it defaults to "" if missing, to satisfy ConfigTest
         this.runCommand = json.optString("runCommand", "");

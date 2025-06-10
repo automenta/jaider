@@ -15,5 +15,8 @@ public interface UI {
     CompletableFuture<DiffInteractionResult> diffInteraction(String diff);
 
     CompletableFuture<String> configEdit(String currentConfig);
+
+    CompletableFuture<Boolean> confirmPlan(String title, String planText, dev.langchain4j.data.message.AiMessage agentMessage);
+    void setInputText(String text); // Added method
     void close() throws IOException;
 }

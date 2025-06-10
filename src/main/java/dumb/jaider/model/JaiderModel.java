@@ -36,6 +36,7 @@ public class JaiderModel {
     public String mode = "Coder";
 
     private String[] originalArgs;
+    private List<dumb.jaider.suggestion.ActiveSuggestion> activeSuggestions = new ArrayList<>(); // Changed for actionable suggestions
 
     public JaiderModel() {
         this.dir = Paths.get("").toAbsolutePath();
@@ -89,5 +90,19 @@ public class JaiderModel {
 
     public void setOriginalArgs(String[] originalArgs) {
         this.originalArgs = originalArgs;
+    }
+
+    public List<dumb.jaider.suggestion.ActiveSuggestion> getActiveSuggestions() {
+        return activeSuggestions;
+    }
+
+    public void setActiveSuggestions(List<dumb.jaider.suggestion.ActiveSuggestion> activeSuggestions) {
+        this.activeSuggestions = activeSuggestions;
+    }
+
+    public void clearActiveSuggestions() {
+        if (this.activeSuggestions != null) {
+            this.activeSuggestions.clear();
+        }
     }
 }

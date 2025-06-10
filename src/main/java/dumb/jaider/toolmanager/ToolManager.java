@@ -7,6 +7,8 @@ import dumb.jaider.tooling.Tool;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Path;
+import java.nio.file.Files; // Added
+import java.nio.file.DirectoryStream; // Added
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -31,35 +33,70 @@ public class ToolManager {
     private final Path toolManifestsDir; // Directory where tool JSON descriptors are stored
     // private final LlmService llmService; // For LM-enhanced features
 
-    public ToolManager(Path toolManifestsDir /*, LlmService llmService */) {
-        this.toolManifestsDir = toolManifestsDir;
+    public ToolManager(String toolManifestsDirStr /*, LlmService llmService */) {
+        if (toolManifestsDirStr == null || toolManifestsDirStr.isBlank()) {
+            LOGGER.warning("Tool manifests directory string is null or blank. ToolManager may not find descriptors.");
+            this.toolManifestsDir = null; // Or a default safe path, or throw IllegalArgumentException
+        } else {
+            this.toolManifestsDir = Path.of(toolManifestsDirStr);
+        }
         // this.llmService = llmService;
         loadToolDescriptors();
     }
 
     private void loadToolDescriptors() {
-        // This is a placeholder. In a real scenario, you'd scan toolManifestsDir for JSON files.
-        // For now, we can imagine loading one example descriptor.
-        // Example: loadDescriptorFromResource("semgrep-descriptor.json");
-        LOGGER.info("ToolManager: Placeholder for loading tool descriptors from " + toolManifestsDir);
-    }
+        if (toolManifestsDir == null || !Files.isDirectory(toolManifestsDir)) {
+            LOGGER.warning("Tool manifests directory is not set or not a directory: " + toolManifestsDir);
+            return;
+        }
 
-    // Example of how a descriptor might be loaded (using org.json for simplicity for now)
-    private void loadDescriptor(InputStream descriptorStream, String descriptorName) {
-        try {
-            // In a real app, using Jackson or Gson would be more robust than org.json for POJO mapping.
-            ObjectMapper mapper = new ObjectMapper();
-            ToolDescriptor descriptor = mapper.readValue(descriptorStream, ToolDescriptor.class);
-            toolDescriptors.put(descriptor.getToolName(), descriptor);
-            LOGGER.info("Loaded tool descriptor: " + descriptor.getToolName());
+        ObjectMapper mapper = new ObjectMapper();
+        try (DirectoryStream<Path> stream = Files.newDirectoryStream(toolManifestsDir, "*.json")) {
+            for (Path jsonFile : stream) {
+                LOGGER.info("Found tool descriptor file: " + jsonFile.toString());
+                try (InputStream descriptorStream = Files.newInputStream(jsonFile)) {
+                    ToolDescriptor descriptor = mapper.readValue(descriptorStream, ToolDescriptor.class);
+                    if (descriptor != null && descriptor.getToolName() != null && !descriptor.getToolName().isEmpty()) {
+                        toolDescriptors.put(descriptor.getToolName(), descriptor);
+                        LOGGER.info("Successfully loaded and registered tool descriptor: " + descriptor.getToolName());
+                    } else {
+                        LOGGER.warning("Parsed tool descriptor from " + jsonFile.getFileName() + " is invalid (missing toolName or null).");
+                    }
+                } catch (IOException e) {
+                    LOGGER.log(Level.SEVERE, "Failed to load or parse tool descriptor: " + jsonFile.getFileName(), e);
+                }
+            }
         } catch (IOException e) {
-            LOGGER.log(Level.SEVERE, "Failed to load or parse tool descriptor: " + descriptorName, e);
+            LOGGER.log(Level.SEVERE, "Error scanning tool manifests directory: " + toolManifestsDir, e);
         }
     }
 
+    // This method is now effectively replaced by the loop in loadToolDescriptors,
+    // but kept if direct stream loading is needed elsewhere, though its direct usage here is removed.
+    private void loadDescriptorFromStream(InputStream descriptorStream, String descriptorName, ObjectMapper mapper) {
+        try {
+            ToolDescriptor descriptor = mapper.readValue(descriptorStream, ToolDescriptor.class);
+             if (descriptor != null && descriptor.getToolName() != null && !descriptor.getToolName().isEmpty()) {
+                toolDescriptors.put(descriptor.getToolName(), descriptor);
+                LOGGER.info("Loaded tool descriptor: " + descriptor.getToolName() + " from " + descriptorName);
+            } else {
+                LOGGER.warning("Parsed tool descriptor from " + descriptorName + " is invalid (missing toolName or null).");
+            }
+        } catch (IOException e) {
+            LOGGER.log(Level.SEVERE, "Failed to load or parse tool descriptor from stream: " + descriptorName, e);
+        }
+    }
 
-    public Optional<ToolDescriptor> getDescriptor(String toolName) {
-        return Optional.ofNullable(toolDescriptors.get(toolName));
+    public ToolDescriptor getToolDescriptor(String toolName) { // Changed return type
+        return toolDescriptors.get(toolName);
+    }
+
+    /**
+     * Returns a map of all loaded tool descriptors.
+     * @return An unmodifiable map of tool names to their descriptors.
+     */
+    public Map<String, ToolDescriptor> getToolDescriptors() {
+        return java.util.Collections.unmodifiableMap(new HashMap<>(toolDescriptors));
     }
 
     /**

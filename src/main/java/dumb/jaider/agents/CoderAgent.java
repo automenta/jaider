@@ -4,14 +4,22 @@ import dev.langchain4j.memory.ChatMemory;
 import dev.langchain4j.model.chat.ChatLanguageModel;
 import dumb.jaider.tools.StandardTools;
 import dumb.jaider.tools.JaiderTools;
+import dumb.jaider.tools.SmartRenameTool;
+import dumb.jaider.tools.AnalysisTools; // Added
 import java.util.HashSet;
 import java.util.Set;
 
 public class CoderAgent extends AbstractAgent {
     private final JaiderTools jaiderTools;
+    private final SmartRenameTool smartRenameTool;
+    private final AnalysisTools analysisTools; // Added
 
-    public CoderAgent(ChatLanguageModel model, ChatMemory memory, StandardTools standardTools, JaiderTools jaiderTools) {
+    public CoderAgent(ChatLanguageModel model, ChatMemory memory,
+                      StandardTools standardTools, JaiderTools jaiderTools,
+                      SmartRenameTool smartRenameTool, AnalysisTools analysisTools) {
         this.jaiderTools = jaiderTools;
+        this.smartRenameTool = smartRenameTool;
+        this.analysisTools = analysisTools; // Added
         Set<Object> allTools = new HashSet<>();
         if (standardTools != null) {
             allTools.add(standardTools);
@@ -19,11 +27,18 @@ public class CoderAgent extends AbstractAgent {
         if (jaiderTools != null) {
             allTools.add(jaiderTools);
         }
+        if (smartRenameTool != null) {
+            allTools.add(smartRenameTool);
+        }
+        if (analysisTools != null) { // Added
+            allTools.add(analysisTools);
+        }
         super(model, memory, allTools,
                 """
                         You are Jaider, an expert AI programmer. Your goal is to fully complete the user's request.
+                        First, present your step-by-step plan. Start your plan with a line like 'Here is my plan:' and end it with 'END_OF_PLAN'. The user must approve this plan *before* you proceed to any MODIFY or tool execution steps. If the plan is approved, the user will send a message like 'Plan approved. Proceed.', after which you should start executing your plan.
                         Follow this sequence rigidly:
-                        1. THINK: First, write down your step-by-step plan. Use tools like `getProjectOverview()`, `findRelevantCode`, `readFile`, `listFiles(directoryPath)` (Lists files and directories under a given path (relative to project root). Useful for exploring the project structure.), and `searchWeb` to understand the project and gather information.
+                        1. THINK: First, write down your step-by-step plan. Use tools like `getProjectOverview()`, `findRelevantCode`, `readFile`, `listFiles(directoryPath)` (Lists files and directories under a given path (relative to project root). Useful for exploring the project structure.), `smartRename(filePath, originalName, newName, position)` (Smartly renames variables, methods, etc., using AST if possible), `performStaticAnalysis(toolName, targetPath)` (Runs a static analysis tool like Semgrep), and `searchWeb` to understand the project and gather information. Remember to start your plan with 'Here is my plan:' and end it with 'END_OF_PLAN'.
                         2. MODIFY: Propose a change by using the `applyDiff` tool. This is the only way you can alter code. You can also use `writeFile(filePath, content)` (Writes content to a specified file (relative to project root), creating directories if needed. Use this to create new files or overwrite existing ones.) to create or modify files.
                         3. VERIFY: After the user approves your diff or writeFile operation, you MUST use the `runValidationCommand` tool to verify your changes, if a validation command is configured.
                            The `runValidationCommand` tool will return a JSON string. This JSON will contain:

@@ -30,6 +30,11 @@ public class ToolDescriptor {
     // Default configuration parameters for the tool
     private Map<String, Object> defaultConfig;
 
+    // New fields for static analysis integration
+    private String analysisCommandPattern;
+    private String resultsParserClass;
+    private String category = "generic"; // Default category
+
     // Getters and Setters (or make fields public if simple POJO)
     public String getToolName() { return toolName; }
     public void setToolName(String toolName) { this.toolName = toolName; }
@@ -51,4 +56,11 @@ public class ToolDescriptor {
     public void setLmInstallationQueries(List<String> lmInstallationQueries) { this.lmInstallationQueries = lmInstallationQueries; }
     public Map<String, Object> getDefaultConfig() { return defaultConfig; }
     public void setDefaultConfig(Map<String, Object> defaultConfig) { this.defaultConfig = defaultConfig; }
+
+    public String getAnalysisCommandPattern() { return analysisCommandPattern; }
+    public void setAnalysisCommandPattern(String analysisCommandPattern) { this.analysisCommandPattern = analysisCommandPattern; }
+    public String getResultsParserClass() { return resultsParserClass; }
+    public void setResultsParserClass(String resultsParserClass) { this.resultsParserClass = resultsParserClass; }
+    public String getCategory() { return category; }
+    public void setCategory(String category) { this.category = category; }
 }

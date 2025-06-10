@@ -22,6 +22,8 @@ public class TUI implements UI {
     /*private*/ ActionListBox contextListBox; // Changed to package-private for testing
     /*private*/ Panel logListBox; // Changed to package-private for testing
     /*private*/ Label statusBar; // Changed to package-private for testing
+    /*private*/ Label suggestionsLabel; // Added for displaying suggestions
+    /*private*/ TextBox inputBox; // Added inputBox field
 
     @Override
     public void init(App app) throws IOException {
@@ -37,18 +39,31 @@ public class TUI implements UI {
         logListBox = Panels.vertical();
         mainPanel.addComponent(logListBox.withBorder(Borders.singleLine("Log")));
 
-        var inputBox = new TextBox(new TerminalSize(100, 1));
-        inputBox.setInputFilter((interactable, keyStroke) -> {
+        this.inputBox = new TextBox(new TerminalSize(100, 1)); // Assign to field
+        this.inputBox.setInputFilter((interactable, keyStroke) -> {
             if (keyStroke.getKeyType() == KeyType.Enter) {
-                app.handleUserInput(inputBox.getText());
-                inputBox.setText("");
+                app.handleUserInput(this.inputBox.getText()); // Use field
+                this.inputBox.setText(""); // Use field
             }
             return true;
         });
         statusBar = new Label("");
-        var bottomPanel = new Panel(new LinearLayout(Direction.HORIZONTAL)).addComponent(inputBox).addComponent(statusBar);
+        suggestionsLabel = new Label(""); // Initialize suggestionsLabel
+        suggestionsLabel.setForegroundColor(TextColor.ANSI.YELLOW); // Make suggestions stand out a bit
 
-        var contentPane = new Panel(new BorderLayout()).addComponent(mainPanel, BorderLayout.Location.CENTER).addComponent(bottomPanel, BorderLayout.Location.BOTTOM);
+        // Panel for input and status/suggestions
+        var bottomStrip = new Panel(new LinearLayout(Direction.VERTICAL));
+        bottomStrip.addComponent(suggestionsLabel);
+        // Panel for input box and status bar side-by-side
+        var inputStatusPanel = new Panel(new LinearLayout(Direction.HORIZONTAL))
+                .addComponent(inputBox)
+                .addComponent(statusBar);
+        bottomStrip.addComponent(inputStatusPanel);
+
+
+        var contentPane = new Panel(new BorderLayout())
+                .addComponent(mainPanel, BorderLayout.Location.CENTER)
+                .addComponent(bottomStrip, BorderLayout.Location.BOTTOM); // Add bottomStrip here
         window.setComponent(contentPane);
         window.setFocusedInteractable(inputBox);
 
@@ -80,6 +95,16 @@ public class TUI implements UI {
                 logListBox.addComponent(l);
             }
             statusBar.setText(String.format(" | Mode: %s | %s | Tokens: %d", model.mode, model.statusBarText, model.currentTokenCount));
+
+            // Display suggestions
+            if (model.getActiveSuggestions() != null && !model.getActiveSuggestions().isEmpty()) {
+                var suggestionTexts = model.getActiveSuggestions().stream()
+                        .map(s -> String.format("[%d] %s?", s.getDisplayNumber(), s.getOriginalSuggestion().getSuggestedToolName())) // Use ActiveSuggestion
+                        .collect(java.util.stream.Collectors.joining("  ")); // Use more space for readability
+                suggestionsLabel.setText("Suggestions: " + suggestionTexts + " (use /accept <num>)");
+            } else {
+                suggestionsLabel.setText(""); // Clear suggestions if none
+            }
         });
     }
 
@@ -161,5 +186,57 @@ public class TUI implements UI {
     @Override
     public void close() throws IOException {
         if (gui != null) gui.getScreen().stopScreen();
+    }
+
+    @Override
+    public CompletableFuture<Boolean> confirmPlan(String title, String planText, AiMessage agentMessage) {
+        var future = new CompletableFuture<Boolean>();
+        gui.getGUIThread().invokeLater(() -> {
+            // For now, just display the planText. agentMessage can be used for more details if needed.
+            // This dialog should be scrollable if planText is long, but MessageDialog might not support that directly.
+            // For a long plan, a custom dialog like diffInteraction would be better.
+            // Let's keep it simple like the 'confirm' dialog for now.
+            // Consider using a TextBox in a custom dialog for scrollability if plans are often long.
+
+            // Truncate planText if it's too long for a simple dialog to prevent UI issues.
+            // This is a temporary workaround. A better solution would be a scrollable view.
+            int maxLength = 500; // Arbitrary max length for the dialog
+            String displayedText = planText;
+            if (planText.length() > maxLength) {
+                displayedText = planText.substring(0, maxLength - 3) + "...";
+            }
+
+            // Using MessageDialog similar to confirm()
+            // Title: "Agent's Proposed Plan"
+            // Text: planText (or displayedText)
+            // Buttons: Approve, Reject
+            MessageDialogButton result = MessageDialog.showMessageDialog(
+                gui,
+                title,
+                displayedText, // Use potentially truncated text
+                new MessageDialogButton("Approve", () -> future.complete(true)),
+                new MessageDialogButton("Reject", () -> future.complete(false))
+            );
+            // The MessageDialog.showMessageDialog with custom buttons doesn't return the pressed button directly in the same way
+            // as the Yes/No version. The action in the button itself completes the future.
+            // If no button is pressed (e.g. dialog closed), the future might not complete.
+            // However, standard MessageDialogs are modal and typically force a choice.
+            // For custom buttons, we rely on their actions to complete the future.
+        });
+        return future;
+    }
+
+    @Override
+    public void setInputText(String text) {
+        if (this.inputBox != null && gui != null) {
+            gui.getGUIThread().invokeLater(() -> {
+                this.inputBox.setText(text);
+                this.inputBox.setCaretPosition(text.length());
+                // Ensure the input box gets focus if it doesn't have it,
+                // though it should generally be focused.
+                // This might require getting the window and setting focused interactable if not.
+                // For now, assume it's focused or will be by user action.
+            });
+        }
     }
 }

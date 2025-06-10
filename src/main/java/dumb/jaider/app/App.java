@@ -15,10 +15,15 @@ import dumb.jaider.agents.ArchitectAgent;
 import dumb.jaider.agents.AskAgent;
 import dumb.jaider.agents.CoderAgent;
 import dumb.jaider.commands.*;
+import dumb.jaider.commands.AcceptSuggestionCommand; // Added
 import dumb.jaider.commands.SummarizeCommand;
 import dumb.jaider.config.Config;
 import dumb.jaider.llm.LlmProviderFactory;
 import dumb.jaider.model.JaiderModel;
+import dumb.jaider.suggestion.ProactiveSuggestionService;
+import dumb.jaider.suggestion.ActiveSuggestion; // Changed from Suggestion
+import dumb.jaider.toolmanager.ToolManager;
+import dumb.jaider.tools.JaiderTools; // Assuming JaiderTools might be needed for internal tools
 import dumb.jaider.tools.StandardTools;
 import dumb.jaider.ui.UI;
 // Note: dumb.jaider.vcs.GitService is different from org.jaider.service.GitService
@@ -54,14 +59,17 @@ public class App {
     private State state = State.IDLE;
     private Tokenizer tokenizer;
     private Agent agent;
+    private AiMessage agentMessageWithPlan;
     private Boolean lastValidationPreference = null; // Added for remembering validation preference
     private org.jaider.service.SelfUpdateOrchestratorService selfUpdateOrchestratorService;
     private StartupService startupService;
     private org.jaider.service.BuildManagerService buildManagerService;
     private org.jaider.service.GitService gitService; // For self-update
     private org.jaider.service.RestartService restartService;
+    private ProactiveSuggestionService proactiveSuggestionService;
 
-    public enum State {IDLE, AGENT_THINKING, WAITING_USER_CONFIRMATION}
+
+    public enum State {IDLE, AGENT_THINKING, WAITING_USER_CONFIRMATION, WAITING_USER_PLAN_APPROVAL}
 
     public App(UI ui, String[] originalArgs) {
         this.ui = ui;
@@ -91,6 +99,7 @@ public class App {
         }
 
         initializeCommands();
+        // ProactiveSuggestionService will now be initialized in update() after ToolManager is available from DI
         update(); // This will now use DI for some components
     }
 
@@ -103,23 +112,39 @@ public class App {
         commands.put("/help", new HelpCommand());
         commands.put("/exit", new ExitCommand());
         commands.put("/summarize", new SummarizeCommand());
+        commands.put("/accept", new AcceptSuggestionCommand()); // Added /accept
+        commands.put("/a", new AcceptSuggestionCommand());      // Added /a as alias
     }
 
     public synchronized void update() {
+        ToolManager toolManager = null; // Initialize toolManager to null
         if (config.getInjector() == null) {
             System.err.println("DI not initialized in App.update(). Cannot fetch components. Reverting to manual creation (limited functionality).");
             // Fallback to minimal functionality or throw error
             // For now, let's try to mimic old behavior if DI fails, though this is not ideal.
+            // If DI is not available, ToolManager might not be available either unless manually created.
+            // For now, ProactiveSuggestionService might be initialized with a null ToolManager in this case.
             var llmFactoryManual = new LlmProviderFactory(this.config, this.model);
             var localChatModelManual = llmFactoryManual.createChatModel();
             this.tokenizer = llmFactoryManual.createTokenizer();
             this.embedding = llmFactoryManual.createEmbeddingModel();
-            var toolsManual = new StandardTools(model, config, this.embedding);
-            agents.put("Coder", new CoderAgent(localChatModelManual, memory, toolsManual)); // chatMemory should be the DI one or fallback
-            agents.put("Architect", new ArchitectAgent(localChatModelManual, memory, toolsManual));
+            var standardToolsManual = new StandardTools(model, config, this.embedding);
+            // Manual instantiation for fallback - ProactiveSuggestionService needs ToolManager
+            // ToolManager needs a path, ParserRegistry needs nothing, RefactoringService needs ParserRegistry
+            // SmartRenameTool needs RefactoringService.
+            // This manual setup can get complex. For fallback, CoderAgent might not get SmartRenameTool.
+            // Or, we simplify: if DI fails, SmartRenameTool is not available.
+            // For now, let's reflect that CoderAgent expects it, but it might be null in this manual path.
+            JaiderTools jaiderToolsManual = null; // Assuming JaiderTools might also be complex to manually init here
+            SmartRenameTool smartRenameToolManual = null; // Likely null in this fallback path
+            AnalysisTools analysisToolsManual = null; // Likely null in this fallback path
+            agents.put("Coder", new CoderAgent(localChatModelManual, memory, standardToolsManual, jaiderToolsManual, smartRenameToolManual, analysisToolsManual));
+            agents.put("Architect", new ArchitectAgent(localChatModelManual, memory, standardToolsManual));
             agents.put("Ask", new AskAgent(localChatModelManual, memory));
+            // toolManager would likely be null here, or manually created if essential for fallback
         } else {
             try {
+                toolManager = config.getComponent("toolManager", ToolManager.class); // Get ToolManager from DI
                 var llmFactory = config.getComponent("llmProviderFactory", LlmProviderFactory.class);
                 var localChatModel = llmFactory.createChatModel(); // Created by factory, not DI component itself
                 this.tokenizer = llmFactory.createTokenizer(); // Created by factory
@@ -201,6 +226,25 @@ public class App {
                 this.model.mode = this.agent.name();
              }
         }
+        // Initialize ProactiveSuggestionService with ToolManager (which might be null if DI failed)
+        this.proactiveSuggestionService = new ProactiveSuggestionService(toolManager);
+
+        if (toolManager != null) {
+            Map<String, dumb.jaider.toolmanager.ToolDescriptor> descriptors = toolManager.getToolDescriptors();
+            if (descriptors != null && !descriptors.isEmpty()) {
+                String loadedToolsLog = "[Jaider Init] ToolManager loaded descriptors: " + String.join(", ", descriptors.keySet());
+                model.addLog(AiMessage.from(loadedToolsLog));
+                System.out.println(loadedToolsLog);
+            } else {
+                String noToolsLog = "[Jaider Init] ToolManager loaded 0 external tool descriptors.";
+                model.addLog(AiMessage.from(noToolsLog));
+                System.out.println(noToolsLog);
+            }
+        } else {
+            String noTmLog = "[Jaider Init] ToolManager was not initialized (null). No external tool descriptors loaded.";
+            model.addLog(AiMessage.from(noTmLog));
+            System.out.println(noTmLog);
+        }
     }
 
     public JaiderModel getModel() { return this.model; }
@@ -279,109 +323,103 @@ public class App {
     }
 
     public void handleUserInput(String input) {
-        if (state != State.IDLE) {
-            model.addLog(AiMessage.from("[Jaider] Please wait, I'm already working."));
+        if (state != State.IDLE && state != State.WAITING_USER_PLAN_APPROVAL) { // Allow input if waiting for plan approval
+            model.addLog(AiMessage.from("[Jaider] Please wait, I'm already working or waiting for approval."));
             ui.redraw(model);
             return;
         }
         model.addLog(UserMessage.from(input));
-        if (input.startsWith("!")) { // New condition for direct tool invocation
+        model.clearActiveSuggestions(); // Changed from clearSuggestions()
+
+        if (input.startsWith("!")) {
             handleDirectToolInvocation(input);
         } else if (input.startsWith("/")) {
             execute(input);
         } else {
-            processAgentTurn();
+            // Generate and log suggestions before processing agent turn
+            // Need ToolManager and internal tool instances.
+            // ToolManager might come from DI or be constructed if not available.
+            // For now, let's assume we can get it from config or construct a new one.
+            ToolManager toolManager = null;
+            try {
+                toolManager = config.getComponent("toolManager", ToolManager.class);
+            } catch (Exception e) {
+                System.err.println("Could not get ToolManager from DI for suggestions: " + e.getMessage());
+                // toolManager = new ToolManager(...); // Or handle absence
+            }
+
+            List<Object> internalToolInstances = new ArrayList<>();
+            try {
+                 // agent.tools() returns Collection<Object> which are the tool instances.
+                 // This might include StandardTools, JaiderTools etc.
+                if(agent != null && agent.tools() != null) {
+                    internalToolInstances.addAll(agent.tools());
+                } else {
+                     // Fallback or specific instantiation if agent or its tools are null
+                    System.err.println("Agent or agent tools are null. Suggestions based on internal tools might be limited.");
+                    // Optionally, could try to get StandardTools/JaiderTools from DI directly if needed as a fallback.
+                    // internalToolInstances.add(config.getComponent("standardTools", StandardTools.class));
+                    // internalToolInstances.add(config.getComponent("jaiderTools", JaiderTools.class));
+                }
+            } catch (Exception e) {
+                System.err.println("Error fetching internal tool instances for suggestions: " + e.getMessage());
+            }
+
+            // Pass only internalToolInstances to generateSuggestions as ToolManager is now a class field
+            List<ActiveSuggestion> activeSuggestions = proactiveSuggestionService.generateSuggestions(input, internalToolInstances);
+            if (!activeSuggestions.isEmpty()) {
+                model.setActiveSuggestions(activeSuggestions); // Store in model
+                for (ActiveSuggestion activeSuggestion : activeSuggestions) {
+                    // Log suggestion to chat - might need a specific message type or formatting
+                    // For now, using the original suggestion's text
+                    model.addLog(AiMessage.from("[Jaider Suggests] " + activeSuggestion.getOriginalSuggestion().getSuggestionText()));
+                }
+            }
+
+            // Initial call to processAgentTurn for a new user query.
+            // Assumes this is the first interaction in a sequence, so agent should propose a plan.
+            processAgentTurn(true);
         }
-        ui.redraw(model); // This might need to be handled within handleDirectToolInvocation if it becomes async
+        ui.redraw(model);
     }
 
     private void handleDirectToolInvocation(String input) {
-        String[] parts = input.substring(1).split("\\s+", 2); // Remove "!" and split tool name from args
+        String[] parts = input.substring(1).split("\\s+", 2);
         String toolName = parts[0];
-        String toolArgsJson = (parts.length > 1) ? parts[1] : "{}"; // Assume args are JSON, default to empty JSON object
+        String toolArgsJson = (parts.length > 1) ? parts[1] : "{}";
 
         if (agent == null || agent.tools() == null || agent.tools().isEmpty()) {
             model.addLog(AiMessage.from("[Jaider] No agent active or agent has no tools. Cannot execute: " + toolName));
-            finishTurn(null); // Or some other way to refresh UI if needed
+            finishTurn(null);
             return;
         }
-
-        // Find the tool
-        // dev.langchain4j.agent.tool.Tool toolSpec = agent.tools().stream()
-        //     .filter(t -> t.toolSpecification().name().equals(toolName))
-        //     .map(t -> (dev.langchain4j.agent.tool.Tool) t) // Cast to the correct Tool type if necessary, depends on what agent.tools() returns
-        //     .findFirst()
-        //     .orElse(null);
-
-        // The above mapping might be tricky if agent.tools() returns a mix.
-        // A safer way if agent.tools() returns Collection<Object> where some are Tool:
-        // Object toolInstance = agent.tools().stream()
-        //     .filter(t -> t.getClass().isAnnotationPresent(dev.langchain4j.service.tool.Tool.class)) // This is not how tools are structured in LC4J typically
-        //     // We need to get ToolSpecification, so let's assume agent.tools() returns something that DefaultToolExecutor can work with.
-        //     // The StandardTools class, for example, has methods annotated with @Tool.
-        //     // DefaultToolExecutor works with a collection of objects that have @Tool methods.
-
-        // Let's simplify the search assuming agent.tools() returns a list of objects
-        // where each object might contain multiple @Tool annotated methods.
-        // We need to find the right object and then build ToolExecutionRequest.
-
-        // DefaultToolExecutor is usually constructed with a list of POJOs containing @Tool methods.
-        // We need to check if any of these POJOs can execute the `toolName`.
-        // This direct invocation is a bit more complex than when the LLM provides the full ToolExecutionRequest.
-
-        // For now, let's assume the `toolName` directly matches a method name in one of the tool objects.
-        // And that `toolArgsJson` is a JSON string of arguments.
-        // This is a simplification. A robust solution would involve inspecting ToolSpecifications.
-
         try {
             ToolExecutionRequest toolExecutionRequest = ToolExecutionRequest.builder()
                 .name(toolName)
-                .arguments(toolArgsJson) // Arguments must be a JSON string
+                .arguments(toolArgsJson)
                 .build();
-
-            // Check if this tool name is actually available via the agent's ToolSpecifications
-            // boolean toolExists = agent.tools().stream()
-            //     .anyMatch(toolCandidate -> {
-            //         // This check is not straightforward as agent.tools() returns a list of Objects,
-            //         // and DefaultToolExecutor inspects them for methods annotated with @Tool.
-            //         // A simpler check for now:
-            //         // This logic needs to be robust based on how tools are registered and identified.
-            //         // For a first pass, we'll try to execute and catch errors.
-            //         // A proper implementation would parse tool specifications.
-            //         return true; // Placeholder: Assume if we try to build it, it might exist.
-            //                      // This needs refinement.
-            //     });
-
-            // A more robust way to check if a tool by this name exists:
-            // This requires knowing the structure of what agent.tools() returns.
-            // If agent.tools() returns a list of objects, and each object has methods annotated with @Tool,
-            // then DefaultToolExecutor will find them. We don't have an easy way here to pre-validate `toolName`
-            // without inspecting annotations on all methods of all tool objects.
-
-            // Let's proceed with execution and handle errors.
             model.addLog(AiMessage.from(String.format("[Jaider] User directly invoked tool: %s with args: %s", toolName, toolArgsJson)));
-            ui.redraw(model); // Show that we are attempting it
+            ui.redraw(model);
 
-            state = State.AGENT_THINKING; // Or a new state like State.TOOL_EXECUTING
+            state = State.AGENT_THINKING;
             model.statusBarText = "Executing tool: " + toolName + "...";
             ui.redraw(model);
 
-            // Execute the tool. The executeTool method should be reusable.
-            String result = executeTool(toolExecutionRequest); // Assumes executeTool is accessible and works
-
+            String result = executeTool(toolExecutionRequest);
             model.addLog(AiMessage.from(String.format("[Tool Result: %s]\n%s", toolName, result)));
-            finishTurn(null); // This will set state to IDLE and redraw
-
+            finishTurn(null);
         } catch (Exception e) {
-            // This catch block is crucial. If the tool doesn't exist or args are bad,
-            // DefaultToolExecutor will likely throw an exception.
             model.addLog(AiMessage.from(String.format("[Jaider] Error invoking tool '%s': %s. Ensure the tool name is correct and arguments are a valid JSON string if needed.", toolName, e.getMessage())));
-            e.printStackTrace(); // Log to console for debugging
-            finishTurn(null); // Go back to IDLE state
+            e.printStackTrace();
+            finishTurn(null);
         }
     }
 
     private void processAgentTurn() {
+        processAgentTurn(false); // Default to not expecting a plan
+    }
+
+    private void processAgentTurn(boolean expectPlan) {
         state = State.AGENT_THINKING;
         model.statusBarText = "Agent is thinking...";
         updateTokenCountPublic();
@@ -392,13 +430,121 @@ public class App {
             var aiMessage = response.content();
             model.addLog(aiMessage);
 
-            if (aiMessage.hasToolExecutionRequests())
-                handleToolExecution(aiMessage.toolExecutionRequests().getFirst());
-            else finishTurn(null);
+            if (expectPlan) {
+                this.agentMessageWithPlan = aiMessage;
+                state = State.WAITING_USER_PLAN_APPROVAL;
+                String fullMessageText = aiMessage.text();
+                String planText = extractPlan(fullMessageText);
+                String logMessage;
+
+                if (planText.equals(fullMessageText)) {
+                    logMessage = "[Jaider] No specific plan section found. Using full message for plan approval.";
+                } else {
+                    logMessage = "[Jaider] Extracted plan section for approval.";
+                }
+                model.addLog(AiMessage.from(logMessage));
+                System.out.println(logMessage); // Also print to console for easier debugging during manual tests
+
+                ui.confirmPlan("Agent's Proposed Plan", planText, aiMessage)
+                  .thenAccept(approved -> handlePlanApproval(this.agentMessageWithPlan, approved));
+            } else {
+                if (aiMessage.hasToolExecutionRequests()) {
+                    handleToolExecution(aiMessage.toolExecutionRequests().getFirst());
+                } else {
+                    finishTurn(null);
+                }
+            }
         }).exceptionally(e -> {
             finishTurn(AiMessage.from("[Error] " + e.getMessage()));
             return null;
         });
+    }
+
+    public void handlePlanApproval(AiMessage agentMessageWithPlan, boolean planApproved) {
+        if (planApproved) {
+            memory.add(UserMessage.from("Plan approved. Proceed."));
+            if (agentMessageWithPlan.hasToolExecutionRequests()) {
+                handleToolExecution(agentMessageWithPlan.toolExecutionRequests().getFirst());
+            } else {
+                processAgentTurn(false);
+            }
+        } else {
+            memory.add(UserMessage.from("Plan rejected. Propose a new one."));
+            processAgentTurn(true);
+        }
+        ui.redraw(model);
+    }
+
+    private String extractPlan(String messageText) {
+        if (messageText == null || messageText.isBlank()) {
+            return ""; // Or return the original if that's preferred for blank messages
+        }
+
+        String[] planMarkers = {
+            "Here's my plan:",
+            "My plan is:",
+            "Here is my plan:"
+            // Add more markers as needed, e.g., "Plan:", "Steps:"
+        };
+
+        String lowerCaseMessageText = messageText.toLowerCase();
+
+        for (String marker : planMarkers) {
+            int markerIndex = lowerCaseMessageText.indexOf(marker.toLowerCase());
+            if (markerIndex != -1) {
+                // Found a marker, try to extract from there until END_OF_PLAN
+                String fromMarker = messageText.substring(markerIndex + marker.length()).trim();
+                int endOfPlanIndex = fromMarker.indexOf("END_OF_PLAN");
+                if (endOfPlanIndex != -1) {
+                    return fromMarker.substring(0, endOfPlanIndex).trim();
+                }
+                return fromMarker; // Return from marker to end if END_OF_PLAN is not there
+            }
+        }
+
+        // Heuristic for numbered or bulleted lists (simple version)
+        // This looks for lines starting with "1.", "2.", "* ", "- "
+        // and considers a sequence of such lines as a plan.
+        String[] lines = messageText.split("\\r?\\n");
+        StringBuilder planBuilder = new StringBuilder();
+        boolean inPlanList = false;
+        int planLines = 0;
+        for (String line : lines) {
+            String trimmedLine = line.trim();
+            if (trimmedLine.matches("^\\d+\\.\\s+.*") || // Matches "1. ", "2. " etc.
+                trimmedLine.matches("^\\*\\s+.*") ||    // Matches "* "
+                trimmedLine.matches("^-\\s+.*")) {     // Matches "- "
+                if (!inPlanList) {
+                    inPlanList = true;
+                }
+                planBuilder.append(line).append(System.lineSeparator());
+                planLines++;
+            } else {
+                if (inPlanList) {
+                    // If we were in a list and found a non-list line, stop.
+                    // Only consider it a plan if there are at least 2 items.
+                    if (planLines >= 2) break;
+                    else { // Reset if too short
+                        planBuilder.setLength(0);
+                        inPlanList = false;
+                        planLines = 0;
+                    }
+                }
+            }
+        }
+
+        if (inPlanList && planLines >= 2) { // Check planLines condition again for plans ending the message
+             String extracted = planBuilder.toString().trim();
+             // Also check for END_OF_PLAN within the list context
+             int endOfPlanIndex = extracted.indexOf("END_OF_PLAN");
+             if (endOfPlanIndex != -1) {
+                 return extracted.substring(0, endOfPlanIndex).trim();
+             }
+             return extracted;
+        }
+
+        // If no specific section found, return the full message
+        return messageText;
     }
 
     private void handleToolExecution(ToolExecutionRequest request) {
