@@ -16,6 +16,11 @@ import org.json.JSONObject;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -201,6 +206,71 @@ public class StandardTools {
                     .collect(Collectors.joining("\n\n---\n\n"));
         } catch (Exception e) {
             return "Error searching for relevant code: " + e.getClass().getSimpleName() + " - " + e.getMessage();
+        }
+    }
+
+    @Tool("Lists files and directories in a given path, respecting .gitignore. Path is relative to project root. If no path is given, lists project root.")
+    public String listFiles(String directoryPath) {
+        try {
+            GitService gitService = new GitService(this.model.dir);
+            String pathToScan = (directoryPath == null || directoryPath.isBlank()) ? "" : directoryPath;
+            List<String> files = gitService.listFiles(pathToScan); // Assuming GitService has such a method
+
+            if (files.isEmpty()) {
+                return "No files found in " + (pathToScan.isEmpty() ? "project root" : pathToScan);
+            }
+
+            StringBuilder result = new StringBuilder();
+            for (String filePath : files) {
+                java.io.File file = this.model.dir.resolve(filePath).toFile();
+                if (file.isDirectory()) {
+                    result.append("[DIR] ").append(filePath).append("\n");
+                } else {
+                    result.append("[FILE] ").append(filePath).append("\n");
+                }
+            }
+            return result.toString();
+        } catch (Exception e) {
+            return "Error listing files: " + e.getClass().getSimpleName() + " - " + e.getMessage();
+        }
+    }
+
+    @Tool("Writes content to a file, creating parent directories if necessary. Path is relative to project root.")
+    public String writeFile(String filePath, String content) {
+        if (filePath == null || filePath.isBlank()) {
+            return "Error: File path cannot be null or empty.";
+        }
+        if (content == null) {
+            // Or decide if writing an empty string is permissible. For now, let's assume null is an error.
+            return "Error: Content cannot be null.";
+        }
+
+        try {
+            Path targetPath = this.model.dir.resolve(filePath);
+
+            // Ensure parent directories exist
+            Path parentDir = targetPath.getParent();
+            if (parentDir != null) {
+                if (!Files.exists(parentDir)) {
+                    Files.createDirectories(parentDir);
+                } else if (!Files.isDirectory(parentDir)) {
+                    return "Error: Cannot create parent directory. A file with the same name as the parent directory already exists: " + parentDir.toString();
+                }
+            }
+
+            boolean existed = Files.exists(targetPath);
+            Files.writeString(targetPath, content, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING, StandardOpenOption.WRITE);
+
+            if (existed) {
+                return "File overwritten successfully: " + filePath;
+            } else {
+                return "File created successfully: " + filePath;
+            }
+
+        } catch (IOException e) {
+            return "Error writing file '" + filePath + "': " + e.getClass().getSimpleName() + " - " + e.getMessage();
+        } catch (Exception e) {
+            return "An unexpected error occurred while writing file '" + filePath + "': " + e.getClass().getSimpleName() + " - " + e.getMessage();
         }
     }
 }
