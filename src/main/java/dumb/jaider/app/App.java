@@ -45,6 +45,7 @@ public class App {
     private State state = State.IDLE;
     private Tokenizer tokenizer;
     private Agent agent;
+    private Boolean lastValidationPreference = null; // Added for remembering validation preference
 
     public enum State {IDLE, AGENT_THINKING, WAITING_USER_CONFIRMATION}
 
@@ -254,11 +255,26 @@ public class App {
         var diffApplied = "applyDiff".equals(request.name()) && toolResult.startsWith("Diff applied");
         if (diffApplied && config.runCommand != null && !config.runCommand.isBlank()) {
             state = State.WAITING_USER_CONFIRMATION;
-            ui.confirm("Run Validation?", String.format("Agent applied a diff. Run configured validation command (`%s`)?", config.runCommand)).thenAccept(approved -> {
-                if (approved) runValidationAndContinue(request, toolResult);
-                else finishTurn(request, toolResult + "\nUser chose not to run validation command.");
+
+            String confirmationQuery;
+            if (this.lastValidationPreference == null) {
+                confirmationQuery = String.format("Agent applied a diff. Run configured validation command (`%s`)?", config.runCommand);
+            } else {
+                confirmationQuery = String.format("Agent applied a diff. Your previous choice was to %s validation. Run configured validation command (`%s`)?",
+                                (this.lastValidationPreference ? "run" : "not run"), config.runCommand);
+            }
+
+            ui.confirm("Run Validation?", confirmationQuery).thenAccept(approved -> {
+                this.lastValidationPreference = approved; // Store the user's current choice
+                if (approved) {
+                    runValidationAndContinue(request, toolResult);
+                } else {
+                    finishTurn(request, toolResult + "\nUser chose not to run validation command.");
+                }
             });
-        } else finishTurn(request, toolResult);
+        } else {
+            finishTurn(request, toolResult);
+        }
     }
 
     private String executeTool(ToolExecutionRequest request) {
