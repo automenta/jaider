@@ -21,8 +21,15 @@ import dumb.jaider.llm.LlmProviderFactory;
 import dumb.jaider.model.JaiderModel;
 import dumb.jaider.tools.StandardTools;
 import dumb.jaider.ui.UI;
-import dumb.jaider.vcs.GitService;
+// Note: dumb.jaider.vcs.GitService is different from org.jaider.service.GitService
+// We need org.jaider.service.GitService for the self-update features.
+// If dumb.jaider.vcs.GitService is still used by isGitRepoClean(), it should remain.
+// For now, assuming it's okay to add the new one.
+import org.jaider.service.BuildManagerService;
+import org.jaider.service.GitService; // For self-update
+import org.jaider.service.RestartService;
 import org.jaider.service.SelfUpdateOrchestratorService;
+import dumb.jaider.app.StartupService;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
@@ -49,6 +56,10 @@ public class App {
     private Agent agent;
     private Boolean lastValidationPreference = null; // Added for remembering validation preference
     private org.jaider.service.SelfUpdateOrchestratorService selfUpdateOrchestratorService;
+    private StartupService startupService;
+    private org.jaider.service.BuildManagerService buildManagerService;
+    private org.jaider.service.GitService gitService; // For self-update
+    private org.jaider.service.RestartService restartService;
 
     public enum State {IDLE, AGENT_THINKING, WAITING_USER_CONFIRMATION}
 
@@ -56,6 +67,7 @@ public class App {
         this.ui = ui;
         this.config = new Config(model.dir); // Config loads DI definitions
         this.model.setOriginalArgs(originalArgs);
+        // StartupService instantiation moved to update() method
 
         var injector = config.getInjector();
         if (injector != null) {
@@ -145,6 +157,35 @@ public class App {
                         System.err.println("Error fetching SelfUpdateOrchestratorService from DI: " + e.getMessage());
                         this.model.addLog(AiMessage.from("[Jaider] CRITICAL ERROR: Failed to initialize SelfUpdateOrchestratorService. Self-update features will be unavailable. " + e.getClass().getSimpleName() + ": " + e.getMessage()));
                     }
+
+                    try {
+                        this.buildManagerService = config.getComponent("buildManagerService", org.jaider.service.BuildManagerService.class);
+                    } catch (Exception e) {
+                        System.err.println("Error fetching BuildManagerService from DI: " + e.getMessage());
+                        this.model.addLog(AiMessage.from("[Jaider] CRITICAL ERROR: Failed to initialize BuildManagerService. Some features might be unavailable. " + e.getClass().getSimpleName() + ": " + e.getMessage()));
+                    }
+                    try {
+                        this.gitService = config.getComponent("gitService", org.jaider.service.GitService.class);
+                    } catch (Exception e) {
+                        System.err.println("Error fetching GitService from DI: " + e.getMessage());
+                        this.model.addLog(AiMessage.from("[Jaider] CRITICAL ERROR: Failed to initialize GitService for self-updates. Some features might be unavailable. " + e.getClass().getSimpleName() + ": " + e.getMessage()));
+                    }
+                    try {
+                        this.restartService = config.getComponent("restartService", org.jaider.service.RestartService.class);
+                    } catch (Exception e) {
+                        System.err.println("Error fetching RestartService from DI: " + e.getMessage());
+                        this.model.addLog(AiMessage.from("[Jaider] CRITICAL ERROR: Failed to initialize RestartService. Some features might be unavailable. " + e.getClass().getSimpleName() + ": " + e.getMessage()));
+                    }
+
+                    // Instantiate StartupService after its dependencies are fetched
+                    if (this.model != null && this.config != null && this.buildManagerService != null && this.gitService != null && this.restartService != null) {
+                        this.startupService = new StartupService(this.model, this.config, this.buildManagerService, this.gitService, this.restartService);
+                        System.out.println("[App.update] StartupService initialized successfully.");
+                    } else {
+                        System.err.println("[App.update] CRITICAL: Could not initialize StartupService due to missing core dependencies (model, config, BuildManager, Git, or Restart services). Post-update validation will be skipped.");
+                        this.model.addLog(AiMessage.from("[Jaider] CRITICAL ERROR: StartupService not initialized due to missing dependencies. Post-update validation will be skipped."));
+                        this.startupService = null; // Ensure it's null if not properly initialized
+                    }
                 }
 
             } catch (Exception e) {
@@ -214,6 +255,24 @@ public class App {
     }
 
     public void run() throws IOException {
+        if (this.startupService != null) {
+            boolean proceedNormalStartup = this.startupService.performStartupValidationChecks();
+            if (!proceedNormalStartup) {
+                // A restart was (or should have been) triggered by the startup service (e.g., after a successful rollback and restart sequence).
+                // The current JVM instance should ideally already be terminating if RestartService called System.exit().
+                // If execution somehow reaches here, it's an unexpected state.
+                System.err.println("[App.run] CRITICAL: StartupService indicated a restart was (or should have been) triggered, but execution continued in the old instance. Forcing exit to prevent unexpected behavior.");
+                this.model.addLog(dev.langchain4j.data.message.AiMessage.from("[App.run] CRITICAL: Post-validation restart did not terminate instance. Forcing exit.")); // Log to model
+                // ui.redraw(model); // Optional: attempt a final redraw if UI is up, though risky.
+                System.exit(1); // Force exit.
+                return; // Should be unreachable.
+            }
+            // If proceedNormalStartup is true, continue with the rest of the run() method.
+        } else {
+            System.err.println("[App.run] CRITICAL: StartupService is not initialized. Self-update validation checks will be skipped.");
+            this.model.addLog(dev.langchain4j.data.message.AiMessage.from("[App.run] CRITICAL: StartupService not initialized. Validation skipped.")); // Log to model
+        }
+
         if (!isGitRepoClean()) return;
         loadSession();
         ui.init(this);

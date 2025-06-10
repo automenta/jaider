@@ -143,23 +143,49 @@ public class LocalGitService implements GitService {
 
     @Override
     public boolean revertChanges(File projectRoot, String filePath) {
-        // logger.info("Attempting to revert changes for file: {} in project root: {}", filePath, projectRoot.getAbsolutePath()); // Future
-        System.out.println("LocalGitService: Attempting to revert changes for file: " + filePath + " in project root: " + projectRoot.getAbsolutePath());
+        // logger.info("Attempting to revert " + filePath + " to its state at HEAD~1 in project root: " + projectRoot.getAbsolutePath()); // Future
+        System.out.println("LocalGitService: Attempting to revert " + filePath + " to its state at HEAD~1.");
 
-        // `git checkout HEAD -- <filePath>`
-        // This command discards changes in the working directory for the specified file.
-        // It restores the file to the state it's in at HEAD.
-        List<String> revertCommand = new ArrayList<>(Arrays.asList("git", "checkout", "HEAD", "--", filePath));
-        CommandResult result = executeGitCommand(projectRoot, revertCommand);
+        // 1. Checkout the file from the commit before HEAD
+        List<String> checkoutCommand = new ArrayList<>(Arrays.asList("git", "checkout", "HEAD~1", "--", filePath));
+        CommandResult checkoutResult = executeGitCommand(projectRoot, checkoutCommand);
 
-        if (!result.isSuccess()) {
-            // logger.error("Failed to revert changes for {}. Exit code: {}. Error: {}", filePath, result.exitCode, result.error); // Future
-            System.err.println("LocalGitService: Failed to revert changes for " + filePath + ". Error: " + result.error + result.output);
-        } else {
-            // logger.info("Successfully reverted changes for {}", filePath); // Future
-            System.out.println("LocalGitService: Successfully reverted changes for " + filePath);
+        if (!checkoutResult.isSuccess()) {
+            // logger.error("Failed to checkout " + filePath + " from HEAD~1. Exit code: {}. Error: {}", checkoutResult.exitCode, checkoutResult.error + checkoutResult.output); // Future
+            System.err.println("LocalGitService: Failed to checkout " + filePath + " from HEAD~1. Error: " + checkoutResult.error + checkoutResult.output);
+            return false;
         }
-        return result.isSuccess();
+        // logger.info("Successfully checked out " + filePath + " from HEAD~1."); // Future
+        System.out.println("LocalGitService: Successfully checked out " + filePath + " from HEAD~1.");
+
+        // 2. Stage the reverted file
+        List<String> addCommand = new ArrayList<>(Arrays.asList("git", "add", filePath));
+        CommandResult addResult = executeGitCommand(projectRoot, addCommand);
+        if (!addResult.isSuccess()) {
+            // logger.error("Failed to stage reverted file " + filePath + ". Exit code: {}. Error: {}", addResult.exitCode, addResult.error + addResult.output); // Future
+            System.err.println("LocalGitService: Failed to stage reverted file " + filePath + ". Error: " + addResult.error + addResult.output);
+            // Consider attempting to clean up the working directory from the checkout if staging fails.
+            // e.g., git checkout HEAD -- <filePath> to restore to original HEAD if possible, though this might also fail.
+            // For now, just report failure.
+            return false;
+        }
+        // logger.info("Successfully staged reverted file " + filePath + "."); // Future
+        System.out.println("LocalGitService: Successfully staged reverted file " + filePath + ".");
+
+        // 3. Commit the revert
+        String commitMessage = "Rollback: Reverted changes to " + filePath + " due to failed validation";
+        List<String> commitCommand = new ArrayList<>(Arrays.asList("git", "commit", "-m", commitMessage));
+        CommandResult commitResult = executeGitCommand(projectRoot, commitCommand);
+
+        if (!commitResult.isSuccess()) {
+            // logger.error("Failed to commit reverted file " + filePath + ". Exit code: {}. Error: {}", commitResult.exitCode, commitResult.error + commitResult.output); // Future
+            System.err.println("LocalGitService: Failed to commit reverted file " + filePath + ". Error: " + commitResult.error + commitResult.output);
+            // If commit fails, the file is staged with its HEAD~1 content. This might be an acceptable state for manual recovery.
+            return false;
+        }
+        // logger.info("Successfully committed revert of " + filePath + "."); // Future
+        System.out.println("LocalGitService: Successfully committed revert of " + filePath + ".");
+        return true;
     }
 
     @Override
