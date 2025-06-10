@@ -4,8 +4,10 @@ import dumb.jaider.tooling.Tool;
 // import dev.langchain4j.service.AiServices; // For LM integration later
 // import dumb.jaider.llm.LlmService; // Assuming an LlmService exists or will be created
 
+import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.nio.file.Path;
 import java.nio.file.Files; // Added
 import java.nio.file.DirectoryStream; // Added
@@ -14,8 +16,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.logging.Level;
-import java.util.logging.Logger;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 // Using org.json for parsing descriptor files for now
 import org.json.JSONObject;
@@ -27,7 +30,7 @@ import com.fasterxml.jackson.databind.ObjectMapper; // For more robust JSON late
  * Manages the lifecycle of tools: discovery, installation, configuration, and availability.
  */
 public class ToolManager {
-    private static final Logger LOGGER = Logger.getLogger(ToolManager.class.getName());
+    private static final Logger LOGGER = LoggerFactory.getLogger(ToolManager.class);
     private final Map<String, ToolDescriptor> toolDescriptors = new HashMap<>();
     private final Map<String, Tool> availableTools = new HashMap<>(); // Tools ready to be used
     private final Path toolManifestsDir; // Directory where tool JSON descriptors are stored
@@ -35,7 +38,7 @@ public class ToolManager {
 
     public ToolManager(String toolManifestsDirStr /*, LlmService llmService */) {
         if (toolManifestsDirStr == null || toolManifestsDirStr.isBlank()) {
-            LOGGER.warning("Tool manifests directory string is null or blank. ToolManager may not find descriptors.");
+            LOGGER.warn("Tool manifests directory string is null or blank. ToolManager may not find descriptors.");
             this.toolManifestsDir = null; // Or a default safe path, or throw IllegalArgumentException
         } else {
             this.toolManifestsDir = Path.of(toolManifestsDirStr);
@@ -46,28 +49,28 @@ public class ToolManager {
 
     private void loadToolDescriptors() {
         if (toolManifestsDir == null || !Files.isDirectory(toolManifestsDir)) {
-            LOGGER.warning("Tool manifests directory is not set or not a directory: " + toolManifestsDir);
+            LOGGER.warn("Tool manifests directory is not set or not a directory: {}", toolManifestsDir);
             return;
         }
 
         ObjectMapper mapper = new ObjectMapper();
         try (DirectoryStream<Path> stream = Files.newDirectoryStream(toolManifestsDir, "*.json")) {
             for (Path jsonFile : stream) {
-                LOGGER.info("Found tool descriptor file: " + jsonFile.toString());
+                LOGGER.info("Found tool descriptor file: {}", jsonFile.toString());
                 try (InputStream descriptorStream = Files.newInputStream(jsonFile)) {
                     ToolDescriptor descriptor = mapper.readValue(descriptorStream, ToolDescriptor.class);
                     if (descriptor != null && descriptor.getToolName() != null && !descriptor.getToolName().isEmpty()) {
                         toolDescriptors.put(descriptor.getToolName(), descriptor);
-                        LOGGER.info("Successfully loaded and registered tool descriptor: " + descriptor.getToolName());
+                        LOGGER.info("Successfully loaded and registered tool descriptor: {}", descriptor.getToolName());
                     } else {
-                        LOGGER.warning("Parsed tool descriptor from " + jsonFile.getFileName() + " is invalid (missing toolName or null).");
+                        LOGGER.warn("Parsed tool descriptor from {} is invalid (missing toolName or null).", jsonFile.getFileName());
                     }
                 } catch (IOException e) {
-                    LOGGER.log(Level.SEVERE, "Failed to load or parse tool descriptor: " + jsonFile.getFileName(), e);
+                    LOGGER.error("Failed to load or parse tool descriptor: {}", jsonFile.getFileName(), e);
                 }
             }
         } catch (IOException e) {
-            LOGGER.log(Level.SEVERE, "Error scanning tool manifests directory: " + toolManifestsDir, e);
+            LOGGER.error("Error scanning tool manifests directory: {}", toolManifestsDir, e);
         }
     }
 
@@ -78,12 +81,12 @@ public class ToolManager {
             ToolDescriptor descriptor = mapper.readValue(descriptorStream, ToolDescriptor.class);
              if (descriptor != null && descriptor.getToolName() != null && !descriptor.getToolName().isEmpty()) {
                 toolDescriptors.put(descriptor.getToolName(), descriptor);
-                LOGGER.info("Loaded tool descriptor: " + descriptor.getToolName() + " from " + descriptorName);
+                LOGGER.info("Loaded tool descriptor: {} from {}", descriptor.getToolName(), descriptorName);
             } else {
-                LOGGER.warning("Parsed tool descriptor from " + descriptorName + " is invalid (missing toolName or null).");
+                LOGGER.warn("Parsed tool descriptor from {} is invalid (missing toolName or null).", descriptorName);
             }
         } catch (IOException e) {
-            LOGGER.log(Level.SEVERE, "Failed to load or parse tool descriptor from stream: " + descriptorName, e);
+            LOGGER.error("Failed to load or parse tool descriptor from stream: {}", descriptorName, e);
         }
     }
 
@@ -109,23 +112,23 @@ public class ToolManager {
     public boolean provisionTool(String toolName) {
         ToolDescriptor descriptor = toolDescriptors.get(toolName);
         if (descriptor == null) {
-            LOGGER.warning("No descriptor found for tool: " + toolName);
+            LOGGER.warn("No descriptor found for tool: {}", toolName);
             return false;
         }
 
         if (isToolInstalled(descriptor)) {
-            LOGGER.info("Tool " + toolName + " is already installed.");
+            LOGGER.info("Tool {} is already installed.", toolName);
             // Further configuration steps could go here
             return true;
         }
 
-        LOGGER.info("Tool " + toolName + " not installed. Attempting to install...");
+        LOGGER.info("Tool {} not installed. Attempting to install...", toolName);
         return installTool(descriptor);
     }
 
     private boolean isToolInstalled(ToolDescriptor descriptor) {
         if (descriptor.getAvailabilityCheckCommand() == null || descriptor.getAvailabilityCheckCommand().isEmpty()) {
-            LOGGER.warning("No availabilityCheckCommand for " + descriptor.getToolName() + ". Assuming not installed.");
+            LOGGER.warn("No availabilityCheckCommand for {}. Assuming not installed.", descriptor.getToolName());
             return false;
         }
         try {
@@ -133,7 +136,7 @@ public class ToolManager {
             Process process = pb.start();
             return process.waitFor() == descriptor.getAvailabilityCheckExitCode();
         } catch (Exception e) {
-            LOGGER.log(Level.WARNING, "Availability check failed for " + descriptor.getToolName(), e);
+            LOGGER.warn("Availability check failed for {}", descriptor.getToolName(), e);
             return false;
         }
     }
@@ -165,30 +168,62 @@ public class ToolManager {
             if(!anyPlatformCommands.isEmpty()){
                 commands = anyPlatformCommands;
             } else {
-                LOGGER.warning("No installation commands found for " + descriptor.getToolName() + " on platform " + platform);
+                LOGGER.warn("No installation commands found for {} on platform {}", descriptor.getToolName(), platform);
                 // TODO: Add LM interaction here using descriptor.getLmInstallationQueries()
                 // For now, just fail.
                 return false;
             }
         }
 
-        LOGGER.info("Attempting to install " + descriptor.getToolName() + " using commands: " + commands);
+        LOGGER.info("Attempting to install {} using commands: {}", descriptor.getToolName(), commands);
         for (String command : commands) {
             try {
-                // Simple command execution. Needs to be more robust (working directory, env vars, etc.)
-                Process process = Runtime.getRuntime().exec(command); // UNSAFE: Command injection vulnerable
-                int exitCode = process.waitFor();
-                if (exitCode != 0) {
-                    LOGGER.severe("Installation command failed: '" + command + "' with exit code " + exitCode);
-                    // TODO: Capture and log stderr/stdout from the process
-                    return false;
+                String[] commandParts = command.split("\\s+");
+                ProcessBuilder pb = new ProcessBuilder(commandParts);
+                Process process = pb.start();
+
+                // Capture stdout
+                StringBuilder stdout = new StringBuilder();
+                try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
+                    String line;
+                    while ((line = reader.readLine()) != null) {
+                        stdout.append(line).append(System.lineSeparator());
+                    }
                 }
-            } catch (Exception e) {
-                LOGGER.log(Level.SEVERE, "Error executing installation command: '" + command + "'", e);
+
+                // Capture stderr
+                StringBuilder stderr = new StringBuilder();
+                try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getErrorStream()))) {
+                    String line;
+                    while ((line = reader.readLine()) != null) {
+                        stderr.append(line).append(System.lineSeparator());
+                    }
+                }
+
+                int exitCode = process.waitFor();
+
+                if (stdout.length() > 0) {
+                    LOGGER.info("Stdout for command '{}':\n{}", command, stdout.toString());
+                }
+
+                if (exitCode != 0) {
+                    LOGGER.error("Installation command failed: '{}' with exit code {}", command, exitCode);
+                    if (stderr.length() > 0) {
+                        LOGGER.error("Stderr for command '{}':\n{}", command, stderr.toString());
+                    }
+                    return false;
+                } else {
+                    if (stderr.length() > 0) {
+                        LOGGER.warn("Stderr for command '{}' (exit code 0):\n{}", command, stderr.toString());
+                    }
+                }
+            } catch (IOException | InterruptedException e) {
+                LOGGER.error("Error executing installation command: '{}'", command, e);
+                Thread.currentThread().interrupt(); // Restore interrupted status
                 return false;
             }
         }
-        LOGGER.info(descriptor.getToolName() + " installation commands executed. Verifying installation...");
+        LOGGER.info("{} installation commands executed. Verifying installation...", descriptor.getToolName());
         return isToolInstalled(descriptor); // Verify after attempting install
     }
 

@@ -11,12 +11,13 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import java.util.stream.Collectors;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 public class StaticAnalysisService {
-    private static final Logger LOGGER = Logger.getLogger(StaticAnalysisService.class.getName());
+    private static final Logger LOGGER = LoggerFactory.getLogger(StaticAnalysisService.class);
     private final ToolManager toolManager;
 
     public StaticAnalysisService(ToolManager toolManager) {
@@ -63,8 +64,11 @@ public class StaticAnalysisService {
 
         // Add more placeholder replacements as needed based on tool descriptor conventions
 
-        LOGGER.info("Executing static analysis command: " + commandToExecute);
+        LOGGER.info("Executing static analysis command: {}", commandToExecute);
+        // Simple space splitting. This might not be robust for arguments containing spaces.
+        // A more sophisticated parser or quoting strategy would be needed for such cases.
         ProcessBuilder pb = new ProcessBuilder(commandToExecute.split("\\s+"));
+
 
         // Determine working directory: Use targetPath's parent, or project root if available and appropriate
         // For now, let's assume project root (if available from a context) or targetPath.getParent()
@@ -94,15 +98,15 @@ public class StaticAnalysisService {
         // Some tools (like Semgrep) might return non-0 exit code if issues are found.
         // This needs to be configurable per tool descriptor, or handled by the parser if it expects such behavior.
         // For now, we proceed to parsing even if exitCode is non-zero, as output might still contain results.
-        LOGGER.info(toolName + " execution finished with exit code: " + exitCode + ". Output length: " + rawOutput.length());
+        LOGGER.info("{} execution finished with exit code: {}. Output length: {}", toolName, exitCode, rawOutput.length());
         if(errorOutput.length() > 0){
-            LOGGER.warning("Error stream output from " + toolName + ":\n" + errorOutput.toString());
+            LOGGER.warn("Error stream output from {}:\n{}", toolName, errorOutput.toString());
         }
 
 
         String parserClassName = descriptor.getResultsParserClass();
         if (parserClassName == null || parserClassName.isBlank()) {
-            LOGGER.warning("No results parser class defined for tool: " + toolName + ". Returning raw output if any.");
+            LOGGER.warn("No results parser class defined for tool: {}. Returning raw output if any.", toolName);
             // Depending on desired behavior, could throw exception or return a single issue with raw output.
             if (rawOutput.length() > 0) {
                  return List.of(new StaticAnalysisIssue(targetPath.toString(), 0, 0, "Raw output from " + toolName + ":\n" + rawOutput.toString() + (errorOutput.length() > 0 ? "\nErrors:\n" + errorOutput.toString() : ""), "RAW_OUTPUT", "INFO"));
@@ -115,10 +119,10 @@ public class StaticAnalysisService {
             StaticAnalysisResultsParser parser = (StaticAnalysisResultsParser) parserClass.getDeclaredConstructor().newInstance();
             return parser.parse(rawOutput.toString(), descriptor.getDefaultConfig());
         } catch (ClassNotFoundException | NoSuchMethodException | InstantiationException | IllegalAccessException | InvocationTargetException e) {
-            LOGGER.log(Level.SEVERE, "Failed to instantiate or use results parser " + parserClassName + " for tool " + toolName, e);
+            LOGGER.error("Failed to instantiate or use results parser {} for tool {}", parserClassName, toolName, e);
             throw new Exception("Error with results parser " + parserClassName + ": " + e.getMessage(), e);
         } catch (Exception e) { // Catch exceptions from the parser itself
-             LOGGER.log(Level.SEVERE, "Parser " + parserClassName + " failed for tool " + toolName, e);
+             LOGGER.error("Parser {} failed for tool {}", parserClassName, toolName, e);
             throw e; // Re-throw parser's specific exception
         }
     }

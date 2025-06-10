@@ -42,10 +42,20 @@ public class Config {
         // did not provide component definitions or they were empty.
         // In this scenario, the injector should use the default component definitions,
         // while other settings (apiKeys, llmProvider, etc.) retain values from load().
-        if (injectorDefs.isEmpty()) {
-            System.err.println("Component definitions are empty after load. Initializing injector with default component definitions.");
+        // this.def is populated by populateFieldsFromJson, called by load().
+        if (this.def.isEmpty()) {
+            // This case implies that even getDefaultConfigAsJsonObject() didn't provide component definitions,
+            // or they were explicitly cleared or filtered out before this point.
+            // This should ideally not happen if getDefaultConfigAsJsonObject() is correctly structured.
+            System.err.println("Component definitions (this.def) are empty after load and potential default population. Attempting to extract from default JSON one last time.");
             injectorDefs = extractComponentDefinitions(getDefaultConfigAsJsonObject());
+            if (injectorDefs.isEmpty()) { // If still empty, it's a critical configuration error.
+                 throw new IllegalStateException("No component definitions found after loading and attempting to apply defaults. Application cannot safely start.");
+            }
+        } else {
+            injectorDefs = this.def; // Use the already populated definitions
         }
+
 
         this.injector = new DependencyInjector(new HashMap<>(injectorDefs)); // Pass a defensive copy
         this.injector.registerSingleton("appConfig", this);
@@ -467,20 +477,11 @@ public class Config {
     }
 
     public <T> T getComponent(String id, Class<T> type) {
-        if (injector == null) {
-            // This might happen if constructor logic for injector init is bypassed or fails early.
-            // Attempt a final re-init.
-            System.err.println("Warning: Injector was null when getComponent was called. Re-initializing.");
-            if (this.def.isEmpty()) {
-                populateFieldsFromJson(getDefaultConfigAsJsonObject());
-            }
-            this.injector = new DependencyInjector(new HashMap<>(this.def));
-            this.injector.registerSingleton("appConfig", this);
-            if (injector == null) { // If still null after re-attempt
-                 throw new IllegalStateException("DependencyInjector critically failed to initialize.");
-            }
+        if (this.injector == null) {
+            // This state should not be reached if the constructor logic is sound and enforced.
+            throw new IllegalStateException("DependencyInjector is not initialized. Config constructor might have failed or been bypassed.");
         }
-        Object componentInstance = injector.getComponent(id);
+        Object componentInstance = this.injector.getComponent(id);
         if (componentInstance == null) {
             throw new RuntimeException("Component with id '" + id + "' not found or failed to create from injector.");
         }
@@ -493,17 +494,10 @@ public class Config {
 
     public DependencyInjector getInjector() {
         // Ensure injector is initialized if accessed directly
-        if (injector == null) {
-             System.err.println("Warning: Injector was null when getInjector was called. Re-initializing.");
-            if (this.def.isEmpty()) {
-                populateFieldsFromJson(getDefaultConfigAsJsonObject());
-            }
-            this.injector = new DependencyInjector(new HashMap<>(this.def));
-            this.injector.registerSingleton("appConfig", this);
-             if (injector == null) { // If still null after re-attempt
-                 throw new IllegalStateException("DependencyInjector critically failed to initialize on getInjector().");
-            }
+        if (this.injector == null) {
+            // This state should not be reached if the constructor logic is sound and enforced.
+            throw new IllegalStateException("DependencyInjector is not initialized. Config constructor might have failed or been bypassed.");
         }
-        return injector;
+        return this.injector;
     }
 }

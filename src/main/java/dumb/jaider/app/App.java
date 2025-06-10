@@ -37,6 +37,8 @@ import org.jaider.service.SelfUpdateOrchestratorService;
 import dumb.jaider.app.StartupService;
 import org.json.JSONArray;
 import org.json.JSONObject;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -52,6 +54,7 @@ import java.util.stream.Collectors;
 
 
 public class App {
+    private static final Logger logger = LoggerFactory.getLogger(App.class);
     private final UI ui;
     private final JaiderModel model = new JaiderModel();
     private final Config config; // Initialized in constructor
@@ -91,13 +94,13 @@ public class App {
                 this.memory = config.getComponent("chatMemory", ChatMemory.class);
             } catch (Exception e) {
                 // Fallback if not defined in DI, or rethrow if critical
-                System.err.println("Failed to get chatMemory from DI, falling back to default: " + e.getMessage());
+                logger.warn("Failed to get chatMemory from DI, falling back to default.", e);
                 this.memory = MessageWindowChatMemory.withMaxMessages(20);
                 injector.registerSingleton("chatMemory", this.memory); // Register the fallback
             }
         } else {
             // DI not initialized, use defaults (original behavior)
-            System.err.println("DependencyInjector not available from Config. Using default initializations.");
+            logger.warn("DependencyInjector not available from Config. Using default initializations.");
             this.memory = MessageWindowChatMemory.withMaxMessages(20);
         }
 
@@ -122,7 +125,7 @@ public class App {
     public synchronized void update() {
         ToolManager toolManager = null; // Initialize toolManager to null
         if (config.getInjector() == null) {
-            System.err.println("DI not initialized in App.update(). Cannot fetch components. Reverting to manual creation (limited functionality).");
+            logger.error("DI not initialized in App.update(). Cannot fetch components. Reverting to manual creation (limited functionality).");
             // Fallback to minimal functionality or throw error
             // For now, let's try to mimic old behavior if DI fails, though this is not ideal.
             // If DI is not available, ToolManager might not be available either unless manually created.
@@ -186,42 +189,42 @@ public class App {
                     try {
                         this.selfUpdateOrchestratorService = config.getComponent("selfUpdateOrchestratorService", org.jaider.service.SelfUpdateOrchestratorService.class);
                     } catch (Exception e) {
-                        System.err.println("Error fetching SelfUpdateOrchestratorService from DI: " + e.getMessage());
+                        logger.error("Error fetching SelfUpdateOrchestratorService from DI.", e);
                         this.model.addLog(AiMessage.from("[Jaider] CRITICAL ERROR: Failed to initialize SelfUpdateOrchestratorService. Self-update features will be unavailable. " + e.getClass().getSimpleName() + ": " + e.getMessage()));
                     }
 
                     try {
                         this.buildManagerService = config.getComponent("buildManagerService", org.jaider.service.BuildManagerService.class);
                     } catch (Exception e) {
-                        System.err.println("Error fetching BuildManagerService from DI: " + e.getMessage());
+                        logger.error("Error fetching BuildManagerService from DI.", e);
                         this.model.addLog(AiMessage.from("[Jaider] CRITICAL ERROR: Failed to initialize BuildManagerService. Some features might be unavailable. " + e.getClass().getSimpleName() + ": " + e.getMessage()));
                     }
                     try {
                         this.gitService = config.getComponent("gitService", org.jaider.service.GitService.class);
                     } catch (Exception e) {
-                        System.err.println("Error fetching GitService from DI: " + e.getMessage());
+                        logger.error("Error fetching GitService from DI.", e);
                         this.model.addLog(AiMessage.from("[Jaider] CRITICAL ERROR: Failed to initialize GitService for self-updates. Some features might be unavailable. " + e.getClass().getSimpleName() + ": " + e.getMessage()));
                     }
                     try {
                         this.restartService = config.getComponent("restartService", org.jaider.service.RestartService.class);
                     } catch (Exception e) {
-                        System.err.println("Error fetching RestartService from DI: " + e.getMessage());
+                        logger.error("Error fetching RestartService from DI.", e);
                         this.model.addLog(AiMessage.from("[Jaider] CRITICAL ERROR: Failed to initialize RestartService. Some features might be unavailable. " + e.getClass().getSimpleName() + ": " + e.getMessage()));
                     }
 
                     // Instantiate StartupService after its dependencies are fetched
                     if (this.model != null && this.config != null && this.buildManagerService != null && this.gitService != null && this.restartService != null) {
                         this.startupService = new StartupService(this.model, this.config, this.buildManagerService, this.gitService, this.restartService);
-                        System.out.println("[App.update] StartupService initialized successfully.");
+                        logger.info("StartupService initialized successfully.");
                     } else {
-                        System.err.println("[App.update] CRITICAL: Could not initialize StartupService due to missing core dependencies (model, config, BuildManager, Git, or Restart services). Post-update validation will be skipped.");
+                        logger.error("CRITICAL: Could not initialize StartupService due to missing core dependencies (model, config, BuildManager, Git, or Restart services). Post-update validation will be skipped.");
                         this.model.addLog(AiMessage.from("[Jaider] CRITICAL ERROR: StartupService not initialized due to missing dependencies. Post-update validation will be skipped."));
                         this.startupService = null; // Ensure it's null if not properly initialized
                     }
                 }
 
             } catch (Exception e) {
-                System.err.println("Error updating components from DI: " + e.getMessage());
+                logger.error("Error updating components from DI.", e);
                 model.addLog(AiMessage.from("[Jaider] CRITICAL ERROR: Failed to update components using DI. Application might be unstable. Check config. " + e.getClass().getSimpleName() + ": " + e.getMessage()));
                 // Optionally, could fall back to manual creation like above if critical components fail
             }
@@ -239,18 +242,18 @@ public class App {
         if (toolManager != null) {
             Map<String, dumb.jaider.toolmanager.ToolDescriptor> descriptors = toolManager.getToolDescriptors();
             if (descriptors != null && !descriptors.isEmpty()) {
-                String loadedToolsLog = "[Jaider Init] ToolManager loaded descriptors: " + String.join(", ", descriptors.keySet());
-                model.addLog(AiMessage.from(loadedToolsLog));
-                System.out.println(loadedToolsLog);
+                String loadedToolsLog = "ToolManager loaded descriptors: " + String.join(", ", descriptors.keySet());
+                model.addLog(AiMessage.from("[Jaider Init] " + loadedToolsLog));
+                logger.info(loadedToolsLog);
             } else {
-                String noToolsLog = "[Jaider Init] ToolManager loaded 0 external tool descriptors.";
-                model.addLog(AiMessage.from(noToolsLog));
-                System.out.println(noToolsLog);
+                String noToolsLog = "ToolManager loaded 0 external tool descriptors.";
+                model.addLog(AiMessage.from("[Jaider Init] " + noToolsLog));
+                logger.info(noToolsLog);
             }
         } else {
-            String noTmLog = "[Jaider Init] ToolManager was not initialized (null). No external tool descriptors loaded.";
-            model.addLog(AiMessage.from(noTmLog));
-            System.out.println(noTmLog);
+            String noTmLog = "ToolManager was not initialized (null). No external tool descriptors loaded.";
+            model.addLog(AiMessage.from("[Jaider Init] " + noTmLog));
+            logger.info(noTmLog);
         }
     }
 
@@ -312,7 +315,7 @@ public class App {
                 // A restart was (or should have been) triggered by the startup service (e.g., after a successful rollback and restart sequence).
                 // The current JVM instance should ideally already be terminating if RestartService called System.exit().
                 // If execution somehow reaches here, it's an unexpected state.
-                System.err.println("[App.run] CRITICAL: StartupService indicated a restart was (or should have been) triggered, but execution continued in the old instance. Forcing exit to prevent unexpected behavior.");
+                logger.error("CRITICAL: StartupService indicated a restart was (or should have been) triggered, but execution continued in the old instance. Forcing exit to prevent unexpected behavior.");
                 this.model.addLog(dev.langchain4j.data.message.AiMessage.from("[App.run] CRITICAL: Post-validation restart did not terminate instance. Forcing exit.")); // Log to model
                 // ui.redraw(model); // Optional: attempt a final redraw if UI is up, though risky.
                 System.exit(1); // Force exit.
@@ -320,7 +323,7 @@ public class App {
             }
             // If proceedNormalStartup is true, continue with the rest of the run() method.
         } else {
-            System.err.println("[App.run] CRITICAL: StartupService is not initialized. Self-update validation checks will be skipped.");
+            logger.error("CRITICAL: StartupService is not initialized. Self-update validation checks will be skipped.");
             this.model.addLog(dev.langchain4j.data.message.AiMessage.from("[App.run] CRITICAL: StartupService not initialized. Validation skipped.")); // Log to model
         }
 
@@ -351,7 +354,7 @@ public class App {
             try {
                 toolManager = config.getComponent("toolManager", ToolManager.class);
             } catch (Exception e) {
-                System.err.println("Could not get ToolManager from DI for suggestions: " + e.getMessage());
+                logger.warn("Could not get ToolManager from DI for suggestions.", e);
                 // toolManager = new ToolManager(...); // Or handle absence
             }
 
@@ -363,13 +366,13 @@ public class App {
                     internalToolInstances.addAll(agent.tools());
                 } else {
                      // Fallback or specific instantiation if agent or its tools are null
-                    System.err.println("Agent or agent tools are null. Suggestions based on internal tools might be limited.");
+                    logger.warn("Agent or agent tools are null. Suggestions based on internal tools might be limited.");
                     // Optionally, could try to get StandardTools/JaiderTools from DI directly if needed as a fallback.
                     // internalToolInstances.add(config.getComponent("standardTools", StandardTools.class));
                     // internalToolInstances.add(config.getComponent("jaiderTools", JaiderTools.class));
                 }
             } catch (Exception e) {
-                System.err.println("Error fetching internal tool instances for suggestions: " + e.getMessage());
+                logger.warn("Error fetching internal tool instances for suggestions.", e);
             }
 
             // Pass only internalToolInstances to generateSuggestions as ToolManager is now a class field
@@ -450,7 +453,7 @@ public class App {
                     logMessage = "[Jaider] Extracted plan section for approval.";
                 }
                 model.addLog(AiMessage.from(logMessage));
-                System.out.println(logMessage); // Also print to console for easier debugging during manual tests
+                logger.info(logMessage); // Also print to console for easier debugging during manual tests
 
                 ui.confirmPlan("Agent's Proposed Plan", planText, aiMessage)
                   .thenAccept(approved -> handlePlanApproval(this.agentMessageWithPlan, approved));
@@ -629,7 +632,7 @@ public class App {
             // TODO: Integrate properly with TUI for user confirmation.
             // For now, this call assumes UserInterfaceService handles interaction.
             // The actual confirmation UI flow will be addressed in Step 1.4.
-            System.out.println("[App] Triggering self-update confirmation process via orchestrator..."); // Temporary log
+            logger.info("Triggering self-update confirmation process via orchestrator..."); // Temporary log
             this.selfUpdateOrchestratorService.triggerUserConfirmationProcess();
         }
     }
@@ -702,21 +705,8 @@ public class App {
     }
 
     private boolean isGitRepoClean() {
-        var gitService = new org.jaider.service.LocalGitService(); // Corrected to use LocalGitService
-        // Assuming LocalGitService might need initialization or a path.
-        // If LocalGitService constructor needs arguments (e.g. Path), this needs adjustment.
-        // For now, assuming a no-arg constructor or one that can infer context if needed.
-        // The original isGitRepoClean() in GitService took Path in constructor.
-        // So LocalGitService will likely need the path too.
-        // var gitService = new org.jaider.service.LocalGitService(this.model.dir);
-        // This depends on LocalGitService's constructor.
-        // For now, let's assume it needs the path, similar to the original GitService.
-        // However, the DI config for "gitService" in Config.java shows no constructor args for LocalGitService.
-        // This indicates LocalGitService might be designed to be parameterless or take them via a different method.
-        // Let's check LocalGitService.java. For now, assuming it can be constructed and then used with path.
-        // OR, the isGitRepoClean method itself should take the path.
-        // Given the error is "abstract cannot be instantiated", the primary fix is using LocalGitService.
-        // The original GitService constructor took a Path. Let's assume LocalGitService also takes a Path.
-        return gitService.isWorkingDirectoryClean(this.model.dir.toFile()); // Assuming isWorkingDirectoryClean takes File
+        // This method should check the cleanliness of the USER'S project directory
+        var userProjectGitService = new dumb.jaider.vcs.GitService(this.model.dir);
+        return userProjectGitService.isGitRepoClean();
     }
 }
