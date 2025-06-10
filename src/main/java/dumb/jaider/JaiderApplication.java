@@ -9,6 +9,7 @@ import org.jaider.service.SelfUpdateOrchestratorService;
 import org.jaider.ui.CommandLineUserInterfaceService;
 
 import java.io.File;
+import java.nio.file.Paths; // Added import
 import java.util.Scanner; // For simple command simulation
 
 public class JaiderApplication {
@@ -25,23 +26,23 @@ public class JaiderApplication {
         System.out.println("Jaider Application Starting...");
 
         // 1. Initialize Model and Services
-        jaiderModel = new JaiderModel();
+        // Initialize JaiderModel with the project directory
+        jaiderModel = new JaiderModel(Paths.get(".").toAbsolutePath());
         jaiderModel.setOriginalArgs(args);
         // TODO: Set the project directory correctly. For now, using current directory.
         // This needs to be the root of the Maven project Jaider is working on (which is Jaider itself for self-update)
-        jaiderModel.setDir(new File("."));
-        System.out.println("Project directory set to: " + jaiderModel.getDir().getAbsolutePath());
+        System.out.println("Project directory set to: " + jaiderModel.dir.toAbsolutePath().toString());
 
         System.out.println("SELF-UPDATE TARGET MARKER: This line is a target for modification."); // Marker for diff
 
-        uiService = new CommandLineUserInterfaceService();
+        // uiService = new CommandLineUserInterfaceService(); // Commented out
         gitService = new LocalGitService();
         buildManagerService = new BuildManagerService();
         restartService = new BasicRestartService();
 
         selfUpdateOrchestratorService = new SelfUpdateOrchestratorService(
                 jaiderModel,
-                uiService,
+                null, // uiService, // Commented out
                 buildManagerService,
                 gitService,
                 restartService
@@ -50,12 +51,12 @@ public class JaiderApplication {
         jaiderTools = new JaiderTools(jaiderModel, selfUpdateOrchestratorService);
 
         // Add shutdown hook to clean up UI service resources
-        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
-            System.out.println("Jaider Application Shutting Down...");
-            if (uiService != null) {
-                uiService.shutdown();
-            }
-        }));
+        // Runtime.getRuntime().addShutdownHook(new Thread(() -> { // Commented out
+        //     System.out.println("Jaider Application Shutting Down...");
+        //     if (uiService != null) {
+        //         uiService.shutdown();
+        //     }
+        // }));
 
         // 2. Application Main Loop (simplified)
         // In a real Langchain4j app, the agent would call jaiderTools.proposeSelfUpdate.
@@ -90,9 +91,9 @@ public class JaiderApplication {
             System.err.println("Main loop interrupted.");
             Thread.currentThread().interrupt();
         } finally {
-            if (uiService != null) { // Ensure shutdown if exiting normally through loop
-                uiService.shutdown();
-            }
+            // if (uiService != null) { // Ensure shutdown if exiting normally through loop // Commented out
+            //     uiService.shutdown();
+            // }
         }
         System.out.println("Jaider Application Exited.");
     }

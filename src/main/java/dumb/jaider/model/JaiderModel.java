@@ -105,4 +105,13 @@ public class JaiderModel {
             this.activeSuggestions.clear();
         }
     }
+
+    public com.google.common.collect.ImmutableList<String> getContextFilePaths() {
+        if (files == null || files.isEmpty()) {
+            return com.google.common.collect.ImmutableList.of();
+        }
+        return files.stream()
+                .map(path -> dir.relativize(path).toString())
+                .collect(com.google.common.collect.ImmutableList.toImmutableList());
+    }
 }

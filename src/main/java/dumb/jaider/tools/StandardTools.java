@@ -176,8 +176,8 @@ public class StandardTools {
             if (config.runCommand != null && config.runCommand.contains("mvn test")) {
                 List<Map<String, String>> testReportList = new ArrayList<>();
                 String[] lines = outputString.split("\n");
-                String currentTestClass = null;
-                String currentTestMethod = null;
+                final String[] currentTestClassHolder = new String[1]; // Holder for effectively final variable
+                final String[] currentTestMethodHolder = new String[1]; // Holder for effectively final variable
 
                 for (int i = 0; i < lines.length; i++) {
                     String line = lines[i].trim();
@@ -189,26 +189,26 @@ public class StandardTools {
                         testIdPart = testIdPart.substring(0, testIdPart.indexOf("Time elapsed:")).trim(); // Remove time part
                         if (testIdPart.contains(".")) {
                             int lastDot = testIdPart.lastIndexOf('.');
-                            currentTestClass = testIdPart.substring(0, lastDot);
-                            currentTestMethod = testIdPart.substring(lastDot + 1);
+                            currentTestClassHolder[0] = testIdPart.substring(0, lastDot);
+                            currentTestMethodHolder[0] = testIdPart.substring(lastDot + 1);
                         } else {
-                            currentTestClass = testIdPart; // Unlikely, but handle if no method name
-                            currentTestMethod = "unknownMethod";
+                            currentTestClassHolder[0] = testIdPart; // Unlikely, but handle if no method name
+                            currentTestMethodHolder[0] = "unknownMethod";
                         }
                     } else if (line.startsWith("Running ") && line.contains(".")) {
                          // Example: Running some.package.ClassName
                         String runningClass = line.substring("Running ".length()).trim();
                         // If we don't have a specific failing method yet, use this as the class
-                        if (currentTestClass == null || !currentTestClass.equals(runningClass)) {
-                           // currentTestClass = runningClass; // Prefer the one from FAILURE line if available
-                           // currentTestMethod = "unknownMethod"; // Reset method if class changes
+                        if (currentTestClassHolder[0] == null || !currentTestClassHolder[0].equals(runningClass)) {
+                           // currentTestClassHolder[0] = runningClass; // Prefer the one from FAILURE line if available
+                           // currentTestMethodHolder[0] = "unknownMethod"; // Reset method if class changes
                         }
                     }
 
 
                     // Look for error messages, typically following a <<< FAILURE! or indication of error
                     // This is a simplified approach: takes the next line that looks like an error message.
-                    if ((line.startsWith("java.") || line.startsWith("org.junit.") || line.startsWith("org.opentest4j.")) && currentTestClass != null) {
+                    if ((line.startsWith("java.") || line.startsWith("org.junit.") || line.startsWith("org.opentest4j.")) && currentTestClassHolder[0] != null) {
                         // Heuristic: if the previous line indicated a failure, or we are in a stack trace context
                         boolean isFailureContext = false;
                         if (i > 0) {
@@ -220,14 +220,14 @@ public class StandardTools {
                         if (isFailureContext || (line.matches("^\\s+at .+$") && i > 0 && lines[i-1].matches("^.+Exception: .+$"))) { // If it's part of a stack trace for an already identified failure
                             // This is a potential error message line
                             Map<String, String> failureDetails = new HashMap<>();
-                            failureDetails.put("testClass", currentTestClass);
-                            failureDetails.put("testMethod", currentTestMethod != null ? currentTestMethod : "unknownMethod");
+                            failureDetails.put("testClass", currentTestClassHolder[0]);
+                            failureDetails.put("testMethod", currentTestMethodHolder[0] != null ? currentTestMethodHolder[0] : "unknownMethod");
                             failureDetails.put("errorMessage", line);
 
                             // Avoid adding duplicate error messages for the same test method if error spans multiple lines
                             boolean alreadyExists = testReportList.stream().anyMatch(entry ->
-                                entry.get("testClass").equals(currentTestClass) &&
-                                entry.get("testMethod").equals(currentTestMethod) &&
+                                entry.get("testClass").equals(currentTestClassHolder[0]) &&
+                                entry.get("testMethod").equals(currentTestMethodHolder[0]) &&
                                 entry.get("errorMessage").startsWith(line.substring(0, Math.min(line.length(), 50))) // check start of message
                             );
                             if(!alreadyExists) {

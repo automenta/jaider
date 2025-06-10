@@ -39,15 +39,15 @@ public class StartupService {
      * @return true if normal startup should proceed, false if a restart has been triggered (e.g., after rollback).
      */
     public boolean performStartupValidationChecks() {
-        // Ensure model and model.getDir() are not null before proceeding
-        if (model == null || model.getDir() == null) {
+        // Ensure model and model.dir are not null before proceeding
+        if (model == null || model.dir == null) {
             logger.error("CRITICAL: JaiderModel or its directory is null. Cannot perform startup checks.");
             // Depending on application structure, this might be a fatal error.
             // For now, we allow startup to proceed, but this state should ideally not occur.
             return true;
         }
 
-        Path jaiderDir = model.getDir().resolve(".jaider");
+        Path jaiderDir = model.dir.resolve(".jaider");
         Path sentinelFile = jaiderDir.resolve(SENTINEL_FILE_NAME);
 
         if (Files.exists(sentinelFile)) {
@@ -77,7 +77,7 @@ public class StartupService {
                     // Assuming buildManagerService.executeMavenCommand can handle generic commands
                     // or a new method like executeCommand(String[] cmd, File dir) is available.
                     // The command string needs to be split into an array.
-                    BuildManagerService.BuildResult validationResult = this.buildManagerService.executeMavenCommand(runCommand.split("\\s+"), model.getDir());
+                    BuildManagerService.BuildResult validationResult = this.buildManagerService.executeMavenCommand(runCommand.split("\\s+"), model.dir.toFile()); // Corrected
 
                     if (validationResult.isSuccess()) {
                         model.addLog(AiMessage.from("[StartupService] Validation command successful for update to: " + filePath));
@@ -114,10 +114,10 @@ public class StartupService {
                             boolean revertSuccess;
                             if (commitHashFromSentinel != null && !commitHashFromSentinel.isBlank()) {
                                 logger.info("Attempting to revert committed update using commit hash: {}", commitHashFromSentinel);
-                                revertSuccess = this.gitService.revertLastCommittedUpdate(model.getDir(), commitHashFromSentinel);
+                                revertSuccess = this.gitService.revertLastCommittedUpdate(model.dir.toFile(), commitHashFromSentinel); // Corrected
                             } else {
                                 logger.warn("No commitHash found in sentinel for update to {}. Attempting file-based revert.", filePath);
-                                revertSuccess = this.gitService.revertChanges(model.getDir(), filePath); // Fallback to previous method
+                                revertSuccess = this.gitService.revertChanges(model.dir.toFile(), filePath); // Corrected
                             }
 
                             if (revertSuccess) {

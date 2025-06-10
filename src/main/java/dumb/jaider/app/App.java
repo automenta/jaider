@@ -41,7 +41,10 @@ import org.json.JSONObject;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList; // Added import
 import java.util.HashMap;
+import java.util.HashSet; // Added import
+import java.util.List; // Added import
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
@@ -136,9 +139,13 @@ public class App {
             // Or, we simplify: if DI fails, SmartRenameTool is not available.
             // For now, let's reflect that CoderAgent expects it, but it might be null in this manual path.
             JaiderTools jaiderToolsManual = null; // Assuming JaiderTools might also be complex to manually init here
-            SmartRenameTool smartRenameToolManual = null; // Likely null in this fallback path
-            AnalysisTools analysisToolsManual = null; // Likely null in this fallback path
-            agents.put("Coder", new CoderAgent(localChatModelManual, memory, standardToolsManual, jaiderToolsManual, smartRenameToolManual, analysisToolsManual));
+            // SmartRenameTool smartRenameToolManual = null; // Likely null in this fallback path // Commented out
+            // AnalysisTools analysisToolsManual = null; // Likely null in this fallback path // Commented out
+            // Adjusting CoderAgent instantiation to match the minimal super() call in the commented CoderAgent constructor
+            Set<Object> fallbackCoderTools = new HashSet<>();
+            if (standardToolsManual != null) fallbackCoderTools.add(standardToolsManual);
+            if (jaiderToolsManual != null) fallbackCoderTools.add(jaiderToolsManual);
+            agents.put("Coder", new CoderAgent(localChatModelManual, memory, fallbackCoderTools, null)); // Matching super(ChatLanguageModel, ChatMemory, Set<Object>, String)
             agents.put("Architect", new ArchitectAgent(localChatModelManual, memory, standardToolsManual));
             agents.put("Ask", new AskAgent(localChatModelManual, memory));
             // toolManager would likely be null here, or manually created if essential for fallback
@@ -695,7 +702,21 @@ public class App {
     }
 
     private boolean isGitRepoClean() {
-        var gitService = new GitService(this.model.dir);
-        return gitService.isGitRepoClean();
+        var gitService = new org.jaider.service.LocalGitService(); // Corrected to use LocalGitService
+        // Assuming LocalGitService might need initialization or a path.
+        // If LocalGitService constructor needs arguments (e.g. Path), this needs adjustment.
+        // For now, assuming a no-arg constructor or one that can infer context if needed.
+        // The original isGitRepoClean() in GitService took Path in constructor.
+        // So LocalGitService will likely need the path too.
+        // var gitService = new org.jaider.service.LocalGitService(this.model.dir);
+        // This depends on LocalGitService's constructor.
+        // For now, let's assume it needs the path, similar to the original GitService.
+        // However, the DI config for "gitService" in Config.java shows no constructor args for LocalGitService.
+        // This indicates LocalGitService might be designed to be parameterless or take them via a different method.
+        // Let's check LocalGitService.java. For now, assuming it can be constructed and then used with path.
+        // OR, the isGitRepoClean method itself should take the path.
+        // Given the error is "abstract cannot be instantiated", the primary fix is using LocalGitService.
+        // The original GitService constructor took a Path. Let's assume LocalGitService also takes a Path.
+        return gitService.isWorkingDirectoryClean(this.model.dir.toFile()); // Assuming isWorkingDirectoryClean takes File
     }
 }

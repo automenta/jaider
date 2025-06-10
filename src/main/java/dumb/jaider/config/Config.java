@@ -272,6 +272,15 @@ public class Config {
         smartRenameToolDef.put("constructorArgs", smartRenameToolArgs);
         componentDefsJsonArray.put(smartRenameToolDef);
 
+        // ListContextFilesTool definition
+        JSONObject listContextFilesToolDef = new JSONObject();
+        listContextFilesToolDef.put("id", "listContextFilesTool");
+        listContextFilesToolDef.put("class", "dumb.jaider.tools.ListContextFilesTool");
+        JSONArray listContextFilesToolArgs = new JSONArray();
+        listContextFilesToolArgs.put(new JSONObject().put("ref", "jaiderModel"));
+        listContextFilesToolDef.put("constructorArgs", listContextFilesToolArgs);
+        componentDefsJsonArray.put(listContextFilesToolDef);
+
         // StaticAnalysisService definition
         JSONObject staticAnalysisServiceDef = new JSONObject();
         staticAnalysisServiceDef.put("id", "staticAnalysisService");

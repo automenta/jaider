@@ -137,7 +137,7 @@ public class SelfUpdateOrchestratorService {
         lock.lock();
         try {
             updateToApply = this.currentStagedUpdate;
-            projectRoot = (jaiderModel != null) ? jaiderModel.getDir() : null;
+            projectRoot = (jaiderModel != null) ? jaiderModel.dir.toFile() : null; // Corrected
 
             if (updateToApply == null) {
                 logger.error("User approval processed, but no staged update found. This should not happen if updateInProgress was true.");
@@ -267,9 +267,9 @@ public class SelfUpdateOrchestratorService {
         logger.info("Update processed for file: {}. Preparing to restart application.", updateToApply.getFilePath());
 
         // Add this block before calling restartService.restartApplication()
-        if (jaiderModel != null && jaiderModel.getDir() != null) {
+        if (jaiderModel != null && jaiderModel.dir != null) { // Corrected
             try {
-                Path jaiderDir = jaiderModel.getDir().resolve(".jaider");
+                Path jaiderDir = jaiderModel.dir.resolve(".jaider"); // Corrected
                 Files.createDirectories(jaiderDir); // Ensure .jaider directory exists
                 Path sentinelFile = jaiderDir.resolve("self_update_pending_validation.json");
 

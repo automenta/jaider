@@ -13,7 +13,7 @@ public interface LanguageAgnosticASTNode {
     /**
      * Gets the text content of this node from the source code.
      */
-    StringgetText();
+    String getText();
 
     /**
      * Gets the starting offset of this node in the source file.

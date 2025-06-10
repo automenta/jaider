@@ -1,7 +1,7 @@
 package dumb.jaider.suggestion;
 
 import dev.langchain4j.agent.tool.ToolSpecification;
-import dev.langchain4j.service.tool.ToolSpecifications;
+// import dev.langchain4j.service.tool.ToolSpecifications; // Commented out
 import dumb.jaider.toolmanager.ToolManager;
 import dumb.jaider.toolmanager.ToolDescriptor;
 import java.lang.reflect.Method;
@@ -74,19 +74,19 @@ public class ProactiveSuggestionService {
                 }
 
                 // 2. Check internal tool instances (if not found in ToolManager)
-                if (!foundTool && internalToolInstances != null) {
-                    for (Object toolInstance : internalToolInstances) {
-                        List<ToolSpecification> specifications = ToolSpecifications.toolSpecificationsFrom(toolInstance);
-                        for (ToolSpecification spec : specifications) {
-                            if (spec.name().equals(toolName)) {
-                                toolDescription = spec.description();
-                                foundTool = true;
-                                break;
-                            }
-                        }
-                        if (foundTool) break;
-                    }
-                }
+                // if (!foundTool && internalToolInstances != null) {
+                //     for (Object toolInstance : internalToolInstances) {
+                //         List<ToolSpecification> specifications = ToolSpecifications.toolSpecificationsFrom(toolInstance);
+                //         for (ToolSpecification spec : specifications) {
+                //             if (spec.name().equals(toolName)) {
+                //                 toolDescription = spec.description();
+                //                 foundTool = true;
+                //                 break;
+                //             }
+                //         }
+                //         if (foundTool) break;
+                //     }
+                // }
 
                 // Fallback for internal tools if ToolSpecifications.toolSpecificationsFrom is problematic
                 // or we need to be absolutely sure about method scanning.

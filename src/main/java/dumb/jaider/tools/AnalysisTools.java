@@ -30,7 +30,7 @@ public class AnalysisTools {
         }
 
         // Resolve targetPathStr relative to the project root from JaiderModel
-        Path projectDir = jaiderModel.getProjectDir();
+        Path projectDir = jaiderModel.dir; // Corrected
         if (projectDir == null) {
             // This case should ideally not happen if JaiderModel is always initialized with a dir.
             // Fallback to current working directory, or throw error.

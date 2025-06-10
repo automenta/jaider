@@ -44,11 +44,11 @@ public class BuildManagerService {
     }
 
     public BuildResult compileProject(JaiderModel jaiderModel) {
-        if (jaiderModel == null || jaiderModel.getDir() == null) {
+        if (jaiderModel == null || jaiderModel.dir == null) {
             logger.error("JaiderModel or its project directory is null. Cannot compile.");
             return new BuildResult(false, "Project directory is not configured.", -1);
         }
-        File projectDir = jaiderModel.getDir();
+        File projectDir = jaiderModel.dir.toFile(); // Corrected
         if (!projectDir.isDirectory()) {
             logger.error("Project directory does not exist or is not a directory: {}", projectDir.getAbsolutePath());
             return new BuildResult(false, "Project directory is invalid: " + projectDir.getAbsolutePath(), -1);
@@ -57,11 +57,11 @@ public class BuildManagerService {
     }
 
     public BuildResult packageProject(JaiderModel jaiderModel) {
-        if (jaiderModel == null || jaiderModel.getDir() == null) {
+        if (jaiderModel == null || jaiderModel.dir == null) {
             logger.error("JaiderModel or its project directory is null. Cannot package.");
             return new BuildResult(false, "Project directory is not configured.", -1);
         }
-        File projectDir = jaiderModel.getDir();
+        File projectDir = jaiderModel.dir.toFile(); // Corrected
         if (!projectDir.isDirectory()) {
             logger.error("Project directory does not exist or is not a directory: {}", projectDir.getAbsolutePath());
             return new BuildResult(false, "Project directory is invalid: " + projectDir.getAbsolutePath(), -1);
@@ -69,7 +69,7 @@ public class BuildManagerService {
         return executeMavenCommand(new String[]{"mvn", "package"}, projectDir);
     }
 
-    private BuildResult executeMavenCommand(String[] command, File projectDir) {
+    public BuildResult executeMavenCommand(String[] command, File projectDir) { // Changed to public
         logger.info("Executing Maven command: {} in directory: {}", Arrays.toString(command), projectDir.getAbsolutePath());
         StringBuilder output = new StringBuilder();
         ProcessBuilder processBuilder = new ProcessBuilder(command);

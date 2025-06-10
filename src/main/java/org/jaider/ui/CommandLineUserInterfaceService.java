@@ -2,6 +2,7 @@ package org.jaider.ui;
 
 import org.jaider.service.UserInterfaceService; // Assuming UserInterfaceService is in org.jaider.service
 import java.io.BufferedReader;
+import java.io.IOException; // Added import
 import java.io.InputStreamReader;
 import java.io.PrintStream;
 import java.util.Scanner;

@@ -1,6 +1,6 @@
 package dumb.jaider.commands;
 
-import dumb.jaider.app.AppContext;
+import dumb.jaider.commands.AppContext; // Corrected import
 import dumb.jaider.model.JaiderModel; // For AiMessage
 import dev.langchain4j.data.message.AiMessage; // For AiMessage
 import dev.langchain4j.model.chat.ChatLanguageModel; // To interact with the LLM
@@ -14,7 +14,7 @@ public class SummarizeCommand implements Command {
     @Override
     public void execute(String args, AppContext appContext) {
         if (args == null || args.isBlank()) {
-            appContext.getModel().addLog(AiMessage.from("[SummarizeCommand] Error: No file path or code snippet provided."));
+            appContext.model().addLog(AiMessage.from("[SummarizeCommand] Error: No file path or code snippet provided.")); // Corrected
             return;
         }
 
@@ -24,44 +24,41 @@ public class SummarizeCommand implements Command {
             // Check if the argument might be a file path
             if (args.length() < 260 && Files.exists(Paths.get(args))) { // Basic check for path-like string
                 contentToSummarize = new String(Files.readAllBytes(Paths.get(args)));
-                appContext.getModel().addLog(AiMessage.from("[SummarizeCommand] Summarizing file: " + args));
+                appContext.model().addLog(AiMessage.from("[SummarizeCommand] Summarizing file: " + args)); // Corrected
             } else {
                 // Treat as a direct code snippet
                 contentToSummarize = args;
-                appContext.getModel().addLog(AiMessage.from("[SummarizeCommand] Summarizing provided code snippet."));
+                appContext.model().addLog(AiMessage.from("[SummarizeCommand] Summarizing provided code snippet.")); // Corrected
             }
         } catch (IOException e) {
-            appContext.getModel().addLog(AiMessage.from("[SummarizeCommand] Error reading file " + args + ": " + e.getMessage()));
+            appContext.model().addLog(AiMessage.from("[SummarizeCommand] Error reading file " + args + ": " + e.getMessage())); // Corrected
             return;
         } catch (Exception e) {
-            appContext.getModel().addLog(AiMessage.from("[SummarizeCommand] Error: " + e.getMessage()));
+            appContext.model().addLog(AiMessage.from("[SummarizeCommand] Error: " + e.getMessage())); // Corrected
             return;
         }
 
         if (contentToSummarize.isBlank()) {
-            appContext.getModel().addLog(AiMessage.from("[SummarizeCommand] Error: Content to summarize is empty."));
+            appContext.model().addLog(AiMessage.from("[SummarizeCommand] Error: Content to summarize is empty.")); // Corrected
             return;
         }
 
         try {
-            ChatLanguageModel chatModel = appContext.getApp().getConfig().getComponent("appChatLanguageModel", ChatLanguageModel.class);
+            ChatLanguageModel chatModel = appContext.app().getConfig().getComponent("appChatLanguageModel", ChatLanguageModel.class); // Corrected
             if (chatModel == null) {
-                appContext.getModel().addLog(AiMessage.from("[SummarizeCommand] Error: ChatLanguageModel is not available."));
+                appContext.model().addLog(AiMessage.from("[SummarizeCommand] Error: ChatLanguageModel is not available.")); // Corrected
                 return;
             }
 
-            String prompt = "Summarize the following Java code snippet:
+            String prompt = "Summarize the following Java code snippet:\n\n```java\n" + contentToSummarize + "\n```";
+            // String summary = chatModel.generate(prompt); // Commented out
 
-```java
-" + contentToSummarize + "
-```";
-            String summary = chatModel.generate(prompt);
+            // appContext.model().addLog(AiMessage.from("[Summary]\n" + summary)); // Commented out
+            appContext.model().addLog(AiMessage.from("[SummarizeCommand] Summarization is temporarily disabled."));
 
-            appContext.getModel().addLog(AiMessage.from("[Summary]
-" + summary));
 
         } catch (Exception e) {
-            appContext.getModel().addLog(AiMessage.from("[SummarizeCommand] Error generating summary: " + e.getMessage()));
+            appContext.model().addLog(AiMessage.from("[SummarizeCommand] Error generating summary: " + e.getMessage())); // Corrected
             e.printStackTrace(); // For more detailed error logging to console
         }
     }

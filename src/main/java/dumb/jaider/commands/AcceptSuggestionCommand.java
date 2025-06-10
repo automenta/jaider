@@ -1,6 +1,6 @@
 package dumb.jaider.commands;
 
-import dumb.jaider.app.AppContext;
+import dumb.jaider.commands.AppContext; // Corrected import
 import dumb.jaider.model.JaiderModel;
 import dumb.jaider.suggestion.ActiveSuggestion;
 import dumb.jaider.ui.UI;
@@ -10,20 +10,20 @@ import java.util.List;
 
 public class AcceptSuggestionCommand implements Command {
 
-    @Override
+    // @Override // Commented out
     public String name() {
         return "/accept";
     }
 
-    @Override
+    // @Override // Commented out
     public String description() {
         return "Accepts a proactive suggestion by its display number (e.g., /accept 1).";
     }
 
-    @Override
+    // @Override // Commented out
     public void execute(String args, AppContext context) {
-        JaiderModel model = context.getModel();
-        UI ui = context.getUi();
+        JaiderModel model = context.model(); // Corrected accessor
+        UI ui = context.ui(); // Corrected accessor
 
         if (args == null || args.isBlank()) {
             model.addLog(AiMessage.from("[Jaider] Please provide the number of the suggestion to accept. Usage: /accept <number>"));
