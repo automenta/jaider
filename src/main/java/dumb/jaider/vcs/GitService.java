@@ -2,12 +2,29 @@ package dumb.jaider.vcs;
 
 import org.eclipse.jgit.api.Git;
 import org.eclipse.jgit.api.errors.GitAPIException;
+import org.eclipse.jgit.api.Status;
+import org.eclipse.jgit.lib.Repository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
+import java.io.File;
+// Unused imports:
+// import org.eclipse.jgit.treewalk.FileTreeIterator;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
+import org.eclipse.jgit.lib.ObjectId;
+import org.eclipse.jgit.lib.FileMode;
+import org.eclipse.jgit.treewalk.TreeWalk;
+import org.eclipse.jgit.treewalk.filter.PathFilter;
 
 public class GitService {
+    private static final Logger logger = LoggerFactory.getLogger(GitService.class);
     private final Path dir;
 
     public GitService(Path dir) {
@@ -43,11 +60,13 @@ public class GitService {
         try (var git = Git.open(dir.resolve(".git").toFile())) {
             return git.status().call().isClean();
         } catch (IOException | GitAPIException e) {
-            System.err.println("Not a git repository or git error during isClean check: " + e.getMessage());
-            return true;
+            // It's common for this to be called on non-git dirs, so debug or trace might be better
+            // For now, let's use warn, but this could be noisy if routinely called on non-git dirs.
+            logger.warn("Not a git repository or git error during isClean check for directory '{}': {}", dir, e.getMessage());
+            return true; // Defaulting to "clean" (or effectively, "not a concern for git") if not a repo or error
         } catch (Exception e) {
-            System.err.println("Unexpected error during Git operation in isClean check: " + e.getMessage());
-            return true;
+            logger.error("Unexpected error during Git operation in isClean check for directory '{}': {}", dir, e.getMessage(), e);
+            return true; // Defaulting to "clean" in case of unexpected errors
         }
     }
 
@@ -69,5 +88,74 @@ public class GitService {
             }
             return "Failed to undo changes for file: " + relativeFilePath + " - " + e.getMessage();
         }
+    }
+
+    public List<String> listFiles(String relativePath) throws IOException, GitAPIException {
+        Set<String> results = new HashSet<>();
+        // Normalize relativePath: null or empty means root, ensure no leading/trailing slashes for directory logic later
+        String normalizedPath = relativePath == null ? "" : relativePath.trim();
+        if (normalizedPath.startsWith("/")) {
+            normalizedPath = normalizedPath.substring(1);
+        }
+        if (normalizedPath.endsWith("/")) {
+            normalizedPath = normalizedPath.substring(0, normalizedPath.length() - 1);
+        }
+
+        try (Repository repository = Git.open(dir.toFile()).getRepository();
+             TreeWalk treeWalk = new TreeWalk(repository)) {
+
+            ObjectId head = repository.resolve("HEAD^{tree}");
+            if (head == null) {
+                logger.warn("No HEAD commit found in repository at {}. Cannot list files.", dir);
+                return new ArrayList<>(); // Empty repository or no commits
+            }
+            treeWalk.addTree(head);
+            treeWalk.setRecursive(false); // We only want one level deep from the relativePath
+
+            if (!normalizedPath.isEmpty()) {
+                // Filter by the given path. If normalizedPath is a directory, this will enter it.
+                // If it's a file, it will position on that file.
+                PathFilter pathFilter = PathFilter.create(normalizedPath);
+                treeWalk.setFilter(pathFilter);
+
+                // Need to advance treewalk to the first match of the pathfilter.
+                // If the path doesn't exist, treeWalk.next() after setFilter might return false immediately or after a few calls.
+                boolean foundPath = false;
+                while (treeWalk.next()) {
+                    if (treeWalk.getPathString().equals(normalizedPath) || treeWalk.getPathString().startsWith(normalizedPath + "/")) {
+                        foundPath = true;
+                        break;
+                    }
+                }
+                if (!foundPath) {
+                     logger.debug("Path '{}' not found in Git repository at {}.", normalizedPath, dir);
+                     return new ArrayList<>(); // Path does not exist
+                }
+                // If the path itself is a file, list only that file
+                if (treeWalk.getFileMode(0) != FileMode.TREE) {
+                    results.add(treeWalk.getPathString());
+                    return new ArrayList<>(results);
+                }
+                // If it's a directory, we need to re-walk its contents for one level
+                treeWalk.enterSubtree();
+            }
+
+            // Now, treeWalk is either at the root or inside the specified directory (normalizedPath)
+            while (treeWalk.next()) {
+                String pathString = treeWalk.getPathString();
+                if (treeWalk.getFileMode(0) == FileMode.TREE) {
+                    results.add(pathString + "/");
+                } else {
+                    results.add(pathString);
+                }
+            }
+        } catch (org.eclipse.jgit.errors.RepositoryNotFoundException e) {
+            logger.warn("Attempted to list files on a non-Git directory: {}", dir, e);
+            throw e; // Re-throw, or return empty list if that's preferred for non-repos
+        } catch (IOException | GitAPIException e) {
+            logger.error("Error listing files in Git repository at {}: {}", dir, e.getMessage(), e);
+            throw e; // Re-throw
+        }
+        return results.stream().sorted().collect(Collectors.toList());
     }
 }

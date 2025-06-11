@@ -1,0 +1,34 @@
+{
+    "toolName": "Semgrep",
+    "displayName": "Semgrep SAST",
+    "description": "Fast, open-source, static analysis for finding bugs and enforcing code standards.",
+    "version": "latest",
+    "homepageUrl": "https.semgrep.dev",
+    "availabilityCheckCommand": "semgrep --version",
+    "availabilityCheckExitCode": 0,
+    "installationCommands": {
+        "linux": [
+            "python3 -m pip install semgrep"
+        ],
+        "macos": [
+            "brew install semgrep"
+        ],
+        "windows": [
+            "python -m pip install semgrep"
+        ],
+        "any": [
+            "pip install semgrep"
+        ]
+    },
+    "lmInstallationQueries": [
+        "how to install semgrep cli",
+        "semgrep installation instructions"
+    ],
+    "defaultConfig": {
+        "semgrepConfig": "auto",
+        "outputFormat": "json"
+    },
+    "category": "static-analyzer",
+    "analysisCommandPattern": "semgrep scan --config {semgrepConfig} --json {targetPath}",
+    "resultsParserClass": "dumb.jaider.staticanalysis.SemgrepResultsParser"
+}

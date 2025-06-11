@@ -121,8 +121,9 @@ public class LlmProviderFactory {
                     .baseUrl(config.genericOpenaiBaseUrl)
                     .modelName(config.genericOpenaiModelName);
 
-            if (config.genericOpenaiApiKey != null && !config.genericOpenaiApiKey.isEmpty()) {
-                model.addLog(AiMessage.from("[Jaider] INFO: genericOpenaiApiKey is set in config, but the current OllamaChatModel builder may not use it for Bearer token authentication. API key might need to be included in baseUrl or handled by a proxy if required by the endpoint."));
+            String apiKey = config.getGenericOpenaiApiKey();
+            if (apiKey != null && !apiKey.isEmpty()) {
+                model.addLog(AiMessage.from("[Jaider] INFO: Generic OpenAI API key found via configuration. Note: the current OllamaChatModel builder may not use it directly for Bearer token authentication. Ensure your generic OpenAI endpoint is secured appropriately or uses a different mechanism if it requires API key authentication. API key might need to be included in baseUrl or handled by a proxy if required by the endpoint."));
             }
 
             this.chatModel = builder.build();

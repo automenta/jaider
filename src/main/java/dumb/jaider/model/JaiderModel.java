@@ -35,6 +35,9 @@ public class JaiderModel {
     public String lastAppliedDiff = null;
     public String mode = "Coder";
 
+    private String[] originalArgs;
+    private List<dumb.jaider.suggestion.ActiveSuggestion> activeSuggestions = new ArrayList<>(); // Changed for actionable suggestions
+
     public JaiderModel() {
         this.dir = Paths.get("").toAbsolutePath();
     }
@@ -79,5 +82,36 @@ public class JaiderModel {
         } catch (IOException e) {
             return String.format("Error reading file %s: %s", path, e.getMessage());
         }
+    }
+
+    public String[] getOriginalArgs() {
+        return originalArgs;
+    }
+
+    public void setOriginalArgs(String[] originalArgs) {
+        this.originalArgs = originalArgs;
+    }
+
+    public List<dumb.jaider.suggestion.ActiveSuggestion> getActiveSuggestions() {
+        return activeSuggestions;
+    }
+
+    public void setActiveSuggestions(List<dumb.jaider.suggestion.ActiveSuggestion> activeSuggestions) {
+        this.activeSuggestions = activeSuggestions;
+    }
+
+    public void clearActiveSuggestions() {
+        if (this.activeSuggestions != null) {
+            this.activeSuggestions.clear();
+        }
+    }
+
+    public com.google.common.collect.ImmutableList<String> getContextFilePaths() {
+        if (files == null || files.isEmpty()) {
+            return com.google.common.collect.ImmutableList.of();
+        }
+        return files.stream()
+                .map(path -> dir.relativize(path).toString())
+                .collect(com.google.common.collect.ImmutableList.toImmutableList());
     }
 }
