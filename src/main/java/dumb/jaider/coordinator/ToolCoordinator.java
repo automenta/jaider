@@ -1,6 +1,7 @@
 package dumb.jaider.coordinator;
 
 import dumb.jaider.tooling.Tool;
+
 import java.util.List;
 import java.util.Map;
 

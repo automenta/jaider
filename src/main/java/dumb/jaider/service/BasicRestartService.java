@@ -51,25 +51,20 @@ public class BasicRestartService implements RestartService {
                 }
                 // Attempt to parse the main class from sun.java.command
                 String[] commandParts = mainClass.split("\\s+");
+                // Main class
                 if (commandParts[0].toLowerCase().endsWith(".jar")) { // It was actually a jar
                      logger.info("sun.java.command indicates JAR: {}. Switching to JAR restart.", commandParts[0]);
-                     command.set(command.size() -1, "-jar"); // remove javaBin, add -jar
-                     command.add(commandParts[0]); // jar path
-                     // Add other args from sun.java.command if any, before originalArgs
-                     for(int i=1; i<commandParts.length; i++) {
-                        command.add(commandParts[i]);
-                     }
+                    command.set(0, "-jar"); // remove javaBin, add -jar
+                    // Add other args from sun.java.command if any, before originalArgs
                 } else {
                     // Assuming commandParts[0] is the main class
                     logger.info("Attempting restart with main class: {} (requires classpath to be set correctly).", commandParts[0]);
                     command.add("-cp");
                     command.add(System.getProperty("java.class.path"));
-                    command.add(commandParts[0]); // Main class
                     // Add other args from sun.java.command if any, before originalArgs
-                     for(int i=1; i<commandParts.length; i++) {
-                        command.add(commandParts[i]);
-                     }
                 }
+                command.add(commandParts[0]); // jar path
+                command.addAll(Arrays.asList(commandParts).subList(1, commandParts.length));
             }
 
             if (originalArgs != null) {

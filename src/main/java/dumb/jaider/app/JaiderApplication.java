@@ -13,12 +13,7 @@ import java.util.Scanner;
 
 public class JaiderApplication {
 
-    private static JaiderModel jaiderModel;
     private static CommandLineUserInterfaceService uiService;
-    private static LocalGitService gitService;
-    private static BuildManagerService buildManagerService;
-    private static BasicRestartService restartService;
-    private static SelfUpdateOrchestratorService selfUpdateOrchestratorService;
     private static JaiderTools jaiderTools; // The tool the LLM would use
 
     public static void main(String[] args) {
@@ -26,20 +21,21 @@ public class JaiderApplication {
 
         // 1. Initialize Model and Services
         // Initialize JaiderModel with the project directory
-        jaiderModel = new JaiderModel(Paths.get(".").toAbsolutePath());
+        JaiderModel jaiderModel = new JaiderModel(Paths.get(".").toAbsolutePath());
         jaiderModel.setOriginalArgs(args);
         // TODO: Set the project directory correctly. For now, using current directory.
         // This needs to be the root of the Maven project Jaider is working on (which is Jaider itself for self-update)
-        System.out.println("Project directory set to: " + jaiderModel.dir.toAbsolutePath().toString());
+        System.out.println("Project directory set to: " + jaiderModel.dir.toAbsolutePath());
 
         System.out.println("SELF-UPDATE TARGET MARKER: This line is a target for modification."); // Marker for diff
 
         // uiService = new CommandLineUserInterfaceService(); // Commented out
-        gitService = new LocalGitService();
-        buildManagerService = new BuildManagerService();
-        restartService = new BasicRestartService();
+        LocalGitService gitService = new LocalGitService();
+        BuildManagerService buildManagerService = new BuildManagerService();
+        BasicRestartService restartService = new BasicRestartService();
 
-        selfUpdateOrchestratorService = new SelfUpdateOrchestratorService(
+        // uiService, // Commented out
+        SelfUpdateOrchestratorService selfUpdateOrchestratorService = new SelfUpdateOrchestratorService(
                 jaiderModel,
                 null, // uiService, // Commented out
                 buildManagerService,
@@ -104,17 +100,18 @@ public class JaiderApplication {
         // A simple diff: add a comment.
         // IMPORTANT: The line numbers in the diff must match the target file's current state.
         // This diff is just an example and likely WON'T apply cleanly without adjustment.
-        String diffContent = "<<<<<<< SEARCH\n" +
-                             "        System.out.println(\"Jaider Application Starting...\");\n" +
-                             "======= SEARCH\n" +
-                             "        System.out.println(\"Jaider Application Starting...\");\n" +
-                             "        // This is a self-update test comment!\n" +
-                             "        System.out.println(\"Project directory set to: \" + jaiderModel.getDir().getAbsolutePath());\n" +
-                             "======= REPLACE\n" +
-                             "        System.out.println(\"Jaider Application Starting...\");\n" +
-                             "        // This is a self-update test comment, applied!\n" +
-                             "        System.out.println(\"Project directory set to: \" + jaiderModel.getDir().getAbsolutePath());\n" +
-                             ">>>>>>> REPLACE";
+        String diffContent = """
+                <<<<<<< SEARCH
+                        System.out.println("Jaider Application Starting...");
+                ======= SEARCH
+                        System.out.println("Jaider Application Starting...");
+                        // This is a self-update test comment!
+                        System.out.println("Project directory set to: " + jaiderModel.getDir().getAbsolutePath());
+                ======= REPLACE
+                        System.out.println("Jaider Application Starting...");
+                        // This is a self-update test comment, applied!
+                        System.out.println("Project directory set to: " + jaiderModel.getDir().getAbsolutePath());
+                >>>>>>> REPLACE""";
 
         // A more robust diff for testing that adds a new line:
         // Assuming `jaiderModel.setDir(new File("."));` is line 30 (example)
@@ -129,14 +126,15 @@ public class JaiderApplication {
 
         // A diff to add a new print statement:
         diffContent =
-            "<<<<<<< SEARCH\n" +
-            "        jaiderModel.setDir(new File(\".\")); \n" +
-            "        System.out.println(\"Project directory set to: \" + jaiderModel.getDir().getAbsolutePath());\n" +
-            "=======\n" +
-            "        jaiderModel.setDir(new File(\".\")); \n" +
-            "        System.out.println(\"Jaider Self-Update: A new line added here!\"); // Added by self-update\n" +
-            "        System.out.println(\"Project directory set to: \" + jaiderModel.getDir().getAbsolutePath());\n" +
-            ">>>>>>> REPLACE";
+                """
+                        <<<<<<< SEARCH
+                                jaiderModel.setDir(new File("."));\s
+                                System.out.println("Project directory set to: " + jaiderModel.getDir().getAbsolutePath());
+                        =======
+                                jaiderModel.setDir(new File("."));\s
+                                System.out.println("Jaider Self-Update: A new line added here!"); // Added by self-update
+                                System.out.println("Project directory set to: " + jaiderModel.getDir().getAbsolutePath());
+                        >>>>>>> REPLACE""";
 
 
         System.out.println("Simulating LLM call to jaiderTools.proposeSelfUpdate...");

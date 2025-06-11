@@ -35,7 +35,7 @@ class IndexCommandTest {
     @Mock
     private AppContext appContext;
     @Spy
-    private JaiderModel model = new JaiderModel(Paths.get("target/test-project-index"));
+    private final JaiderModel model = new JaiderModel(Paths.get("target/test-project-index"));
     @Mock
     private App app;
     @Mock

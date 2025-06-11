@@ -1,10 +1,9 @@
 package dumb.jaider.commands;
 
-import dumb.jaider.commands.AppContext; // Corrected import
+import dev.langchain4j.data.message.AiMessage;
 import dumb.jaider.model.JaiderModel;
 import dumb.jaider.suggestion.ActiveSuggestion;
 import dumb.jaider.ui.UI;
-import dev.langchain4j.data.message.AiMessage;
 
 import java.util.List;
 
@@ -43,14 +42,14 @@ public class AcceptSuggestionCommand implements Command {
 
             ActiveSuggestion foundSuggestion = null;
             for (ActiveSuggestion activeSuggestion : activeSuggestions) {
-                if (activeSuggestion.getDisplayNumber() == suggestionNumber) {
+                if (activeSuggestion.displayNumber() == suggestionNumber) {
                     foundSuggestion = activeSuggestion;
                     break;
                 }
             }
 
             if (foundSuggestion != null) {
-                String prefillCommand = foundSuggestion.getPrefillCommand();
+                String prefillCommand = foundSuggestion.prefillCommand();
                 ui.setInputText(prefillCommand); // This method needs to be added to UI and TUI
                 model.addLog(AiMessage.from(String.format("[Jaider] Prefilled input with suggestion %d: %s",
                         suggestionNumber, prefillCommand)));

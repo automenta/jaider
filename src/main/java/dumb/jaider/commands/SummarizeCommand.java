@@ -1,9 +1,7 @@
 package dumb.jaider.commands;
 
-import dumb.jaider.commands.AppContext; // Corrected import
-import dumb.jaider.model.JaiderModel; // For AiMessage
-import dev.langchain4j.data.message.AiMessage; // For AiMessage
-import dev.langchain4j.model.chat.ChatLanguageModel; // To interact with the LLM
+import dev.langchain4j.data.message.AiMessage;
+import dev.langchain4j.model.chat.ChatLanguageModel;
 
 import java.io.IOException;
 import java.nio.file.Files;

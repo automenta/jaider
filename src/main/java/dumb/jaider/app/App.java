@@ -28,6 +28,7 @@ import dumb.jaider.toolmanager.ToolManager;
 import dumb.jaider.tools.JaiderTools;
 import dumb.jaider.tools.StandardTools;
 import dumb.jaider.ui.UI;
+import org.jetbrains.annotations.NotNull;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.slf4j.Logger;
@@ -134,8 +135,7 @@ public class App {
             // AnalysisTools analysisToolsManual = null; // Likely null in this fallback path // Commented out
             // Adjusting CoderAgent instantiation to match the minimal super() call in the commented CoderAgent constructor
             Set<Object> fallbackCoderTools = new HashSet<>();
-            if (standardToolsManual != null) fallbackCoderTools.add(standardToolsManual);
-            if (jaiderToolsManual != null) fallbackCoderTools.add(jaiderToolsManual);
+            fallbackCoderTools.add(standardToolsManual);
             agents.put("Coder", new CoderAgent(localChatModelManual, memory, fallbackCoderTools, null)); // Matching super(ChatLanguageModel, ChatMemory, Set<Object>, String)
             agents.put("Architect", new ArchitectAgent(localChatModelManual, memory, standardToolsManual));
             agents.put("Ask", new AskAgent(localChatModelManual, memory));
@@ -168,7 +168,7 @@ public class App {
 
 
                 agents.clear(); // Clear old agent instances
-                agents.clear(); // Clear old agent instances
+                // Clear old agent instances
                 agents.put("Coder", config.getComponent("coderAgent", Agent.class));
                 agents.put("Architect", config.getComponent("architectAgent", Agent.class));
                 agents.put("Ask", config.getComponent("askAgent", Agent.class));
@@ -201,7 +201,7 @@ public class App {
                     }
 
                     // Instantiate StartupService after its dependencies are fetched
-                    if (this.model != null && this.config != null && this.buildManagerService != null && this.gitService != null && this.restartService != null) {
+                    if (this.buildManagerService != null && this.gitService != null && this.restartService != null) {
                         this.startupService = new StartupService(this.model, this.config, this.buildManagerService, this.gitService, this.restartService);
                         logger.info("StartupService initialized successfully.");
                     } else {
@@ -370,7 +370,7 @@ public class App {
                 for (ActiveSuggestion activeSuggestion : activeSuggestions) {
                     // Log suggestion to chat - might need a specific message type or formatting
                     // For now, using the original suggestion's text
-                    model.addLog(AiMessage.from("[Jaider Suggests] " + activeSuggestion.getOriginalSuggestion().getSuggestionText()));
+                    model.addLog(AiMessage.from("[Jaider Suggests] " + activeSuggestion.originalSuggestion().suggestionText()));
                 }
             }
 
@@ -566,13 +566,7 @@ public class App {
         if (diffApplied && config.runCommand != null && !config.runCommand.isBlank()) {
             state = State.WAITING_USER_CONFIRMATION;
 
-            String confirmationQuery;
-            if (this.lastValidationPreference == null) {
-                confirmationQuery = String.format("Agent applied a diff. Run configured validation command (`%s`)?", config.runCommand);
-            } else {
-                confirmationQuery = String.format("Agent applied a diff. Your previous choice was to %s validation. Run configured validation command (`%s`)?",
-                                (this.lastValidationPreference ? "run" : "not run"), config.runCommand);
-            }
+            var confirmationQuery = getString();
 
             ui.confirm("Run Validation?", confirmationQuery).thenAccept(approved -> {
                 this.lastValidationPreference = approved; // Store the user's current choice
@@ -585,6 +579,18 @@ public class App {
         } else {
             finishTurn(request, toolResult);
         }
+    }
+
+    @NotNull
+    private String getString() {
+        String confirmationQuery;
+        if (this.lastValidationPreference == null) {
+            confirmationQuery = String.format("Agent applied a diff. Run configured validation command (`%s`)?", config.runCommand);
+        } else {
+            confirmationQuery = String.format("Agent applied a diff. Your previous choice was to %s validation. Run configured validation command (`%s`)?",
+                    (this.lastValidationPreference ? "run" : "not run"), config.runCommand);
+        }
+        return confirmationQuery;
     }
 
     private String executeTool(ToolExecutionRequest request) {

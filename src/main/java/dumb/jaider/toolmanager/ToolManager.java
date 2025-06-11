@@ -1,29 +1,18 @@
 package dumb.jaider.toolmanager;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import dumb.jaider.tooling.Tool;
-// import dev.langchain4j.service.AiServices; // For LM integration later
-// import dumb.jaider.llm.LlmService; // Assuming an LlmService exists or will be created
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.nio.file.DirectoryStream;
+import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Files; // Added
-import java.nio.file.DirectoryStream; // Added
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-// Using org.json for parsing descriptor files for now
-import org.json.JSONObject;
-import org.json.JSONArray;
-import com.fasterxml.jackson.databind.ObjectMapper; // For more robust JSON later if needed
+import java.util.*;
 
 
 /**
@@ -99,7 +88,7 @@ public class ToolManager {
      * @return An unmodifiable map of tool names to their descriptors.
      */
     public Map<String, ToolDescriptor> getToolDescriptors() {
-        return java.util.Collections.unmodifiableMap(new HashMap<>(toolDescriptors));
+        return Map.copyOf(toolDescriptors);
     }
 
     /**
@@ -202,19 +191,19 @@ public class ToolManager {
 
                 int exitCode = process.waitFor();
 
-                if (stdout.length() > 0) {
-                    LOGGER.info("Stdout for command '{}':\n{}", command, stdout.toString());
+                if (!stdout.isEmpty()) {
+                    LOGGER.info("Stdout for command '{}':\n{}", command, stdout);
                 }
 
                 if (exitCode != 0) {
                     LOGGER.error("Installation command failed: '{}' with exit code {}", command, exitCode);
-                    if (stderr.length() > 0) {
-                        LOGGER.error("Stderr for command '{}':\n{}", command, stderr.toString());
+                    if (!stderr.isEmpty()) {
+                        LOGGER.error("Stderr for command '{}':\n{}", command, stderr);
                     }
                     return false;
                 } else {
-                    if (stderr.length() > 0) {
-                        LOGGER.warn("Stderr for command '{}' (exit code 0):\n{}", command, stderr.toString());
+                    if (!stderr.isEmpty()) {
+                        LOGGER.warn("Stderr for command '{}' (exit code 0):\n{}", command, stderr);
                     }
                 }
             } catch (IOException | InterruptedException e) {

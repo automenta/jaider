@@ -1,9 +1,9 @@
 package dumb.jaider.tools;
 
 import com.google.common.collect.ImmutableList;
-import dumb.jaider.model.JaiderModel; // Corrected import
-import dev.langchain4j.agent.tool.Tool; // Corrected import
 import com.google.errorprone.annotations.CheckReturnValue;
+import dev.langchain4j.agent.tool.Tool;
+import dumb.jaider.model.JaiderModel;
 
 /** Tool to list files in JaiderModel's context. */
 public final class ListContextFilesTool {

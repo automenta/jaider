@@ -86,7 +86,7 @@ public class GitService {
         }
     }
 
-    public List<String> listFiles(String relativePath) throws IOException, GitAPIException {
+    public List<String> listFiles(String relativePath) throws IOException {
         Set<String> results = new HashSet<>();
         // Normalize relativePath: null or empty means root, ensure no leading/trailing slashes for directory logic later
         String normalizedPath = relativePath == null ? "" : relativePath.trim();

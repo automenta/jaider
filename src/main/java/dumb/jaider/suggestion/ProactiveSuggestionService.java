@@ -1,14 +1,13 @@
 package dumb.jaider.suggestion;
 
-import dev.langchain4j.agent.tool.ToolSpecification;
-// import dev.langchain4j.service.tool.ToolSpecifications; // Commented out
-import dumb.jaider.toolmanager.ToolManager;
+import dev.langchain4j.agent.tool.Tool;
 import dumb.jaider.toolmanager.ToolDescriptor;
+import dumb.jaider.toolmanager.ToolManager;
+
 import java.lang.reflect.Method;
 import java.util.ArrayList;
-import java.util.List;
 import java.util.Arrays;
-import dev.langchain4j.agent.tool.Tool;
+import java.util.List;
 
 
 public class ProactiveSuggestionService {

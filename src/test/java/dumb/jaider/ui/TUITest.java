@@ -39,6 +39,7 @@ class TUITest {
     Label statusBar;
 
     @Spy
+    final
     JaiderModel model = new JaiderModel(Paths.get("/test/project"));
 
     @Spy

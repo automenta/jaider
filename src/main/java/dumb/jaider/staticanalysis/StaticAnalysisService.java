@@ -2,6 +2,9 @@ package dumb.jaider.staticanalysis;
 
 import dumb.jaider.toolmanager.ToolDescriptor;
 import dumb.jaider.toolmanager.ToolManager;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.InputStreamReader;
@@ -12,9 +15,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Collectors;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 public class StaticAnalysisService {
     private static final Logger LOGGER = LoggerFactory.getLogger(StaticAnalysisService.class);
@@ -99,8 +99,8 @@ public class StaticAnalysisService {
         // This needs to be configurable per tool descriptor, or handled by the parser if it expects such behavior.
         // For now, we proceed to parsing even if exitCode is non-zero, as output might still contain results.
         LOGGER.info("{} execution finished with exit code: {}. Output length: {}", toolName, exitCode, rawOutput.length());
-        if(errorOutput.length() > 0){
-            LOGGER.warn("Error stream output from {}:\n{}", toolName, errorOutput.toString());
+        if (!errorOutput.isEmpty()) {
+            LOGGER.warn("Error stream output from {}:\n{}", toolName, errorOutput);
         }
 
 
@@ -108,8 +108,8 @@ public class StaticAnalysisService {
         if (parserClassName == null || parserClassName.isBlank()) {
             LOGGER.warn("No results parser class defined for tool: {}. Returning raw output if any.", toolName);
             // Depending on desired behavior, could throw exception or return a single issue with raw output.
-            if (rawOutput.length() > 0) {
-                 return List.of(new StaticAnalysisIssue(targetPath.toString(), 0, 0, "Raw output from " + toolName + ":\n" + rawOutput.toString() + (errorOutput.length() > 0 ? "\nErrors:\n" + errorOutput.toString() : ""), "RAW_OUTPUT", "INFO"));
+            if (!rawOutput.isEmpty()) {
+                return List.of(new StaticAnalysisIssue(targetPath.toString(), 0, 0, "Raw output from " + toolName + ":\n" + rawOutput + (!errorOutput.isEmpty() ? "\nErrors:\n" + errorOutput : ""), "RAW_OUTPUT", "INFO"));
             }
             return new ArrayList<>(); // No parser and no output
         }

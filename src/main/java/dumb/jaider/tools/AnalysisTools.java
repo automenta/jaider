@@ -1,9 +1,9 @@
 package dumb.jaider.tools;
 
 import dev.langchain4j.agent.tool.Tool;
+import dumb.jaider.model.JaiderModel;
 import dumb.jaider.staticanalysis.StaticAnalysisIssue;
 import dumb.jaider.staticanalysis.StaticAnalysisService;
-import dumb.jaider.model.JaiderModel; // Assuming JaiderModel is accessible for project root
 
 import java.nio.file.Path;
 import java.nio.file.Paths;

@@ -15,17 +15,12 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.io.BufferedReader;
-import java.util.ArrayList; // Keep one ArrayList
-import java.util.HashMap;
-import java.util.List; // Keep one List
-import java.util.Map;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
-// Removed duplicate ArrayList and List, Path and Files are already imported.
-import java.util.Set;
+import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -441,7 +436,7 @@ public class StandardTools {
                 if (!Files.exists(parentDir)) {
                     Files.createDirectories(parentDir);
                 } else if (!Files.isDirectory(parentDir)) {
-                    return "Error: Cannot create parent directory. A file with the same name as the parent directory already exists: " + parentDir.toString();
+                    return "Error: Cannot create parent directory. A file with the same name as the parent directory already exists: " + parentDir;
                 }
             }
 

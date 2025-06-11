@@ -16,28 +16,7 @@ public class BuildManagerService {
     private static final Logger logger = LoggerFactory.getLogger(BuildManagerService.class);
     private static final long MAVEN_TIMEOUT_SECONDS = 120; // 2 minutes timeout for Maven commands
 
-    public static class BuildResult {
-        private final boolean success;
-        private final String output;
-        private final int exitCode;
-
-        public BuildResult(boolean success, String output, int exitCode) {
-            this.success = success;
-            this.output = output;
-            this.exitCode = exitCode;
-        }
-
-        public boolean isSuccess() {
-            return success;
-        }
-
-        public String getOutput() {
-            return output;
-        }
-
-        public int getExitCode() {
-            return exitCode;
-        }
+    public record BuildResult(boolean success, String output, int exitCode) {
     }
 
     public BuildManagerService() {

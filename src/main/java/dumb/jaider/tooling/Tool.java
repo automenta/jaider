@@ -1,7 +1,5 @@
 package dumb.jaider.tooling;
 
-import java.util.Map;
-
 /**
  * Represents an abstract tool that can be executed by Jaider.
  */

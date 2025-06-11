@@ -20,22 +20,6 @@ public class LocalGitService implements GitService {
     private static final Logger logger = LoggerFactory.getLogger(LocalGitService.class);
     private static final long GIT_TIMEOUT_SECONDS = 30;
 
-    private static class CommandResult {
-        final int exitCode;
-        final String output;
-        final String error;
-
-        CommandResult(int exitCode, String output, String error) {
-            this.exitCode = exitCode;
-            this.output = output;
-            this.error = error;
-        }
-
-        boolean isSuccess() {
-            return exitCode == 0;
-        }
-    }
-
     private CommandResult executeGitCommand(File workingDirectory, List<String> commandParts) {
         logger.info("Executing Git command: {} in directory: {}", String.join(" ", commandParts), workingDirectory.getAbsolutePath());
 
@@ -64,18 +48,18 @@ public class LocalGitService implements GitService {
             if (!process.waitFor(GIT_TIMEOUT_SECONDS, TimeUnit.SECONDS)) {
                 logger.warn("Git command timed out: {}", String.join(" ", commandParts));
                 process.destroyForcibly();
-                return new CommandResult(-1, stdOutput.toString(), stdError.toString() + "\nError: Git command timed out.");
+                return new CommandResult(-1, stdOutput.toString(), stdError + "\nError: Git command timed out.");
             }
             exitCode = process.exitValue();
             logger.debug("Git command finished with exit code {}. Output: '{}', Error: '{}'", exitCode, stdOutput.toString().trim(), stdError.toString().trim());
 
         } catch (IOException e) {
             logger.error("IOException during Git command execution: {}. Command: {}", e.getMessage(), String.join(" ", commandParts), e);
-            return new CommandResult(-1, stdOutput.toString(), stdError.toString() + "\nError: IOException - " + e.getMessage());
+            return new CommandResult(-1, stdOutput.toString(), stdError + "\nError: IOException - " + e.getMessage());
         } catch (InterruptedException e) {
             logger.warn("Git command execution interrupted: {}. Command: {}", e.getMessage(), String.join(" ", commandParts), e);
             Thread.currentThread().interrupt();
-            return new CommandResult(-1, stdOutput.toString(), stdError.toString() + "\nError: Interrupted - " + e.getMessage());
+            return new CommandResult(-1, stdOutput.toString(), stdError + "\nError: Interrupted - " + e.getMessage());
         }
         return new CommandResult(exitCode, stdOutput.toString(), stdError.toString());
     }
@@ -90,7 +74,7 @@ public class LocalGitService implements GitService {
             tempDiffFile = File.createTempFile("jaider_diff_", ".patch", projectRoot); // Create in project root for simpler paths if git requires
             Path tempDiffPath = tempDiffFile.toPath();
             Files.writeString(tempDiffPath, diffContent, StandardOpenOption.WRITE);
-            logger.debug("Diff content written to temporary file: {}", tempDiffPath.toString());
+            logger.debug("Diff content written to temporary file: {}", tempDiffPath);
 
             // 2. Check if the diff applies cleanly (optional but good practice)
             List<String> checkCommand = new ArrayList<>(Arrays.asList("git", "apply", "--check", "--verbose", tempDiffPath.toString()));
@@ -119,6 +103,13 @@ public class LocalGitService implements GitService {
             if (tempDiffFile != null && !tempDiffFile.delete()) {
                 logger.warn("Failed to delete temporary diff file: {}", tempDiffFile.getAbsolutePath());
             }
+        }
+    }
+
+    private record CommandResult(int exitCode, String output, String error) {
+
+        boolean isSuccess() {
+            return exitCode == 0;
         }
     }
 

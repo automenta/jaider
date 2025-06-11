@@ -22,8 +22,6 @@ import java.util.List;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -117,7 +115,7 @@ class StaticAnalysisServiceTest {
             assertEquals(expectedIssues, actualIssues);
 
             // Verify ProcessBuilder was called correctly
-            ProcessBuilder constructedPb = mockedPbConstruction.constructed().get(0);
+            ProcessBuilder constructedPb = mockedPbConstruction.constructed().getFirst();
             verify(constructedPb).command(eq(List.of("semgrep", "scan", "--config", "auto", "--json", "/path/to/target")));
 
             // Verify that the parser was instantiated and used (implicitly tested by getting results)
@@ -156,7 +154,7 @@ class StaticAnalysisServiceTest {
 
             staticAnalysisService.runAnalysis(toolName, targetPath, runtimeOptions);
 
-            ProcessBuilder constructedPb = mockedPbConstruction.constructed().get(0);
+            ProcessBuilder constructedPb = mockedPbConstruction.constructed().getFirst();
             verify(constructedPb).command(eq(List.of("semgrep", "scan", "--config", "custom_rules", "--json", "/path/to/target")));
         }
     }
@@ -167,9 +165,7 @@ class StaticAnalysisServiceTest {
         String toolName = "UnknownTool";
         when(toolManager.getToolDescriptor(toolName)).thenReturn(null);
 
-        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
-            staticAnalysisService.runAnalysis(toolName, targetPath, Collections.emptyMap());
-        });
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> staticAnalysisService.runAnalysis(toolName, targetPath, Collections.emptyMap()));
         assertEquals("No descriptor found for tool: " + toolName, exception.getMessage());
     }
 
@@ -179,9 +175,7 @@ class StaticAnalysisServiceTest {
         when(toolManager.getToolDescriptor(toolName)).thenReturn(toolDescriptor);
         when(toolDescriptor.getCategory()).thenReturn("formatter"); // Not a static-analyzer
 
-        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
-            staticAnalysisService.runAnalysis(toolName, targetPath, Collections.emptyMap());
-        });
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> staticAnalysisService.runAnalysis(toolName, targetPath, Collections.emptyMap()));
         assertEquals("Tool " + toolName + " is not categorized as a static-analyzer.", exception.getMessage());
     }
 
@@ -192,9 +186,7 @@ class StaticAnalysisServiceTest {
         when(toolDescriptor.getCategory()).thenReturn("static-analyzer");
         when(toolManager.provisionTool(toolName)).thenReturn(false); // Provisioning fails
 
-        RuntimeException exception = assertThrows(RuntimeException.class, () -> {
-            staticAnalysisService.runAnalysis(toolName, targetPath, Collections.emptyMap());
-        });
+        RuntimeException exception = assertThrows(RuntimeException.class, () -> staticAnalysisService.runAnalysis(toolName, targetPath, Collections.emptyMap()));
         assertEquals("Tool " + toolName + " is not available or could not be installed.", exception.getMessage());
     }
 
@@ -206,9 +198,7 @@ class StaticAnalysisServiceTest {
         when(toolManager.provisionTool(toolName)).thenReturn(true);
         when(toolDescriptor.getAnalysisCommandPattern()).thenReturn(null); // Command pattern is missing
 
-        IllegalStateException exception = assertThrows(IllegalStateException.class, () -> {
-            staticAnalysisService.runAnalysis(toolName, targetPath, Collections.emptyMap());
-        });
+        IllegalStateException exception = assertThrows(IllegalStateException.class, () -> staticAnalysisService.runAnalysis(toolName, targetPath, Collections.emptyMap()));
         assertEquals("Analysis command pattern is not defined for tool: " + toolName, exception.getMessage());
     }
 
@@ -235,16 +225,14 @@ class StaticAnalysisServiceTest {
             when(process.getErrorStream()).thenReturn(new ByteArrayInputStream("".getBytes(StandardCharsets.UTF_8)));
             when(process.waitFor()).thenReturn(0);
 
-            Exception exception = assertThrows(Exception.class, () -> {
-                staticAnalysisService.runAnalysis(toolName, targetPath, Collections.emptyMap());
-            });
+            Exception exception = assertThrows(Exception.class, () -> staticAnalysisService.runAnalysis(toolName, targetPath, Collections.emptyMap()));
             assertTrue(exception.getMessage().contains("Error with results parser " + invalidParserClass));
-            assertTrue(exception.getCause() instanceof ClassNotFoundException);
+            assertInstanceOf(ClassNotFoundException.class, exception.getCause());
         }
     }
 
     @Test
-    void runAnalysis_processExecutionError() throws Exception {
+    void runAnalysis_processExecutionError() {
         String toolName = "Semgrep";
         when(toolManager.getToolDescriptor(toolName)).thenReturn(toolDescriptor);
         when(toolDescriptor.getCategory()).thenReturn("static-analyzer");
@@ -297,10 +285,10 @@ class StaticAnalysisServiceTest {
             List<StaticAnalysisIssue> issues = staticAnalysisService.runAnalysis(toolName, targetPath, Collections.emptyMap());
 
             assertEquals(1, issues.size());
-            StaticAnalysisIssue issue = issues.get(0);
-            assertEquals(targetPath.toString(), issue.getFilePath());
-            assertEquals("RAW_OUTPUT", issue.getRuleId());
-            assertTrue(issue.getMessage().contains(rawToolOutput));
+            StaticAnalysisIssue issue = issues.getFirst();
+            assertEquals(targetPath.toString(), issue.filePath());
+            assertEquals("RAW_OUTPUT", issue.ruleId());
+            assertTrue(issue.message().contains(rawToolOutput));
         }
     }
 }

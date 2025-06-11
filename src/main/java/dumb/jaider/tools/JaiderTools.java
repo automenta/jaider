@@ -11,7 +11,6 @@ import dumb.jaider.service.SelfUpdateOrchestratorService;
 
 public class JaiderTools {
 
-    private final JaiderModel jaiderModel; // Retained for future use, though not directly used in this version of proposeSelfUpdate
     private final SelfUpdateOrchestratorService selfUpdateOrchestratorService; // New dependency
 
     // private static final Pattern GIT_MERGE_DIFF_FORMAT_PATTERN = Pattern.compile(
@@ -29,7 +28,7 @@ public class JaiderTools {
         if (selfUpdateOrchestratorService == null) {
             throw new IllegalArgumentException("SelfUpdateOrchestratorService cannot be null.");
         }
-        this.jaiderModel = jaiderModel;
+        // Retained for future use, though not directly used in this version of proposeSelfUpdate
         this.selfUpdateOrchestratorService = selfUpdateOrchestratorService;
     }
 

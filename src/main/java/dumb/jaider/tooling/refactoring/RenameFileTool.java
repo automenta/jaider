@@ -2,14 +2,13 @@ package dumb.jaider.tooling.refactoring;
 
 import dumb.jaider.tooling.Tool;
 import dumb.jaider.tooling.ToolContext;
-import org.eclipse.jgit.api.Git; // Will use JGit for staging
+import org.eclipse.jgit.api.Git;
 import org.eclipse.jgit.lib.Repository;
 import org.eclipse.jgit.storage.file.FileRepositoryBuilder;
 
 import java.io.File;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 
 public class RenameFileTool implements Tool {

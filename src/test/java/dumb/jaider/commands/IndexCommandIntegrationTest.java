@@ -44,7 +44,7 @@ class IndexCommandIntegrationTest {
 
     // Inner class for testing
     static class DummyEmbeddingModel implements EmbeddingModel {
-        public List<TextSegment> segmentsPassedToEmbedAll = new ArrayList<>(); // Made public for easier access in tests
+        public final List<TextSegment> segmentsPassedToEmbedAll = new ArrayList<>(); // Made public for easier access in tests
 
         @Override
         public Response<Embedding> embed(String text) {

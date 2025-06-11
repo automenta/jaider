@@ -107,7 +107,7 @@ public class JaiderModel {
     }
 
     public com.google.common.collect.ImmutableList<String> getContextFilePaths() {
-        if (files == null || files.isEmpty()) {
+        if (files.isEmpty()) {
             return com.google.common.collect.ImmutableList.of();
         }
         return files.stream()

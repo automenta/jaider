@@ -30,9 +30,9 @@ public class DependencyInjectorTest {
     }
 
     public static class LiteralArgComponent {
-        String name;
-        int version;
-        boolean active;
+        final String name;
+        final int version;
+        final boolean active;
         long longVal;
         float floatVal;
         double doubleVal;
@@ -54,7 +54,7 @@ public class DependencyInjectorTest {
     }
 
     public static class RefArgComponent {
-        SimpleComponent dependency;
+        final SimpleComponent dependency;
         public RefArgComponent(SimpleComponent dep) { this.dependency = dep; }
     }
 
@@ -70,7 +70,7 @@ public class DependencyInjectorTest {
     }
 
     public static class InstanceFactoryProduct {
-        String type;
+        final String type;
         SimpleComponent dep;
         boolean flag;
         public InstanceFactoryProduct(String type) { this.type = type;}
@@ -89,12 +89,12 @@ public class DependencyInjectorTest {
     }
 
     public static class CircularA {
-        CircularB b;
+        final CircularB b;
         public CircularA(CircularB b) { this.b = b; }
     }
 
     public static class CircularB {
-        CircularA a;
+        final CircularA a;
         public CircularB(CircularA a) { this.a = a; }
     }
 

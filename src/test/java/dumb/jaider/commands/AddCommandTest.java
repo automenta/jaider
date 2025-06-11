@@ -29,7 +29,7 @@ class AddCommandTest {
     @Mock
     private AppContext appContext;
     @Spy // Use Spy for JaiderModel to have real fields initialized
-    private JaiderModel model = new JaiderModel(Paths.get("target/test-project-add"));
+    private final JaiderModel model = new JaiderModel(Paths.get("target/test-project-add"));
     @Mock
     private Config config;
     @Mock

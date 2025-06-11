@@ -99,7 +99,7 @@ public class TUI implements UI {
             // Display suggestions
             if (model.getActiveSuggestions() != null && !model.getActiveSuggestions().isEmpty()) {
                 var suggestionTexts = model.getActiveSuggestions().stream()
-                        .map(s -> String.format("[%d] %s?", s.getDisplayNumber(), s.getOriginalSuggestion().getSuggestedToolName())) // Use ActiveSuggestion
+                        .map(s -> String.format("[%d] %s?", s.displayNumber(), s.originalSuggestion().suggestedToolName())) // Use ActiveSuggestion
                         .collect(java.util.stream.Collectors.joining("  ")); // Use more space for readability
                 suggestionsLabel.setText("Suggestions: " + suggestionTexts + " (use /accept <num>)");
             } else {

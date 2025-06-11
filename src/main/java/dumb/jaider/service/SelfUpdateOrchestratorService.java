@@ -210,9 +210,9 @@ public class SelfUpdateOrchestratorService {
 
         // Step 2: Compile Project
         BuildManagerService.BuildResult compileResult = buildManagerService.compileProject(jaiderModel);
-        if (!compileResult.isSuccess()) {
-            jaiderModel.addLog(AiMessage.from("[Orchestrator] Project compilation failed. Output: " + compileResult.getOutput().lines().limit(5).collect(java.util.stream.Collectors.joining("\n")) + "\nAttempting to revert..."));
-            logger.error("Project compilation failed after update for file: {}. Output:\n{}", updateToApply.getFilePath(), compileResult.getOutput());
+        if (!compileResult.success()) {
+            jaiderModel.addLog(AiMessage.from("[Orchestrator] Project compilation failed. Output: " + compileResult.output().lines().limit(5).collect(java.util.stream.Collectors.joining("\n")) + "\nAttempting to revert..."));
+            logger.error("Project compilation failed after update for file: {}. Output:\n{}", updateToApply.getFilePath(), compileResult.output());
 
             boolean revertSuccess = gitService.revertChanges(projectRoot, updateToApply.getFilePath());
             if (revertSuccess) {
@@ -236,9 +236,9 @@ public class SelfUpdateOrchestratorService {
 
         // Step 3: Package Project (Optional but recommended)
         BuildManagerService.BuildResult packageResult = buildManagerService.packageProject(jaiderModel);
-        if (!packageResult.isSuccess()) {
-            jaiderModel.addLog(AiMessage.from("[Orchestrator] WARNING: Project packaging failed. Output: " + packageResult.getOutput().lines().limit(5).collect(java.util.stream.Collectors.joining("\n")) + "\nProceeding with restart."));
-            logger.warn("Project packaging failed for file: {}. Output:\n{}", updateToApply.getFilePath(), packageResult.getOutput());
+        if (!packageResult.success()) {
+            jaiderModel.addLog(AiMessage.from("[Orchestrator] WARNING: Project packaging failed. Output: " + packageResult.output().lines().limit(5).collect(java.util.stream.Collectors.joining("\n")) + "\nProceeding with restart."));
+            logger.warn("Project packaging failed for file: {}. Output:\n{}", updateToApply.getFilePath(), packageResult.output());
         } else {
             jaiderModel.addLog(AiMessage.from("[Orchestrator] Project packaged successfully."));
             logger.info("Project packaged successfully for file: {}", updateToApply.getFilePath());
@@ -248,53 +248,46 @@ public class SelfUpdateOrchestratorService {
         // For simplicity, let's make this conditional, e.g. based on a flag or always try
         boolean attemptCommit = true; // Could be a configuration
         String commitHash = null; // Initialize commitHash
-        if (attemptCommit) {
-            commitHash = gitService.commitChanges(projectRoot, updateToApply.getFilePath(), updateToApply.getCommitMessage());
-            if (commitHash == null || commitHash.isBlank()) {
-                jaiderModel.addLog(AiMessage.from("[Orchestrator] WARNING: Failed to commit changes for: " + updateToApply.getFilePath() + " or could not retrieve commit hash. Update applied and built. Manual commit recommended."));
-                logger.warn("Failed to commit changes for {} or retrieve commit hash. Proceeding with restart.", updateToApply.getFilePath());
-                // commitHash will remain null or blank
-            } else {
-                jaiderModel.addLog(AiMessage.from("[Orchestrator] Changes committed: " + updateToApply.getCommitMessage() + " (Hash: " + commitHash + ")"));
-                logger.info("Changes committed successfully for {}. Hash: {}", updateToApply.getFilePath(), commitHash);
-            }
+        commitHash = gitService.commitChanges(projectRoot, updateToApply.getFilePath(), updateToApply.getCommitMessage());
+        if (commitHash == null || commitHash.isBlank()) {
+            jaiderModel.addLog(AiMessage.from("[Orchestrator] WARNING: Failed to commit changes for: " + updateToApply.getFilePath() + " or could not retrieve commit hash. Update applied and built. Manual commit recommended."));
+            logger.warn("Failed to commit changes for {} or retrieve commit hash. Proceeding with restart.", updateToApply.getFilePath());
+            // commitHash will remain null or blank
+        } else {
+            jaiderModel.addLog(AiMessage.from("[Orchestrator] Changes committed: " + updateToApply.getCommitMessage() + " (Hash: " + commitHash + ")"));
+            logger.info("Changes committed successfully for {}. Hash: {}", updateToApply.getFilePath(), commitHash);
         }
 
         // Step 5: Prepare for Restart
-        String[] originalArgs = (jaiderModel != null) ? jaiderModel.getOriginalArgs() : new String[]{};
+        String[] originalArgs = jaiderModel.getOriginalArgs();
         jaiderModel.addLog(AiMessage.from("[Orchestrator] Update processed. Preparing to restart Jaider..."));
         logger.info("Update processed for file: {}. Preparing to restart application.", updateToApply.getFilePath());
 
         // Add this block before calling restartService.restartApplication()
-        if (jaiderModel != null && jaiderModel.dir != null) { // Corrected
-            try {
-                Path jaiderDir = jaiderModel.dir.resolve(".jaider"); // Corrected
-                Files.createDirectories(jaiderDir); // Ensure .jaider directory exists
-                Path sentinelFile = jaiderDir.resolve("self_update_pending_validation.json");
+        // Corrected
+        try {
+            Path jaiderDir = jaiderModel.dir.resolve(".jaider"); // Corrected
+            Files.createDirectories(jaiderDir); // Ensure .jaider directory exists
+            Path sentinelFile = jaiderDir.resolve("self_update_pending_validation.json");
 
-                JSONObject sentinelData = new JSONObject();
-                sentinelData.put("filePath", updateToApply.getFilePath());
-                sentinelData.put("commitMessage", updateToApply.getCommitMessage());
-                sentinelData.put("timestamp", System.currentTimeMillis());
-                sentinelData.put("attempt", 1);
-                if (commitHash != null && !commitHash.isBlank()) { // Add this check
-                    sentinelData.put("commitHash", commitHash);
-                }
-
-                Files.writeString(sentinelFile, sentinelData.toString(2)); // Write JSON string
-                logger.info("Created sentinel file for post-restart validation: {}", sentinelFile.toString());
-                // Replaced uiService.showMessage with jaiderModel.addLog
-                jaiderModel.addLog(AiMessage.from("[Orchestrator] Sentinel file for post-restart validation created: " + sentinelFile.toString()));
-            } catch (Exception e) {
-                logger.error("CRITICAL - Failed to write sentinel file for self-update validation: {}", e.getMessage(), e);
-                // Replaced uiService.showError with jaiderModel.addLog
-                jaiderModel.addLog(AiMessage.from("[Orchestrator] CRITICAL: Failed to write sentinel file: " + e.getMessage() + ". Post-restart validation may not occur."));
-                // Decide if restart should be aborted if sentinel cannot be written. For now, proceed with restart.
+            JSONObject sentinelData = new JSONObject();
+            sentinelData.put("filePath", updateToApply.getFilePath());
+            sentinelData.put("commitMessage", updateToApply.getCommitMessage());
+            sentinelData.put("timestamp", System.currentTimeMillis());
+            sentinelData.put("attempt", 1);
+            if (commitHash != null && !commitHash.isBlank()) { // Add this check
+                sentinelData.put("commitHash", commitHash);
             }
-        } else {
-            logger.error("CRITICAL - JaiderModel or project directory is null. Cannot write sentinel file.");
+
+            Files.writeString(sentinelFile, sentinelData.toString(2)); // Write JSON string
+            logger.info("Created sentinel file for post-restart validation: {}", sentinelFile);
+            // Replaced uiService.showMessage with jaiderModel.addLog
+            jaiderModel.addLog(AiMessage.from("[Orchestrator] Sentinel file for post-restart validation created: " + sentinelFile));
+        } catch (Exception e) {
+            logger.error("CRITICAL - Failed to write sentinel file for self-update validation: {}", e.getMessage(), e);
             // Replaced uiService.showError with jaiderModel.addLog
-            jaiderModel.addLog(AiMessage.from("[Orchestrator] CRITICAL: JaiderModel or project directory is null. Cannot write sentinel file."));
+            jaiderModel.addLog(AiMessage.from("[Orchestrator] CRITICAL: Failed to write sentinel file: " + e.getMessage() + ". Post-restart validation may not occur."));
+            // Decide if restart should be aborted if sentinel cannot be written. For now, proceed with restart.
         }
 
         // Step 6: Restart Application

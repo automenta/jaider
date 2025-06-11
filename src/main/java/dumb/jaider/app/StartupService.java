@@ -51,8 +51,8 @@ public class StartupService {
         Path sentinelFile = jaiderDir.resolve(SENTINEL_FILE_NAME);
 
         if (Files.exists(sentinelFile)) {
-            model.addLog(AiMessage.from("[StartupService] Pending self-update validation sentinel file found: " + sentinelFile.toString()));
-            logger.info("Pending self-update validation sentinel file found: {}", sentinelFile.toString());
+            model.addLog(AiMessage.from("[StartupService] Pending self-update validation sentinel file found: " + sentinelFile));
+            logger.info("Pending self-update validation sentinel file found: {}", sentinelFile);
 
             try {
                 String content = Files.readString(sentinelFile);
@@ -79,7 +79,7 @@ public class StartupService {
                     // The command string needs to be split into an array.
                     BuildManagerService.BuildResult validationResult = this.buildManagerService.executeMavenCommand(runCommand.split("\\s+"), model.dir.toFile()); // Corrected
 
-                    if (validationResult.isSuccess()) {
+                    if (validationResult.success()) {
                         model.addLog(AiMessage.from("[StartupService] Validation command successful for update to: " + filePath));
                         logger.info("Validation command successful for update to: {}", filePath);
                         try {
@@ -91,8 +91,8 @@ public class StartupService {
                         }
                         return true; // Proceed with normal startup
                     } else {
-                        model.addLog(AiMessage.from("[StartupService] VALIDATION FAILED for update to: " + filePath + ". Exit Code: " + validationResult.getExitCode() + ". Output:\n" + validationResult.getOutput()));
-                        logger.error("VALIDATION FAILED for update to: {}. Exit Code: {}. Output:\n{}", filePath, validationResult.getExitCode(), validationResult.getOutput());
+                        model.addLog(AiMessage.from("[StartupService] VALIDATION FAILED for update to: " + filePath + ". Exit Code: " + validationResult.exitCode() + ". Output:\n" + validationResult.output()));
+                        logger.error("VALIDATION FAILED for update to: {}. Exit Code: {}. Output:\n{}", filePath, validationResult.exitCode(), validationResult.output());
 
                         int newAttempt = attempt + 1;
                         if (newAttempt > MAX_ROLLBACK_ATTEMPTS) {
@@ -125,13 +125,13 @@ public class StartupService {
                                 logger.info("Code revert successful for {}. Recompiling project.", filePath);
 
                                 BuildManagerService.BuildResult compileResult = this.buildManagerService.compileProject(model);
-                                model.addLog(AiMessage.from("[StartupService] Re-compile after revert. Success: " + compileResult.isSuccess() + ". Output:\n" + compileResult.getOutput()));
-                                logger.info("Re-compile after revert for {}. Success: {}. Output:\n{}", filePath, compileResult.isSuccess(), compileResult.getOutput());
+                                model.addLog(AiMessage.from("[StartupService] Re-compile after revert. Success: " + compileResult.success() + ". Output:\n" + compileResult.output()));
+                                logger.info("Re-compile after revert for {}. Success: {}. Output:\n{}", filePath, compileResult.success(), compileResult.output());
 
-                                if (compileResult.isSuccess()) {
+                                if (compileResult.success()) {
                                     BuildManagerService.BuildResult packageResult = this.buildManagerService.packageProject(model);
-                                    model.addLog(AiMessage.from("[StartupService] Re-package after revert. Success: " + packageResult.isSuccess() + ". Output:\n" + packageResult.getOutput()));
-                                    logger.info("Re-package after revert for {}. Success: {}. Output:\n{}", filePath, packageResult.isSuccess(), packageResult.getOutput());
+                                    model.addLog(AiMessage.from("[StartupService] Re-package after revert. Success: " + packageResult.success() + ". Output:\n" + packageResult.output()));
+                                    logger.info("Re-package after revert for {}. Success: {}. Output:\n{}", filePath, packageResult.success(), packageResult.output());
 
                                     // Update Sentinel File for next attempt
                                     try {

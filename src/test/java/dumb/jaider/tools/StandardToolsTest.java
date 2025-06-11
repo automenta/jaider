@@ -197,7 +197,7 @@ public class StandardToolsTest {
 
         // The StandardTools.writeFile has a check:
         // else if (!Files.isDirectory(parentDir)) { return "Error: Cannot create parent directory..."
-        assertEquals("Error: Cannot create parent directory. A file with the same name as the parent directory already exists: " + tempDir.resolve(filePathParent).toString(), result);
+        assertEquals("Error: Cannot create parent directory. A file with the same name as the parent directory already exists: " + tempDir.resolve(filePathParent), result);
         assertFalse(Files.exists(tempDir.resolve(filePathChild)));
     }
 
