@@ -1,18 +1,17 @@
-package org.jaider.service;
+package dumb.jaider.service;
 
-import dumb.jaider.model.JaiderModel;
+import dev.langchain4j.data.message.AiMessage;
 import dumb.jaider.model.JaiderModel;
 import dumb.jaider.model.StagedUpdate;
-import dumb.jaider.ui.UI; // Changed import
-import dev.langchain4j.data.message.AiMessage; // Ensure AiMessage is imported
-
-import java.io.File; // Added for project root
-import java.util.concurrent.locks.ReentrantLock;
-import java.nio.file.Files; // New import
-import java.nio.file.Path;   // New import
-import org.json.JSONObject; // New import
+import dumb.jaider.ui.UI;
+import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.io.File;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.concurrent.locks.ReentrantLock;
 
 public class SelfUpdateOrchestratorService {
 

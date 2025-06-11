@@ -48,7 +48,7 @@ class CoderAgentTest {
         when(standardTools.getReadOnlyTools()).thenReturn(Set.of(standardTools));
 
         // Use the new constructor to inject the mocked JaiderAiService
-        coderAgent = new CoderAgent(chatLanguageModel, chatMemory, standardTools, jaiderAiServiceMock);
+        coderAgent = new CoderAgent(chatLanguageModel, chatMemory, standardTools.getReadOnlyTools(), jaiderAiServiceMock);
     }
 
     @Test

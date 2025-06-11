@@ -2,8 +2,8 @@ package dumb.jaider.tools;
 
 import dev.langchain4j.agent.tool.Tool;
 import dumb.jaider.model.JaiderModel;
-import dumb.jaider.model.StagedUpdate; // New import
-import org.jaider.service.SelfUpdateOrchestratorService; // New import
+import dumb.jaider.model.StagedUpdate;
+import dumb.jaider.service.SelfUpdateOrchestratorService;
 
 // No longer needed for basic path validation if JaiderModel isn't used directly here yet
 // import java.io.File;

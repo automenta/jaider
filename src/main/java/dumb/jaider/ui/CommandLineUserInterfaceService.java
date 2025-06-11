@@ -1,16 +1,16 @@
-package org.jaider.ui;
+package dumb.jaider.ui;
 
-import org.jaider.service.UserInterfaceService; // Assuming UserInterfaceService is in org.jaider.service
+import dumb.jaider.service.UserInterfaceService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.io.BufferedReader;
-import java.io.IOException; // Added import
+import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintStream;
-import java.util.Scanner;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.function.Consumer;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 public class CommandLineUserInterfaceService implements UserInterfaceService {
 

@@ -1,16 +1,15 @@
-package org.jaider.app;
+package dumb.jaider.app;
 
 import dumb.jaider.model.JaiderModel;
+import dumb.jaider.service.BasicRestartService;
+import dumb.jaider.service.BuildManagerService;
+import dumb.jaider.service.LocalGitService;
+import dumb.jaider.service.SelfUpdateOrchestratorService;
 import dumb.jaider.tools.JaiderTools;
-import org.jaider.service.BasicRestartService;
-import org.jaider.service.BuildManagerService;
-import org.jaider.service.LocalGitService;
-import org.jaider.service.SelfUpdateOrchestratorService;
-import org.jaider.ui.CommandLineUserInterfaceService;
+import dumb.jaider.ui.CommandLineUserInterfaceService;
 
-import java.io.File;
-import java.nio.file.Paths; // Added import
-import java.util.Scanner; // For simple command simulation
+import java.nio.file.Paths;
+import java.util.Scanner;
 
 public class JaiderApplication {
 

@@ -1,14 +1,14 @@
-package org.jaider.app.app;
+package dumb.jaider.app;
 
-import dumb.jaider.model.JaiderModel;
+import dev.langchain4j.data.message.AiMessage;
 import dumb.jaider.config.Config;
-import dev.langchain4j.data.message.AiMessage; // For logging to model
-import org.json.JSONObject; // For parsing sentinel file
-import org.jaider.service.BuildManagerService; // New import
-import org.jaider.service.GitService;         // New import
-import org.jaider.service.RestartService;      // New import
-import org.slf4j.Logger;                       // New import
-import org.slf4j.LoggerFactory;                // New import
+import dumb.jaider.model.JaiderModel;
+import dumb.jaider.service.BuildManagerService;
+import dumb.jaider.service.GitService;
+import dumb.jaider.service.RestartService;
+import org.json.JSONObject;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.nio.file.Files;
 import java.nio.file.Path;

@@ -14,7 +14,6 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.IOException;
-import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -24,7 +23,6 @@ import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
@@ -216,7 +214,7 @@ class StaticAnalysisServiceTest {
 
 
     @Test
-    void runAnalysis_parserClassNotFound() {
+    void runAnalysis_parserClassNotFound() throws InterruptedException {
         String toolName = "Semgrep";
         String invalidParserClass = "com.example.NonExistentParser";
         when(toolManager.getToolDescriptor(toolName)).thenReturn(toolDescriptor);

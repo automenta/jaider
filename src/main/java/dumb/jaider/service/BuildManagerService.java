@@ -1,14 +1,15 @@
-package org.jaider.service;
+package dumb.jaider.service;
 
 import dumb.jaider.model.JaiderModel;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.Arrays;
 import java.util.concurrent.TimeUnit;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 public class BuildManagerService {
 

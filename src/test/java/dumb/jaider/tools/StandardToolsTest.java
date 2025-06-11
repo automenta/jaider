@@ -1,18 +1,17 @@
 package dumb.jaider.tools;
 
+import dev.langchain4j.model.embedding.EmbeddingModel;
 import dumb.jaider.config.Config;
 import dumb.jaider.model.JaiderModel;
-import dev.langchain4j.model.embedding.EmbeddingModel;
+import org.eclipse.jgit.api.errors.GitAPIException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
-import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.when;
@@ -34,9 +33,9 @@ public class StandardToolsTest {
     Path tempDir; // JUnit 5 temporary directory
 
     @BeforeEach
-    void setUp() throws IOException {
+    void setUp() throws GitAPIException {
         MockitoAnnotations.openMocks(this);
-        when(model.getDir()).thenReturn(tempDir); // Make JaiderModel use the tempDir
+        when(model.dir).thenReturn(tempDir); // Make JaiderModel use the tempDir
         // It seems model.dir is public, if not, need a getter like getDir()
         // For StandardTools constructor model.dir is accessed directly. Let's assume it is accessible or change to use getter.
         // If model.dir is final and set in constructor, this mock might be tricky.
@@ -58,7 +57,7 @@ public class StandardToolsTest {
         // For simplicity in this step, I will create a real JaiderModel instance for testing StandardTools,
         // and ensure its `dir` field points to `tempDir`.
 
-        JaiderModel realModel = new JaiderModel(tempDir, null); // Assuming constructor exists. Editor might be null.
+        JaiderModel realModel = new JaiderModel(tempDir);
         standardTools = new StandardTools(realModel, config, embeddingModel);
 
         // Initialize a Git repository in the tempDir for relevant tests

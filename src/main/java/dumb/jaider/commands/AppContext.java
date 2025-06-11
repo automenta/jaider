@@ -1,6 +1,6 @@
 package dumb.jaider.commands;
 
-import org.jaider.app.app.App;
+import dumb.jaider.app.App;
 import dumb.jaider.config.Config;
 import dumb.jaider.model.JaiderModel;
 import dumb.jaider.ui.UI;

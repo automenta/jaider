@@ -2,14 +2,14 @@ package dumb.jaider.vcs;
 
 import org.eclipse.jgit.api.Git;
 import org.eclipse.jgit.api.errors.GitAPIException;
-import org.eclipse.jgit.api.Status;
+import org.eclipse.jgit.lib.FileMode;
+import org.eclipse.jgit.lib.ObjectId;
 import org.eclipse.jgit.lib.Repository;
+import org.eclipse.jgit.treewalk.TreeWalk;
+import org.eclipse.jgit.treewalk.filter.PathFilter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.File;
-// Unused imports:
-// import org.eclipse.jgit.treewalk.FileTreeIterator;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -18,10 +18,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
-import org.eclipse.jgit.lib.ObjectId;
-import org.eclipse.jgit.lib.FileMode;
-import org.eclipse.jgit.treewalk.TreeWalk;
-import org.eclipse.jgit.treewalk.filter.PathFilter;
 
 public class GitService {
     private static final Logger logger = LoggerFactory.getLogger(GitService.class);
@@ -152,7 +148,7 @@ public class GitService {
         } catch (org.eclipse.jgit.errors.RepositoryNotFoundException e) {
             logger.warn("Attempted to list files on a non-Git directory: {}", dir, e);
             throw e; // Re-throw, or return empty list if that's preferred for non-repos
-        } catch (IOException | GitAPIException e) {
+        } catch (IOException e) {
             logger.error("Error listing files in Git repository at {}: {}", dir, e.getMessage(), e);
             throw e; // Re-throw
         }

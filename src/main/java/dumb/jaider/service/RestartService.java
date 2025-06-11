@@ -1,4 +1,4 @@
-package org.jaider.service;
+package dumb.jaider.service;
 
 // Placeholder for Restart Service
 public interface RestartService {

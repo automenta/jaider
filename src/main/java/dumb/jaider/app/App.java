@@ -1,4 +1,4 @@
-package org.jaider.app.app;
+package dumb.jaider.app;
 
 import dev.langchain4j.agent.tool.ToolExecutionRequest;
 import dev.langchain4j.data.message.AiMessage;
@@ -15,26 +15,19 @@ import dumb.jaider.agents.ArchitectAgent;
 import dumb.jaider.agents.AskAgent;
 import dumb.jaider.agents.CoderAgent;
 import dumb.jaider.commands.*;
-import dumb.jaider.commands.AcceptSuggestionCommand; // Added
-import dumb.jaider.commands.SummarizeCommand;
 import dumb.jaider.config.Config;
 import dumb.jaider.llm.LlmProviderFactory;
 import dumb.jaider.model.JaiderModel;
+import dumb.jaider.service.BuildManagerService;
+import dumb.jaider.service.GitService;
+import dumb.jaider.service.RestartService;
+import dumb.jaider.service.SelfUpdateOrchestratorService;
+import dumb.jaider.suggestion.ActiveSuggestion;
 import dumb.jaider.suggestion.ProactiveSuggestionService;
-import dumb.jaider.suggestion.ActiveSuggestion; // Changed from Suggestion
 import dumb.jaider.toolmanager.ToolManager;
-import dumb.jaider.tools.JaiderTools; // Assuming JaiderTools might be needed for internal tools
+import dumb.jaider.tools.JaiderTools;
 import dumb.jaider.tools.StandardTools;
 import dumb.jaider.ui.UI;
-// Note: dumb.jaider.vcs.GitService is different from org.jaider.service.GitService
-// We need org.jaider.service.GitService for the self-update features.
-// If dumb.jaider.vcs.GitService is still used by isGitRepoClean(), it should remain.
-// For now, assuming it's okay to add the new one.
-import org.jaider.service.BuildManagerService;
-import org.jaider.service.GitService; // For self-update
-import org.jaider.service.RestartService;
-import org.jaider.service.SelfUpdateOrchestratorService;
-import org.jaider.app.app.StartupService;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.slf4j.Logger;
@@ -43,12 +36,7 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.ArrayList; // Added import
-import java.util.HashMap;
-import java.util.HashSet; // Added import
-import java.util.List; // Added import
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
@@ -67,17 +55,17 @@ public class App {
     private Agent agent;
     private AiMessage agentMessageWithPlan;
     private Boolean lastValidationPreference = null; // Added for remembering validation preference
-    private org.jaider.service.SelfUpdateOrchestratorService selfUpdateOrchestratorService;
+    private SelfUpdateOrchestratorService selfUpdateOrchestratorService;
     private StartupService startupService;
-    private org.jaider.service.BuildManagerService buildManagerService;
-    private org.jaider.service.GitService gitService; // For self-update
-    private org.jaider.service.RestartService restartService;
+    private BuildManagerService buildManagerService;
+    private GitService gitService; // For self-update
+    private RestartService restartService;
     private ProactiveSuggestionService proactiveSuggestionService;
 
 
     public enum State {IDLE, AGENT_THINKING, WAITING_USER_CONFIRMATION, WAITING_USER_PLAN_APPROVAL}
 
-    public App(UI ui, String[] originalArgs) {
+    public App(UI ui, String... originalArgs) {
         this.ui = ui;
         this.config = new Config(model.dir); // Config loads DI definitions
         this.model.setOriginalArgs(originalArgs);
@@ -187,26 +175,26 @@ public class App {
 
                 if (config.getInjector() != null) { // Re-check injector just in case
                     try {
-                        this.selfUpdateOrchestratorService = config.getComponent("selfUpdateOrchestratorService", org.jaider.service.SelfUpdateOrchestratorService.class);
+                        this.selfUpdateOrchestratorService = config.getComponent("selfUpdateOrchestratorService", SelfUpdateOrchestratorService.class);
                     } catch (Exception e) {
                         logger.error("Error fetching SelfUpdateOrchestratorService from DI.", e);
                         this.model.addLog(AiMessage.from("[Jaider] CRITICAL ERROR: Failed to initialize SelfUpdateOrchestratorService. Self-update features will be unavailable. " + e.getClass().getSimpleName() + ": " + e.getMessage()));
                     }
 
                     try {
-                        this.buildManagerService = config.getComponent("buildManagerService", org.jaider.service.BuildManagerService.class);
+                        this.buildManagerService = config.getComponent("buildManagerService", BuildManagerService.class);
                     } catch (Exception e) {
                         logger.error("Error fetching BuildManagerService from DI.", e);
                         this.model.addLog(AiMessage.from("[Jaider] CRITICAL ERROR: Failed to initialize BuildManagerService. Some features might be unavailable. " + e.getClass().getSimpleName() + ": " + e.getMessage()));
                     }
                     try {
-                        this.gitService = config.getComponent("gitService", org.jaider.service.GitService.class);
+                        this.gitService = config.getComponent("gitService", GitService.class);
                     } catch (Exception e) {
                         logger.error("Error fetching GitService from DI.", e);
                         this.model.addLog(AiMessage.from("[Jaider] CRITICAL ERROR: Failed to initialize GitService for self-updates. Some features might be unavailable. " + e.getClass().getSimpleName() + ": " + e.getMessage()));
                     }
                     try {
-                        this.restartService = config.getComponent("restartService", org.jaider.service.RestartService.class);
+                        this.restartService = config.getComponent("restartService", RestartService.class);
                     } catch (Exception e) {
                         logger.error("Error fetching RestartService from DI.", e);
                         this.model.addLog(AiMessage.from("[Jaider] CRITICAL ERROR: Failed to initialize RestartService. Some features might be unavailable. " + e.getClass().getSimpleName() + ": " + e.getMessage()));
