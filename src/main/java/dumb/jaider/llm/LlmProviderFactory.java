@@ -6,6 +6,7 @@ import dev.langchain4j.model.chat.ChatLanguageModel;
 import dev.langchain4j.model.embedding.EmbeddingModel;
 import dev.langchain4j.model.ollama.OllamaChatModel;
 import dev.langchain4j.model.ollama.OllamaEmbeddingModel;
+import dev.langchain4j.model.vertexai.VertexAiChatModel; // Added import
 import dumb.jaider.config.Config;
 import dumb.jaider.model.JaiderModel;
 
@@ -30,6 +31,8 @@ public class LlmProviderFactory {
             setupGenericOpenAI();
         } else if ("openai".equalsIgnoreCase(config.llm)) {
             model.addLog(AiMessage.from("[Jaider] OpenAI provider selected but setupOpenAI() is currently commented out. No model initialized."));
+        } else if ("gemini".equalsIgnoreCase(config.llm)) {
+            setupGemini();
         } else {
             model.addLog(AiMessage.from(String.format("[Jaider] WARNING: Unknown llmProvider '%s' in config. Defaulting to Ollama.", config.llm)));
             setupOllama();
@@ -64,6 +67,8 @@ public class LlmProviderFactory {
             } else if ("openai".equalsIgnoreCase(config.llm)) {
                 // setupOpenAIEmbeddingModel(); // Placeholder
                 model.addLog(AiMessage.from("[Jaider] OpenAI embedding model selected but setup is currently commented out. No embedding model initialized."));
+            } else if ("gemini".equalsIgnoreCase(config.llm)) {
+                setupGeminiEmbeddingModel();
             } else {
                 model.addLog(AiMessage.from(String.format("[Jaider] WARNING: Unknown llmProvider '%s' for embedding model. No embedding model initialized.", config.llm)));
             }
@@ -133,5 +138,40 @@ public class LlmProviderFactory {
             model.addLog(AiMessage.from(String.format("[Jaider] CRITICAL ERROR: Failed to initialize Generic OpenAI-compatible model '%s' from %s. Error: %s. Functionality severely limited.", config.genericOpenaiModelName, config.genericOpenaiBaseUrl, e.getMessage())));
             // Fallback for chat model might be needed.
         }
+    }
+
+    private void setupGemini() {
+        try {
+            String project = System.getenv("GOOGLE_CLOUD_PROJECT");
+            String location = System.getenv("GOOGLE_CLOUD_LOCATION");
+
+            if (project == null || project.trim().isEmpty()) {
+                throw new IllegalArgumentException("GOOGLE_CLOUD_PROJECT environment variable is not set.");
+            }
+            if (location == null || location.trim().isEmpty()) {
+                throw new IllegalArgumentException("GOOGLE_CLOUD_LOCATION environment variable is not set.");
+            }
+
+            this.chatModel = VertexAiChatModel.builder()
+                    .project(project)
+                    .location(location)
+                    .modelName(config.getGeminiModelName())
+                    // .temperature(0.7f) // Example: Add other configurations as needed
+                    // .maxOutputTokens(1024) // Example
+                    .build();
+
+            if (this.chatModel instanceof Tokenizer) {
+                this.tokenizer = (Tokenizer) this.chatModel;
+            }
+            model.addLog(AiMessage.from(String.format("[Jaider] Vertex AI Gemini model '%s' (project: %s, location: %s) initialized successfully.", config.getGeminiModelName(), project, location)));
+        } catch (Exception e) {
+            model.addLog(AiMessage.from(String.format("[Jaider] CRITICAL ERROR: Failed to initialize Vertex AI Gemini model '%s'. Error: %s. Functionality severely limited.", config.getGeminiModelName(), e.getMessage())));
+            // Consider a fallback chat model if necessary
+        }
+    }
+
+    private void setupGeminiEmbeddingModel() {
+        model.addLog(AiMessage.from("[Jaider] Gemini provider selected for embeddings. Using NoOpEmbeddingModel for now."));
+        this.embeddingModel = new dumb.jaider.llm.NoOpEmbeddingModel();
     }
 }

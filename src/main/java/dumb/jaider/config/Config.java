@@ -3,6 +3,8 @@ package dumb.jaider.config;
 import dumb.jaider.app.DependencyInjector;
 import org.json.JSONArray;
 import org.json.JSONObject;
+import org.slf4j.Logger; // Added import
+import org.slf4j.LoggerFactory; // Added import
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -11,6 +13,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 public class Config {
+    private static final Logger logger = LoggerFactory.getLogger(Config.class); // Added logger
     final Path file;
     private JSONObject loadedJsonConfig; // Store the raw JSON
     private final Map<String, JSONObject> def = new HashMap<>();
@@ -47,9 +50,10 @@ public class Config {
             // This case implies that even getDefaultConfigAsJsonObject() didn't provide component definitions,
             // or they were explicitly cleared or filtered out before this point.
             // This should ideally not happen if getDefaultConfigAsJsonObject() is correctly structured.
-            System.err.println("Component definitions (this.def) are empty after load and potential default population. Attempting to extract from default JSON one last time.");
+            logger.warn("Component definitions (this.def) are empty after load and potential default population. Attempting to extract from default JSON one last time."); // MODIFIED
             injectorDefs = extractComponentDefinitions(getDefaultConfigAsJsonObject());
             if (injectorDefs.isEmpty()) { // If still empty, it's a critical configuration error.
+                 logger.error("Critical: No component definitions could be derived from defaults. Application cannot safely start."); // MODIFIED
                  throw new IllegalStateException("No component definitions found after loading and attempting to apply defaults. Application cannot safely start.");
             }
         } else {
@@ -68,10 +72,10 @@ public class Config {
             JSONArray componentDefsArray = json.getJSONArray(COMPONENTS_KEY);
             for (int i = 0; i < componentDefsArray.length(); i++) {
                 JSONObject componentDef = componentDefsArray.getJSONObject(i);
-                if (componentDef.has("id")) {
+                if (componentDef.has("id") && componentDef.has("class")) { // MODIFIED check
                     defs.put(componentDef.getString("id"), componentDef);
                 } else {
-                    System.err.println("Component definition missing 'id' while extracting: " + componentDef);
+                    logger.warn("Component definition missing 'id' or 'class' while extracting from default JSON: {}", componentDef.toString(2)); // MODIFIED
                 }
             }
         }
@@ -87,24 +91,23 @@ public class Config {
                 this.loadedJsonConfig = j; // Store it
                 populateFieldsFromJson(j);
                 loadedSuccessfully = true;
-            } catch (Exception e) {
-                System.err.println("Error parsing existing config file (" + file + "): " + e.getMessage() + ". Applying defaults.");
+            } catch (Exception e) { // Broader catch, ensure exception is logged
+                logger.error("Error parsing existing config file ({}): {}. Applying defaults.", file, e.getMessage(), e); // MODIFIED
             }
         }
 
         if (!loadedSuccessfully) {
-            System.err.println("Config not loaded from file, or file was partial/invalid. Applying full default configuration.");
+            logger.warn("Config file {} not found or was invalid. Applying and writing default configuration.", file); // MODIFIED
             JSONObject defaultConfigJson = getDefaultConfigAsJsonObject();
             this.loadedJsonConfig = defaultConfigJson; // Store default JSON
-            populateFieldsFromJson(defaultConfigJson);
+            populateFieldsFromJson(defaultConfigJson); // This populates this.def as well
 
             try {
                 Files.createDirectories(file.getParent());
-                // Use the stored loadedJsonConfig (which is defaultConfigJson here) for saving
                 Files.writeString(file, this.loadedJsonConfig.toString(2));
-                System.err.println("Written default config to: " + file);
+                logger.info("Written default config to: {}", file); // MODIFIED
             } catch (IOException e) {
-                System.err.println("Warning: Failed to write default config to file: " + file + " - " + e.getMessage());
+                logger.warn("Failed to write default config to file: {} - {}", file, e.getMessage(), e); // MODIFIED
             }
         }
     }
@@ -344,10 +347,10 @@ public class Config {
             JSONArray componentDefsArray = json.getJSONArray(COMPONENTS_KEY);
             for (int i = 0; i < componentDefsArray.length(); i++) {
                 JSONObject componentDef = componentDefsArray.getJSONObject(i);
-                if (componentDef.has("id")) {
+                if (componentDef.has("id") && componentDef.has("class")) { // MODIFIED check
                     this.def.put(componentDef.getString("id"), componentDef);
                 } else {
-                    System.err.println("Component definition missing 'id' in config: " + componentDef);
+                    logger.warn("Component definition in config file missing 'id' or 'class', skipping: {}", componentDef.toString(2)); // MODIFIED
                 }
             }
         }
@@ -399,6 +402,10 @@ public class Config {
         return getKeyValue("GEMINI_API_KEY", "geminiApiKey", "google");
     }
 
+    public String getGeminiModelName() { // Added getter
+        return this.geminiModelName;
+    }
+
     public String getGenericOpenaiApiKey() {
         return getKeyValue("GENERIC_OPENAI_API_KEY", "genericOpenaiApiKey", "genericOpenai");
     }
@@ -423,7 +430,7 @@ public class Config {
             try {
                 configToEdit = new JSONObject(Files.readString(file));
             } catch (Exception e) { // If file is corrupt, start with defaults
-                System.err.println("Warning: Couldn't read existing config for editing, starting with defaults: " + e.getMessage());
+                logger.warn("Couldn't read existing config file {} for editing, starting with defaults: {}", file, e.getMessage(), e); // MODIFIED
                 configToEdit = getDefaultConfigAsJsonObject();
             }
         } else {
@@ -443,8 +450,8 @@ public class Config {
                     // but for now, a simple put will overwrite, which is the old behavior for these.
                     baseConfig.put(key, fileConfig.get(key));
                 }
-            } catch (Exception e) {
-                System.err.println("Warning: Couldn't read existing config for editing, using defaults: " + e.getMessage());
+            } catch (Exception e) { // Broader catch, ensure exception is logged
+                logger.warn("Couldn't process existing config file {} during merge for editing, using defaults on top of base: {}", file, e.getMessage(), e); // MODIFIED
                 // baseConfig is already set to defaults, so just proceed
             }
         }
