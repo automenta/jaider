@@ -6,7 +6,10 @@ import dev.langchain4j.model.chat.ChatLanguageModel;
 import dev.langchain4j.model.embedding.EmbeddingModel;
 import dev.langchain4j.model.ollama.OllamaChatModel;
 import dev.langchain4j.model.ollama.OllamaEmbeddingModel;
-import dev.langchain4j.model.vertexai.VertexAiChatModel; // Added import
+import dev.langchain4j.model.openai.OpenAiChatModel;
+import dev.langchain4j.model.openai.OpenAiEmbeddingModel;
+import dev.langchain4j.model.vertexai.VertexAiChatModel;
+import dev.langchain4j.model.vertexai.VertexAiEmbeddingModel; // Added import
 import dumb.jaider.config.Config;
 import dumb.jaider.model.JaiderModel;
 
@@ -30,7 +33,8 @@ public class LlmProviderFactory {
         } else if ("genericOpenai".equalsIgnoreCase(config.llm)) {
             setupGenericOpenAI();
         } else if ("openai".equalsIgnoreCase(config.llm)) {
-            model.addLog(AiMessage.from("[Jaider] OpenAI provider selected but setupOpenAI() is currently commented out. No model initialized."));
+            // model.addLog(AiMessage.from("[Jaider] OpenAI provider selected but setupOpenAI() is currently commented out. No model initialized."));
+            setupOpenAI();
         } else if ("gemini".equalsIgnoreCase(config.llm)) {
             setupGemini();
         } else {
@@ -65,8 +69,7 @@ public class LlmProviderFactory {
                 // For demonstration, trying OllamaEmbeddingModel, but this might not be correct for all generic OpenAI endpoints.
                 setupGenericOpenAIEmbeddingModel();
             } else if ("openai".equalsIgnoreCase(config.llm)) {
-                // setupOpenAIEmbeddingModel(); // Placeholder
-                model.addLog(AiMessage.from("[Jaider] OpenAI embedding model selected but setup is currently commented out. No embedding model initialized."));
+                setupOpenAIEmbeddingModel();
             } else if ("gemini".equalsIgnoreCase(config.llm)) {
                 setupGeminiEmbeddingModel();
             } else {
@@ -90,18 +93,26 @@ public class LlmProviderFactory {
     }
 
     private void setupGenericOpenAIEmbeddingModel() {
-        // This is speculative. Generic OpenAI endpoints might not support embedding through the Ollama client
-        // or might need a different client/builder.
-        // For now, this attempts to use OllamaEmbeddingModel, which might fail for non-Ollama OpenAI-compatible endpoints.
         try {
-            this.embeddingModel = OllamaEmbeddingModel.builder()
-                    .baseUrl(config.genericOpenaiBaseUrl) // Assuming embedding endpoint is at same base
-                    .modelName(config.genericOpenaiModelName) // Or a specific embedding model name
+            String apiKey = config.getGenericOpenaiApiKey(); // Reuse the same API key
+             if (apiKey == null || apiKey.isEmpty()) {
+                model.addLog(AiMessage.from("[Jaider] INFO: Generic OpenAI API key is not configured. This might be required for the embedding endpoint."));
+            }
+
+            // Using the new config field for generic embedding model name
+            String embeddingModelName = config.getGenericOpenaiEmbeddingModelName();
+
+            this.embeddingModel = OpenAiEmbeddingModel.builder()
+                    .baseUrl(config.genericOpenaiBaseUrl) // Assume embedding endpoint is relative to the base URL
+                    .apiKey(apiKey)
+                    .modelName(embeddingModelName)
+                    // .logRequests(true) // Optional
+                    // .logResponses(true) // Optional
                     .build();
-            model.addLog(AiMessage.from(String.format("[Jaider] Generic OpenAI-compatible Embedding model '%s' attempted initialization from %s.", config.genericOpenaiModelName, config.genericOpenaiBaseUrl)));
+            model.addLog(AiMessage.from(String.format("[Jaider] Generic OpenAI-compatible Embedding model '%s' (using OpenAiEmbeddingModel client) attempted initialization from %s.", embeddingModelName, config.genericOpenaiBaseUrl)));
         } catch (Exception e) {
-            model.addLog(AiMessage.from(String.format("[Jaider] CRITICAL ERROR: Failed to initialize Generic OpenAI-compatible Embedding model '%s' from %s. Error: %s. Falling back to local NoOpEmbeddingModel.", config.genericOpenaiModelName, config.genericOpenaiBaseUrl, e.getMessage())));
-            this.embeddingModel = new dumb.jaider.llm.NoOpEmbeddingModel(); // Use local NoOpEmbeddingModel
+            model.addLog(AiMessage.from(String.format("[Jaider] CRITICAL ERROR: Failed to initialize Generic OpenAI-compatible Embedding model '%s' from %s using OpenAiEmbeddingModel client. Error: %s. Falling back to NoOpEmbeddingModel.", config.getGenericOpenaiEmbeddingModelName(), config.genericOpenaiBaseUrl, e.getMessage())));
+            this.embeddingModel = new dumb.jaider.llm.NoOpEmbeddingModel();
         }
     }
 
@@ -122,21 +133,26 @@ public class LlmProviderFactory {
 
     private void setupGenericOpenAI() {
         try {
-            var builder = OllamaChatModel.builder()
-                    .baseUrl(config.genericOpenaiBaseUrl)
-                    .modelName(config.genericOpenaiModelName);
-
             String apiKey = config.getGenericOpenaiApiKey();
-            if (apiKey != null && !apiKey.isEmpty()) {
-                model.addLog(AiMessage.from("[Jaider] INFO: Generic OpenAI API key found via configuration. Note: the current OllamaChatModel builder may not use it directly for Bearer token authentication. Ensure your generic OpenAI endpoint is secured appropriately or uses a different mechanism if it requires API key authentication. API key might need to be included in baseUrl or handled by a proxy if required by the endpoint."));
+            if (apiKey == null || apiKey.isEmpty()) {
+                model.addLog(AiMessage.from("[Jaider] INFO: Generic OpenAI API key is not configured in .jaider.json or related environment variables. The endpoint might require an API key."));
             }
 
-            this.chatModel = builder.build();
-            this.tokenizer = (Tokenizer) this.chatModel; // Assuming chat model can also be tokenizer
-            model.addLog(AiMessage.from(String.format("[Jaider] Generic OpenAI-compatible model '%s' initialized from %s.", config.genericOpenaiModelName, config.genericOpenaiBaseUrl)));
+            this.chatModel = OpenAiChatModel.builder()
+                    .baseUrl(config.genericOpenaiBaseUrl)
+                    .apiKey(apiKey) // OpenAiChatModel should use this for Bearer token
+                    .modelName(config.genericOpenaiModelName)
+                    .logRequests(true) // Optional: for debugging
+                    .logResponses(true) // Optional: for debugging
+                    .build();
+
+            if (this.chatModel instanceof Tokenizer) {
+                this.tokenizer = (Tokenizer) this.chatModel;
+            }
+            model.addLog(AiMessage.from(String.format("[Jaider] Generic OpenAI-compatible model '%s' (using OpenAiChatModel client) initialized from %s.", config.genericOpenaiModelName, config.genericOpenaiBaseUrl)));
         } catch (Exception e) {
-            model.addLog(AiMessage.from(String.format("[Jaider] CRITICAL ERROR: Failed to initialize Generic OpenAI-compatible model '%s' from %s. Error: %s. Functionality severely limited.", config.genericOpenaiModelName, config.genericOpenaiBaseUrl, e.getMessage())));
-            // Fallback for chat model might be needed.
+            model.addLog(AiMessage.from(String.format("[Jaider] CRITICAL ERROR: Failed to initialize Generic OpenAI-compatible model '%s' from %s using OpenAiChatModel client. Error: %s. Functionality severely limited.", config.genericOpenaiModelName, config.genericOpenaiBaseUrl, e.getMessage())));
+            // chatModel will remain null or previous value if exception occurs
         }
     }
 
@@ -171,7 +187,79 @@ public class LlmProviderFactory {
     }
 
     private void setupGeminiEmbeddingModel() {
-        model.addLog(AiMessage.from("[Jaider] Gemini provider selected for embeddings. Using NoOpEmbeddingModel for now."));
-        this.embeddingModel = new dumb.jaider.llm.NoOpEmbeddingModel();
+        try {
+            String project = System.getenv("GOOGLE_CLOUD_PROJECT");
+            String location = System.getenv("GOOGLE_CLOUD_LOCATION");
+
+            if (project == null || project.trim().isEmpty()) {
+                throw new IllegalArgumentException("GOOGLE_CLOUD_PROJECT environment variable is not set for Gemini embedding model.");
+            }
+            if (location == null || location.trim().isEmpty()) {
+                throw new IllegalArgumentException("GOOGLE_CLOUD_LOCATION environment variable is not set for Gemini embedding model.");
+            }
+
+            String embeddingModelName = config.getGeminiEmbeddingModelName();
+            if (embeddingModelName == null || embeddingModelName.trim().isEmpty()){
+                embeddingModelName = "textembedding-gecko";
+                model.addLog(AiMessage.from(String.format("[Jaider] Gemini embedding model name not specified in config, defaulting to '%s'.", embeddingModelName)));
+            }
+
+            this.embeddingModel = VertexAiEmbeddingModel.builder()
+                    .project(project)
+                    .location(location)
+                    .modelName(embeddingModelName)
+                    // .maxRetries(3) // Example optional parameter
+                    .build();
+            model.addLog(AiMessage.from(String.format("[Jaider] Vertex AI Gemini Embedding model '%s' (project: %s, location: %s) initialized successfully.", embeddingModelName, project, location)));
+        } catch (Exception e) {
+            model.addLog(AiMessage.from(String.format("[Jaider] CRITICAL ERROR: Failed to initialize Vertex AI Gemini Embedding model. Error: %s. Falling back to NoOpEmbeddingModel.", e.getMessage())));
+            this.embeddingModel = new dumb.jaider.llm.NoOpEmbeddingModel();
+        }
+    }
+
+    private void setupOpenAI() {
+        try {
+            String apiKey = config.getOpenaiApiKey();
+            String modelName = config.getOpenaiModelName(); // Assuming this method exists in Config.java
+
+            if (apiKey == null || apiKey.trim().isEmpty()) {
+                model.addLog(AiMessage.from("[Jaider] INFO: OpenAI API key is not configured. Langchain4j might attempt to find it in environment variables or system properties."));
+            }
+
+            this.chatModel = OpenAiChatModel.builder()
+                    .apiKey(apiKey)
+                    .modelName(modelName)
+                    .logRequests(true)
+                    .logResponses(true)
+                    .build();
+
+            if (this.chatModel instanceof Tokenizer) {
+                this.tokenizer = (Tokenizer) this.chatModel;
+            }
+            model.addLog(AiMessage.from(String.format("[Jaider] OpenAI Chat model '%s' initialized successfully.", modelName)));
+        } catch (Exception e) {
+            model.addLog(AiMessage.from(String.format("[Jaider] CRITICAL ERROR: Failed to initialize OpenAI Chat model. Error: %s. Jaider's functionality might be limited.", e.getMessage())));
+            // Optionally, fallback to a NoOp model or handle differently
+        }
+    }
+
+    private void setupOpenAIEmbeddingModel() {
+        try {
+            String apiKey = config.getOpenaiApiKey();
+            String embeddingModelName = "text-embedding-ada-002"; // Default, can be made configurable
+
+            if (apiKey == null || apiKey.trim().isEmpty()) {
+                model.addLog(AiMessage.from("[Jaider] INFO: OpenAI API key is not configured for embedding model. Langchain4j might attempt to find it elsewhere."));
+            }
+
+            this.embeddingModel = OpenAiEmbeddingModel.builder()
+                    .apiKey(apiKey)
+                    .modelName(embeddingModelName)
+                    .build();
+            model.addLog(AiMessage.from(String.format("[Jaider] OpenAI Embedding model '%s' initialized successfully.", embeddingModelName)));
+        } catch (Exception e) {
+            model.addLog(AiMessage.from(String.format("[Jaider] CRITICAL ERROR: Failed to initialize OpenAI Embedding model. Error: %s. Falling back to NoOpEmbeddingModel.", e.getMessage())));
+            this.embeddingModel = new dumb.jaider.llm.NoOpEmbeddingModel();
+        }
     }
 }

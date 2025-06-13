@@ -13,7 +13,8 @@ Jaider is an interactive, command-line AI programming assistant designed to help
 *   **Multiple LLM Integrations:**
     *   **Ollama:** Connect to local LLMs running via Ollama.
     *   **Generic OpenAI-compatible:** Connect to any API endpoint that follows the OpenAI REST API specification.
-    *   **Google Gemini (via Vertex AI):** Utilize Google's Gemini models. (Note: Direct OpenAI integration is currently commented out in the code but can be re-enabled).
+    *   **OpenAI:** Connect directly to OpenAI's API.
+    *   **Google Gemini (via Vertex AI):** Utilize Google's Gemini models.
 *   **Interactive Diff Application:** Proposed code changes are presented as diffs, which you can accept, reject, or even edit before applying.
 *   **Configurable Validation Command:** Define a custom command (`runCommand` in `.jaider.json`) to run tests, linters, or build processes after changes are applied. The agent receives structured JSON feedback (exit code, success status, output) from this command.
 *   **Web Search Capability:** Agents can use the `searchWeb` tool (powered by Tavily) to find information online.
@@ -36,15 +37,18 @@ Jaider uses a `.jaider.json` file in the root of your project directory for conf
 Key configurable fields include:
 
 *   `llmProvider`: Specifies the LLM provider to use.
-    *   Values: `"ollama"`, `"genericOpenai"`, `"gemini"`, `"openai"` (currently inactive).
+    *   Values: `"ollama"`, `"genericOpenai"`, `"openai"`, `"gemini"`.
     *   Default: `"ollama"`
 *   `ollamaBaseUrl`: (for `ollama` provider) The base URL for your Ollama instance (e.g., `"http://localhost:11434"`).
 *   `ollamaModelName`: (for `ollama` provider) The name of the Ollama model to use (e.g., `"llamablit"`).
 *   `genericOpenaiBaseUrl`: (for `genericOpenai` provider) The base URL of the OpenAI-compatible API (e.g., `"http://localhost:8080/v1"`).
-*   `genericOpenaiModelName`: (for `genericOpenai` provider) The model name for the generic API.
+*   `genericOpenaiModelName`: (for `genericOpenai` provider) The chat model name for the generic API.
+*   `genericOpenaiEmbeddingModelName`: (for `genericOpenai` provider) The embedding model name to use with your generic OpenAI-compatible endpoint (e.g., `"text-embedding-ada-002"`). Default: `"text-embedding-ada-002"`
 *   `genericOpenaiApiKey`: (Legacy, in `.jaider.json`) (for `genericOpenai` provider) The API key, if required. Preferred: `GENERIC_OPENAI_API_KEY` env var.
 *   `openaiApiKey`: (Legacy, in `.jaider.json`) API key for OpenAI. Preferred: `OPENAI_API_KEY` env var.
-*   `geminiModelName`: (for `gemini` provider) The Gemini model name (e.g., `"gemini-1.5-flash-latest"`).
+*   `openaiModelName`: (for `openai` provider) The OpenAI model name to use (e.g., `"gpt-4o-mini"`, `"gpt-4-turbo"`, `"gpt-3.5-turbo"`). Default: `"gpt-4o-mini"`
+*   `geminiModelName`: (for `gemini` provider) The Gemini chat model name (e.g., `"gemini-1.5-flash-latest"`).
+*   `geminiEmbeddingModelName`: (for `gemini` provider) The specific Vertex AI Gemini embedding model name to use (e.g., `"textembedding-gecko"`, `"textembedding-gecko-multilingual"`). Default: `"textembedding-gecko"`
 *   `geminiApiKey`: (Legacy, in `.jaider.json`) (for `gemini` provider, if using direct Gemini API - Vertex AI typically uses ADC). Preferred: `GEMINI_API_KEY` env var.
 *   `tavilyApiKey`: (Legacy, in `.jaider.json`) API key for Tavily web search. Preferred: `TAVILY_API_KEY` env var.
 *   `runCommand`: The command to execute for validation (e.g., tests, linter, build). Example: `"mvn test"`, `"npm run lint"`.
@@ -64,10 +68,13 @@ Key configurable fields include:
   "ollamaModelName": "llama3",
   "genericOpenaiBaseUrl": "http://localhost:8080/v1",
   "genericOpenaiModelName": "local-gpt",
+  "genericOpenaiEmbeddingModelName": "text-embedding-ada-002", // Specific embedding model for Generic OpenAI
   "genericOpenaiApiKey": "", // Can be set here, but GENERIC_OPENAI_API_KEY env var is preferred
   "openaiApiKey": "", // Can be set here, but OPENAI_API_KEY env var is preferred
+  "openaiModelName": "gpt-4o-mini", // Specific model for OpenAI
   "geminiApiKey": "", // Can be set here, but GEMINI_API_KEY env var is preferred
   "geminiModelName": "gemini-1.5-flash-latest",
+  "geminiEmbeddingModelName": "textembedding-gecko", // Specific embedding model for Gemini
   "tavilyApiKey": "", // Can be set here, but TAVILY_API_KEY env var is preferred
   "runCommand": "mvn clean test",
   "apiKeys": { // Fallback map
@@ -87,12 +94,19 @@ Key configurable fields include:
     *   Configure `ollamaBaseUrl` (default: `"http://localhost:11434"`) and `ollamaModelName`.
 *   **Generic OpenAI-compatible API:**
     *   Set `llmProvider: "genericOpenai"`.
-    *   Configure `genericOpenaiBaseUrl` and `genericOpenaiModelName`.
-    *   Set `genericOpenaiApiKey` if your endpoint requires a Bearer token. Note: The current implementation uses the Ollama client which may not robustly support arbitrary headers for all OpenAI-compatible APIs.
+    *   Configure `genericOpenaiBaseUrl` for the API endpoint.
+    *   Set `genericOpenaiModelName` for the chat model.
+    *   Optionally, set `genericOpenaiEmbeddingModelName` if your endpoint supports a specific embedding model (defaults to `"text-embedding-ada-002"`).
+    *   If your endpoint requires an API key (Bearer token), set it via `genericOpenaiApiKey` in the JSON or preferably the `GENERIC_OPENAI_API_KEY` environment variable. Jaider uses Langchain4j's `OpenAiChatModel` and `OpenAiEmbeddingModel` clients, which are designed to handle standard OpenAI API authentication.
+*   **OpenAI:**
+    *   Set `llmProvider: "openai"`.
+    *   Configure `openaiModelName` (e.g., `"gpt-4o-mini"`, `"gpt-4-turbo"`).
+    *   Ensure your OpenAI API key is configured via one of the methods described in "API Key Configuration Precedence" (typically `OPENAI_API_KEY` environment variable).
 *   **Google Gemini (via Vertex AI):**
     *   Set `llmProvider: "gemini"`.
-    *   Configure `geminiModelName` (e.g., `"gemini-pro"`, `"gemini-1.5-flash-latest"`).
-    *   **Authentication:** The primary method for Vertex AI is Application Default Credentials (ADC). Ensure your environment is set up (e.g., by running `gcloud auth application-default login`).
+    *   Configure `geminiModelName` for chat capabilities (e.g., `"gemini-pro"`, `"gemini-1.5-flash-latest"`).
+    *   For embedding capabilities, Jaider now also supports `VertexAiEmbeddingModel`. You can specify `geminiEmbeddingModelName` in your `.jaider.json` (e.g., `"textembedding-gecko"`). If not specified, it defaults to `"textembedding-gecko"`.
+    *   **Authentication:** The primary method for Vertex AI (both chat and embedding) is Application Default Credentials (ADC). Ensure your environment is set up (e.g., by running `gcloud auth application-default login`).
     *   You also need to set the following environment variables:
         *   `GOOGLE_CLOUD_PROJECT`: Your Google Cloud Project ID.
         *   `GOOGLE_CLOUD_LOCATION`: The region for your Vertex AI resources (e.g., "us-central1").

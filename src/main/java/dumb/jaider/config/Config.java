@@ -29,9 +29,12 @@ public class Config {
     public String ollamaModelName = "llamablit";
     public String genericOpenaiBaseUrl = "http://localhost:8080/v1";
     public String genericOpenaiModelName = "local-model";
+    public String genericOpenaiEmbeddingModelName = "text-embedding-ada-002"; // Added for Generic OpenAI Embedding
     public String genericOpenaiApiKey = "";
+    public String openaiModelName = "gpt-4o-mini"; // Added for OpenAI
     public String geminiApiKey = "";
     public String geminiModelName = "gemini-1.5-flash-latest";
+    public String geminiEmbeddingModelName = "textembedding-gecko"; // Added for Gemini Embedding
     public String tavilyApiKey = "";
     public String toolManifestsDir = "src/main/resources/tool-descriptors"; // Added for ToolManager
 
@@ -120,9 +123,12 @@ public class Config {
         defaultConfig.put("ollamaModelName", this.ollamaModelName);
         defaultConfig.put("genericOpenaiBaseUrl", this.genericOpenaiBaseUrl);
         defaultConfig.put("genericOpenaiModelName", this.genericOpenaiModelName);
+        defaultConfig.put("genericOpenaiEmbeddingModelName", this.genericOpenaiEmbeddingModelName); // Added for Generic OpenAI Embedding
         defaultConfig.put("genericOpenaiApiKey", this.genericOpenaiApiKey);
+        defaultConfig.put("openaiModelName", this.openaiModelName); // Added for OpenAI
         defaultConfig.put("geminiApiKey", this.geminiApiKey);
         defaultConfig.put("geminiModelName", this.geminiModelName);
+        defaultConfig.put("geminiEmbeddingModelName", this.geminiEmbeddingModelName); // Added for Gemini Embedding
         defaultConfig.put("tavilyApiKey", this.tavilyApiKey);
         defaultConfig.put("openaiApiKey", ""); // Add this for the new getOpenaiApiKey specific key
         defaultConfig.put("runCommand", this.runCommand); // Will be "" by default
@@ -324,9 +330,12 @@ public class Config {
         this.ollamaModelName = json.optString("ollamaModelName", this.ollamaModelName);
         this.genericOpenaiBaseUrl = json.optString("genericOpenaiBaseUrl", this.genericOpenaiBaseUrl);
         this.genericOpenaiModelName = json.optString("genericOpenaiModelName", this.genericOpenaiModelName);
+        this.genericOpenaiEmbeddingModelName = json.optString("genericOpenaiEmbeddingModelName", this.genericOpenaiEmbeddingModelName); // Added for Generic OpenAI Embedding
         this.genericOpenaiApiKey = json.optString("genericOpenaiApiKey", this.genericOpenaiApiKey);
+        this.openaiModelName = json.optString("openaiModelName", this.openaiModelName); // Added for OpenAI
         this.geminiApiKey = json.optString("geminiApiKey", this.geminiApiKey);
         this.geminiModelName = json.optString("geminiModelName", this.geminiModelName);
+        this.geminiEmbeddingModelName = json.optString("geminiEmbeddingModelName", this.geminiEmbeddingModelName); // Added for Gemini Embedding
         this.tavilyApiKey = json.optString("tavilyApiKey", this.tavilyApiKey);
         this.toolManifestsDir = json.optString("toolManifestsDir", this.toolManifestsDir); // Populate toolManifestsDir
 
@@ -406,12 +415,24 @@ public class Config {
         return this.geminiModelName;
     }
 
+    public String getGeminiEmbeddingModelName() { // Added getter for Gemini Embedding
+        return this.geminiEmbeddingModelName;
+    }
+
     public String getGenericOpenaiApiKey() {
         return getKeyValue("GENERIC_OPENAI_API_KEY", "genericOpenaiApiKey", "genericOpenai");
     }
 
+    public String getGenericOpenaiEmbeddingModelName() { // Added getter for Generic OpenAI Embedding
+        return this.genericOpenaiEmbeddingModelName;
+    }
+
     public String getOpenaiApiKey() {
         return getKeyValue("OPENAI_API_KEY", "openaiApiKey", "openai");
+    }
+
+    public String getOpenaiModelName() { // Added getter for OpenAI model name
+        return this.openaiModelName;
     }
 
     // Simpler version, prioritizing env, then the apiKeys map.
