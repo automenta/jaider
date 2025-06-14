@@ -45,7 +45,7 @@ public class AddCommand implements Command {
         Arrays.stream(filesToAdd)
                 .filter(fileName -> !fileName.isBlank()) // Ensure no empty strings from multiple spaces
                 .map(fileName -> context.model().getDir().resolve(fileName.trim())) // Trim individual file names
-                .forEach(path -> context.model().getFiles().add(path));
+                .forEach(path -> context.model().files.add(path)); // Changed to use model.files directly
 
         context.app().updateTokenCountPublic(); // Assumes this method exists and is public
 

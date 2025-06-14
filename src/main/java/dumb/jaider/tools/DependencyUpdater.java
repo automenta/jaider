@@ -14,6 +14,7 @@ import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import com.github.difflib.DiffUtils;
+import com.github.difflib.UnifiedDiffUtils; // Added import
 import com.github.difflib.patch.Patch;
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -144,8 +145,8 @@ public class DependencyUpdater implements Tool {
 
             if (updated) {
                 try {
-                    Patch<String> patch = DiffUtils.diff(originalPomLines, modifiedPomLines, null);
-                    List<String> diffOutput = DiffUtils.generateUnifiedDiff("pom.xml", "pom.xml", originalPomLines, patch, 0);
+                    Patch<String> patch = DiffUtils.diff(originalPomLines, modifiedPomLines); // Changed to 2-argument version
+                    List<String> diffOutput = UnifiedDiffUtils.generateUnifiedDiff("pom.xml", "pom.xml", originalPomLines, patch, 0); // Changed to UnifiedDiffUtils
                     StringBuilder diffString = new StringBuilder();
                     for (String diffLine : diffOutput) {
                         diffString.append(diffLine).append(System.lineSeparator());
