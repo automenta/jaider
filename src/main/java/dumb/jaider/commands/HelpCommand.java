@@ -47,7 +47,7 @@ public class HelpCommand implements Command {
      */
     @Override
     public void execute(String args, AppContext context) {
-        String availableModes = context.getApp().getAvailableAgentNames().stream()
+        String availableModes = context.app().getAvailableAgentNames().stream()
                                      .sorted()
                                      .collect(Collectors.joining(", "));
         if (availableModes.isEmpty()) {
@@ -77,9 +77,9 @@ public class HelpCommand implements Command {
         // The test HelpCommandTest expects multiple calls if we log line by line.
         // Let's log title, then each command, then modes block.
 
-        context.getJaiderModel().addLog(AiMessage.from(ANSI_BOLD + "Jaider Commands:" + ANSI_RESET));
+        context.model().addLog(AiMessage.from(ANSI_BOLD + "Jaider Commands:" + ANSI_RESET));
         COMMANDS_HELP.forEach((cmd, desc) -> {
-            context.getJaiderModel().addLog(AiMessage.from(ANSI_BOLD + cmd + ANSI_RESET + " - " + desc));
+            context.model().addLog(AiMessage.from(ANSI_BOLD + cmd + ANSI_RESET + " - " + desc));
         });
 
         String modesHelp = String.format("""
@@ -90,6 +90,6 @@ public class HelpCommand implements Command {
             - Architect: A read-only mode for high-level questions about the codebase.
             - Ask: A simple Q&A mode with no access to your files.
             """, ANSI_BOLD, ANSI_RESET, ANSI_BOLD, ANSI_RESET, availableModes);
-        context.getJaiderModel().addLog(AiMessage.from(modesHelp));
+        context.model().addLog(AiMessage.from(modesHelp));
     }
 }

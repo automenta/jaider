@@ -28,8 +28,8 @@ public class RunCommand implements Command {
      */
     @Override
     public void execute(String args, AppContext context) {
-        JaiderModel model = context.getJaiderModel(); // Using getter from AppContext
-        Agent currentAgent = context.getApp().getCurrentAgent();
+        JaiderModel model = context.model(); // Using getter from AppContext
+        Agent currentAgent = context.app().getCurrentAgent();
 
         if (currentAgent == null) {
             model.addLog(AiMessage.from("[RunCommand] Error: No active agent found."));
@@ -37,8 +37,8 @@ public class RunCommand implements Command {
         }
 
         StandardTools standardTools = null;
-        if (currentAgent.getTools() != null) { // Check if tools set is null before iterating
-            for (Object tool : currentAgent.getTools()) {
+        if (currentAgent.tools() != null) { // Check if tools set is null before iterating
+            for (Object tool : currentAgent.tools()) {
                 if (tool instanceof StandardTools) {
                     standardTools = (StandardTools) tool;
                     break;

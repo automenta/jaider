@@ -436,15 +436,29 @@ public class Config {
             } else {
                 logger.debug("User config file {} has no components or is empty, using default components for editing (already in baseConfig).", file);
             }
-
-        } else { // No user file exists, baseConfig (from default-config.json) is complete as is.
-             logger.info("No existing user config file found at {}, using defaults from resource for editing.", file);
         }
+        // End of the for loop for overlaying settings.
+        // The following else block should be associated with the initial `if (Files.exists(file))`
+        // to handle the case where the user's config file doesn't exist from the start.
+        // However, the logic inside readForEditing already handles this by starting with `defaultConfigJson`
+        // if the file doesn't exist or fails to load, and then overlays.
+        // The current structure implies `configToEdit` would be the default if file didn't exist,
+        // so this 'else' for the for-loop is misplaced.
+        // Given the current logic, if `configToEdit` is populated by `getDefaultConfigAsJsonObject()`
+        // when `file` doesn't exist, then iterating its keyset (which would be default keys)
+        // and putting them back into `baseConfig` (also from `getDefaultConfigAsJsonObject()`) is redundant.
+        // The problematic `else` seems to be a remnant of a different logic flow.
+        // For now, to fix the immediate compilation error, I will remove the misplaced `else`.
+        // A more thorough review of this method's logic might be needed if behavior is not as expected.
+
 
         // `testCommand` is not written to the editable config; its logic is handled in `populateFieldsFromJson`.
         // `runCommand` in baseConfig will reflect the correct value from defaults or user's file (via populateFieldsFromJson -> load -> this.runCommand)
         // So, we ensure baseConfig's runCommand is set from the *loaded* this.runCommand if not already set by user's file.
         // This ensures the editable config reflects the actual runCommand that would be used.
+        // If no user file existed, configToEdit started as default, and this.getRunCommand() would be the default runCommand.
+        // If user file existed, this.getRunCommand() would be the loaded runCommand.
+        // This correctly sets the runCommand in the editable output.
         baseConfig.put("runCommand", this.getRunCommand()); // Use getter for currently loaded value
         baseConfig.remove("testCommand"); // Ensure testCommand is not in the output for editing
 

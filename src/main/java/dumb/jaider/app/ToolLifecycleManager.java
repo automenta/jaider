@@ -82,7 +82,7 @@ public class ToolLifecycleManager {
         boolean diffApplied = "applyDiff".equals(request.name()) && toolResult.startsWith("Diff applied");
         Config currentConfig = app.getConfig(); // Get config from App
 
-        if (diffApplied && currentConfig.runCommand != null && !currentConfig.runCommand.isBlank()) {
+        if (diffApplied && currentConfig.getRunCommand() != null && !currentConfig.getRunCommand().isBlank()) {
             app.setStatePublic(App.State.WAITING_USER_CONFIRMATION);
             String confirmationQuery = getValidationConfirmationQuery(currentConfig);
             app.getUi().confirm("Run Validation?", confirmationQuery).thenAccept(approved -> {
@@ -140,10 +140,10 @@ public class ToolLifecycleManager {
         String confirmationQuery;
         Boolean lastPref = app.getLastValidationPreferencePublic(); // Get pref via App method
         if (lastPref == null) {
-            confirmationQuery = String.format("Agent applied a diff. Run configured validation command (`%s`)?", currentConfig.runCommand);
+            confirmationQuery = String.format("Agent applied a diff. Run configured validation command (`%s`)?", currentConfig.getRunCommand());
         } else {
             confirmationQuery = String.format("Agent applied a diff. Your previous choice was to %s validation. Run configured validation command (`%s`)?",
-                    (lastPref ? "run" : "not run"), currentConfig.runCommand);
+                    (lastPref ? "run" : "not run"), currentConfig.getRunCommand());
         }
         return confirmationQuery;
     }

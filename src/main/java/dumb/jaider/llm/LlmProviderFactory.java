@@ -28,17 +28,17 @@ public class LlmProviderFactory {
     }
 
     public ChatLanguageModel createChatModel() {
-        if ("ollama".equalsIgnoreCase(config.llm)) {
+        if ("ollama".equalsIgnoreCase(config.getLlm())) {
             setupOllama();
-        } else if ("genericOpenai".equalsIgnoreCase(config.llm)) {
+        } else if ("genericOpenai".equalsIgnoreCase(config.getLlm())) {
             setupGenericOpenAI();
-        } else if ("openai".equalsIgnoreCase(config.llm)) {
+        } else if ("openai".equalsIgnoreCase(config.getLlm())) {
             // model.addLog(AiMessage.from("[Jaider] OpenAI provider selected but setupOpenAI() is currently commented out. No model initialized."));
             setupOpenAI();
-        } else if ("gemini".equalsIgnoreCase(config.llm)) {
+        } else if ("gemini".equalsIgnoreCase(config.getLlm())) {
             setupGemini();
         } else {
-            model.addLog(AiMessage.from(String.format("[Jaider] WARNING: Unknown llmProvider '%s' in config. Defaulting to Ollama.", config.llm)));
+            model.addLog(AiMessage.from(String.format("[Jaider] WARNING: Unknown llmProvider '%s' in config. Defaulting to Ollama.", config.getLlm())));
             setupOllama();
         }
 
@@ -70,9 +70,9 @@ public class LlmProviderFactory {
 
     public EmbeddingModel createEmbeddingModel() {
         if (this.embeddingModel == null) { // Create only if not already created
-            if ("ollama".equalsIgnoreCase(config.llm)) {
+            if ("ollama".equalsIgnoreCase(config.getLlm())) {
                 setupOllamaEmbeddingModel();
-            } else if ("genericOpenai".equalsIgnoreCase(config.llm)) {
+            } else if ("genericOpenai".equalsIgnoreCase(config.getLlm())) {
                 // Assuming genericOpenai might use a similar setup for embeddings if available
                 // This part might need a specific GenericOpenAiEmbeddingModel or configuration
                 // For now, let's try to adapt OllamaEmbeddingModel if the API is compatible
@@ -80,12 +80,12 @@ public class LlmProviderFactory {
                 // Setting to null or a specific implementation if available.
                 // For demonstration, trying OllamaEmbeddingModel, but this might not be correct for all generic OpenAI endpoints.
                 setupGenericOpenAIEmbeddingModel();
-            } else if ("openai".equalsIgnoreCase(config.llm)) {
+            } else if ("openai".equalsIgnoreCase(config.getLlm())) {
                 setupOpenAIEmbeddingModel();
-            } else if ("gemini".equalsIgnoreCase(config.llm)) {
+            } else if ("gemini".equalsIgnoreCase(config.getLlm())) {
                 setupGeminiEmbeddingModel();
             } else {
-                model.addLog(AiMessage.from(String.format("[Jaider] WARNING: Unknown llmProvider '%s' for embedding model. No embedding model initialized.", config.llm)));
+                model.addLog(AiMessage.from(String.format("[Jaider] WARNING: Unknown llmProvider '%s' for embedding model. No embedding model initialized.", config.getLlm())));
             }
         }
         return this.embeddingModel;
@@ -94,12 +94,12 @@ public class LlmProviderFactory {
     private void setupOllamaEmbeddingModel() {
         try {
             this.embeddingModel = OllamaEmbeddingModel.builder()
-                    .baseUrl(config.ollamaBaseUrl)
-                    .modelName(config.ollamaModelName) // Often, the same model can be used for embeddings or a specific one like 'nomic-embed-text'
+                    .baseUrl(config.getOllamaBaseUrl())
+                    .modelName(config.getOllamaModelName()) // Often, the same model can be used for embeddings or a specific one like 'nomic-embed-text'
                     .build();
-            model.addLog(AiMessage.from(String.format("[Jaider] Ollama Embedding model '%s' initialized successfully from %s.", config.ollamaModelName, config.ollamaBaseUrl)));
+            model.addLog(AiMessage.from(String.format("[Jaider] Ollama Embedding model '%s' initialized successfully from %s.", config.getOllamaModelName(), config.getOllamaBaseUrl())));
         } catch (Exception e) {
-            model.addLog(AiMessage.from(String.format("[Jaider] CRITICAL ERROR: Failed to initialize Ollama Embedding model '%s' from %s. Error: %s. Falling back to local NoOpEmbeddingModel.", config.ollamaModelName, config.ollamaBaseUrl, e.getMessage())));
+            model.addLog(AiMessage.from(String.format("[Jaider] CRITICAL ERROR: Failed to initialize Ollama Embedding model '%s' from %s. Error: %s. Falling back to local NoOpEmbeddingModel.", config.getOllamaModelName(), config.getOllamaBaseUrl(), e.getMessage())));
             this.embeddingModel = new dumb.jaider.llm.NoOpEmbeddingModel(); // Use local NoOpEmbeddingModel
         }
     }
@@ -115,15 +115,15 @@ public class LlmProviderFactory {
             String embeddingModelName = config.getGenericOpenaiEmbeddingModelName();
 
             this.embeddingModel = OpenAiEmbeddingModel.builder()
-                    .baseUrl(config.genericOpenaiBaseUrl) // Assume embedding endpoint is relative to the base URL
+                    .baseUrl(config.getGenericOpenaiBaseUrl()) // Assume embedding endpoint is relative to the base URL
                     .apiKey(apiKey)
                     .modelName(embeddingModelName)
                     // .logRequests(true) // Optional
                     // .logResponses(true) // Optional
                     .build();
-            model.addLog(AiMessage.from(String.format("[Jaider] Generic OpenAI-compatible Embedding model '%s' (using OpenAiEmbeddingModel client) attempted initialization from %s.", embeddingModelName, config.genericOpenaiBaseUrl)));
+            model.addLog(AiMessage.from(String.format("[Jaider] Generic OpenAI-compatible Embedding model '%s' (using OpenAiEmbeddingModel client) attempted initialization from %s.", embeddingModelName, config.getGenericOpenaiBaseUrl())));
         } catch (Exception e) {
-            model.addLog(AiMessage.from(String.format("[Jaider] CRITICAL ERROR: Failed to initialize Generic OpenAI-compatible Embedding model '%s' from %s using OpenAiEmbeddingModel client. Error: %s. Falling back to NoOpEmbeddingModel.", config.getGenericOpenaiEmbeddingModelName(), config.genericOpenaiBaseUrl, e.getMessage())));
+            model.addLog(AiMessage.from(String.format("[Jaider] CRITICAL ERROR: Failed to initialize Generic OpenAI-compatible Embedding model '%s' from %s using OpenAiEmbeddingModel client. Error: %s. Falling back to NoOpEmbeddingModel.", config.getGenericOpenaiEmbeddingModelName(), config.getGenericOpenaiBaseUrl(), e.getMessage())));
             this.embeddingModel = new dumb.jaider.llm.NoOpEmbeddingModel();
         }
     }
@@ -131,13 +131,13 @@ public class LlmProviderFactory {
     private void setupOllama() {
         try {
             this.chatModel = OllamaChatModel.builder()
-                    .baseUrl(config.ollamaBaseUrl)
-                    .modelName(config.ollamaModelName)
+                    .baseUrl(config.getOllamaBaseUrl())
+                    .modelName(config.getOllamaModelName())
                     .build();
             this.tokenizer = (Tokenizer) this.chatModel; // Assuming chat model can also be tokenizer
-            model.addLog(AiMessage.from(String.format("[Jaider] Ollama model '%s' initialized successfully from %s.", config.ollamaModelName, config.ollamaBaseUrl)));
+            model.addLog(AiMessage.from(String.format("[Jaider] Ollama model '%s' initialized successfully from %s.", config.getOllamaModelName(), config.getOllamaBaseUrl())));
         } catch (Exception e) {
-            model.addLog(AiMessage.from(String.format("[Jaider] CRITICAL ERROR: Failed to initialize Ollama model '%s' from %s. Error: %s. Jaider's functionality will be severely limited. Check Ollama server and config.", config.ollamaModelName, config.ollamaBaseUrl, e.getMessage())));
+            model.addLog(AiMessage.from(String.format("[Jaider] CRITICAL ERROR: Failed to initialize Ollama model '%s' from %s. Error: %s. Jaider's functionality will be severely limited. Check Ollama server and config.", config.getOllamaModelName(), config.getOllamaBaseUrl(), e.getMessage())));
             // Fallback for chat model might be needed if it's critical for tests that don't mock it.
             // For now, focusing on embedding model.
         }
@@ -151,9 +151,9 @@ public class LlmProviderFactory {
             }
 
             this.chatModel = OpenAiChatModel.builder()
-                    .baseUrl(config.genericOpenaiBaseUrl)
+                    .baseUrl(config.getGenericOpenaiBaseUrl())
                     .apiKey(apiKey) // OpenAiChatModel should use this for Bearer token
-                    .modelName(config.genericOpenaiModelName)
+                    .modelName(config.getGenericOpenaiModelName())
                     .logRequests(true) // Optional: for debugging
                     .logResponses(true) // Optional: for debugging
                     .build();
@@ -161,9 +161,9 @@ public class LlmProviderFactory {
             if (this.chatModel instanceof Tokenizer) {
                 this.tokenizer = (Tokenizer) this.chatModel;
             }
-            model.addLog(AiMessage.from(String.format("[Jaider] Generic OpenAI-compatible model '%s' (using OpenAiChatModel client) initialized from %s.", config.genericOpenaiModelName, config.genericOpenaiBaseUrl)));
+            model.addLog(AiMessage.from(String.format("[Jaider] Generic OpenAI-compatible model '%s' (using OpenAiChatModel client) initialized from %s.", config.getGenericOpenaiModelName(), config.getGenericOpenaiBaseUrl())));
         } catch (Exception e) {
-            model.addLog(AiMessage.from(String.format("[Jaider] CRITICAL ERROR: Failed to initialize Generic OpenAI-compatible model '%s' from %s using OpenAiChatModel client. Error: %s. Functionality severely limited.", config.genericOpenaiModelName, config.genericOpenaiBaseUrl, e.getMessage())));
+            model.addLog(AiMessage.from(String.format("[Jaider] CRITICAL ERROR: Failed to initialize Generic OpenAI-compatible model '%s' from %s using OpenAiChatModel client. Error: %s. Functionality severely limited.", config.getGenericOpenaiModelName(), config.getGenericOpenaiBaseUrl(), e.getMessage())));
             // chatModel will remain null or previous value if exception occurs
         }
     }

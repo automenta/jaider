@@ -27,13 +27,13 @@ public class AddCommand implements Command {
     @Override
     public void execute(String args, AppContext context) {
         if (args == null || args.isBlank()) {
-            context.getJaiderModel().addLog(AiMessage.from("Usage: /add <file1> [file2] ..."));
+            context.model().addLog(AiMessage.from("Usage: /add <file1> [file2] ..."));
             return;
         }
         // Trim leading/trailing whitespace from the overall args string before splitting
         String trimmedArgs = args.trim();
         if (trimmedArgs.isEmpty()) { // Check again after trim, in case args was just whitespace
-            context.getJaiderModel().addLog(AiMessage.from("Usage: /add <file1> [file2] ..."));
+            context.model().addLog(AiMessage.from("Usage: /add <file1> [file2] ..."));
             return;
         }
 
@@ -44,10 +44,10 @@ public class AddCommand implements Command {
         // That might be handled by the agent or when files are actually read.
         Arrays.stream(filesToAdd)
                 .filter(fileName -> !fileName.isBlank()) // Ensure no empty strings from multiple spaces
-                .map(fileName -> context.getJaiderModel().getDir().resolve(fileName.trim())) // Trim individual file names
-                .forEach(path -> context.getJaiderModel().getFiles().add(path));
+                .map(fileName -> context.model().getDir().resolve(fileName.trim())) // Trim individual file names
+                .forEach(path -> context.model().getFiles().add(path));
 
-        context.getApp().updateTokenCountPublic(); // Assumes this method exists and is public
+        context.app().updateTokenCountPublic(); // Assumes this method exists and is public
 
         // Provide feedback on what was added. String.join is good.
         // Consider if filesToAdd itself should be filtered for blank strings before joining for the log.
@@ -56,11 +56,11 @@ public class AddCommand implements Command {
                                                             .filter(s -> !s.isEmpty())
                                                             .toArray(String[]::new));
         if (!addedFilesMessage.isEmpty()) {
-            context.getJaiderModel().addLog(AiMessage.from("Added to context: " + addedFilesMessage));
+            context.model().addLog(AiMessage.from("Added to context: " + addedFilesMessage));
         } else {
             // This case might happen if input was like "/add   " and then split by space.
             // The initial isBlank() check should catch most, but defensive coding here is fine.
-            context.getJaiderModel().addLog(AiMessage.from("Usage: /add <file1> [file2] ... (no valid file names provided)"));
+            context.model().addLog(AiMessage.from("Usage: /add <file1> [file2] ... (no valid file names provided)"));
         }
     }
 }
