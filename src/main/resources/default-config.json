@@ -1,0 +1,366 @@
+{
+  "llmProvider": "ollama",
+  "ollamaBaseUrl": "http://localhost:11434",
+  "ollamaModelName": "llamablit",
+  "genericOpenaiBaseUrl": "http://localhost:8080/v1",
+  "genericOpenaiModelName": "local-model",
+  "genericOpenaiEmbeddingModelName": "text-embedding-ada-002",
+  "genericOpenaiApiKey": "",
+  "openaiModelName": "gpt-4o-mini",
+  "openaiApiKey": "",
+  "geminiApiKey": "",
+  "geminiModelName": "gemini-1.5-flash-latest",
+  "geminiEmbeddingModelName": "textembedding-gecko",
+  "tavilyApiKey": "",
+  "runCommand": "",
+  "toolManifestsDir": "src/main/resources/tool-descriptors",
+  "apiKeys": {
+    "openai": "YOUR_OPENAI_API_KEY",
+    "anthropic": "YOUR_ANTHROPIC_API_KEY",
+    "google": "YOUR_GOOGLE_API_KEY",
+    "tavily": "",
+    "genericOpenai": ""
+  },
+  "components": [
+    {
+      "id": "chatMemory",
+      "class": "dev.langchain4j.memory.chat.MessageWindowChatMemory",
+      "staticFactoryMethod": "withMaxMessages",
+      "staticFactoryArgs": [
+        {
+          "value": 20,
+          "type": "int"
+        }
+      ]
+    },
+    {
+      "id": "llmProviderFactory",
+      "class": "dumb.jaider.llm.LlmProviderFactory",
+      "constructorArgs": [
+        {
+          "ref": "appConfig"
+        },
+        {
+          "ref": "jaiderModel"
+        }
+      ]
+    },
+    {
+      "id": "toolManager",
+      "class": "dumb.jaider.toolmanager.ToolManager",
+      "constructorArgs": [
+        {
+          "value": "src/main/resources/tool-descriptors",
+          "type": "java.lang.String"
+        }
+      ]
+    },
+    {
+      "id": "standardTools",
+      "class": "dumb.jaider.tools.StandardTools",
+      "constructorArgs": [
+        {
+          "ref": "jaiderModel"
+        },
+        {
+          "ref": "appConfig"
+        },
+        {
+          "ref": "appEmbeddingModel"
+        }
+      ]
+    },
+    {
+      "id": "parserRegistry",
+      "class": "dumb.jaider.refactoring.ParserRegistry"
+    },
+    {
+      "id": "refactoringService",
+      "class": "dumb.jaider.refactoring.RefactoringService",
+      "constructorArgs": [
+        {
+          "ref": "parserRegistry"
+        }
+      ]
+    },
+    {
+      "id": "smartRenameTool",
+      "class": "dumb.jaider.tools.SmartRenameTool",
+      "constructorArgs": [
+        {
+          "ref": "refactoringService"
+        }
+      ]
+    },
+    {
+      "id": "listContextFilesTool",
+      "class": "dumb.jaider.tools.ListContextFilesTool",
+      "constructorArgs": [
+        {
+          "ref": "jaiderModel"
+        }
+      ]
+    },
+    {
+      "id": "staticAnalysisService",
+      "class": "dumb.jaider.staticanalysis.StaticAnalysisService",
+      "constructorArgs": [
+        {
+          "ref": "toolManager"
+        }
+      ]
+    },
+    {
+      "id": "analysisTools",
+      "class": "dumb.jaider.tools.AnalysisTools",
+      "constructorArgs": [
+        {
+          "ref": "staticAnalysisService"
+        },
+        {
+          "ref": "jaiderModel"
+        }
+      ]
+    },
+    {
+      "id": "userInterfaceService",
+      "class": "dumb.jaider.ui.CommandLineUserInterfaceService"
+    },
+    {
+      "id": "gitService",
+      "class": "dumb.jaider.service.LocalGitService"
+    },
+    {
+      "id": "buildManagerService",
+      "class": "dumb.jaider.service.BuildManagerService"
+    },
+    {
+      "id": "restartService",
+      "class": "dumb.jaider.service.BasicRestartService"
+    },
+    {
+      "id": "selfUpdateOrchestratorService",
+      "class": "dumb.jaider.service.SelfUpdateOrchestratorService",
+      "constructorArgs": [
+        {
+          "ref": "jaiderModel"
+        },
+        {
+          "ref": "userInterfaceService"
+        },
+        {
+          "ref": "buildManagerService"
+        },
+        {
+          "ref": "gitService"
+        },
+        {
+          "ref": "restartService"
+        },
+        {
+          "ref": "appConfig"
+        }
+      ]
+    },
+    {
+      "id": "jaiderTools",
+      "class": "dumb.jaider.tools.JaiderTools",
+      "constructorArgs": [
+        {
+          "ref": "jaiderModel"
+        },
+        {
+          "ref": "selfUpdateOrchestratorService"
+        }
+      ]
+    },
+    {
+      "id": "coderAgent",
+      "class": "dumb.jaider.agents.CoderAgent",
+      "constructorArgs": [
+        {
+          "ref": "appChatLanguageModel"
+        },
+        {
+          "ref": "chatMemory"
+        },
+        {
+          "list": [
+            {
+              "ref": "standardTools"
+            },
+            {
+              "ref": "jaiderTools"
+            },
+            {
+              "ref": "smartRenameTool"
+            },
+            {
+              "ref": "analysisTools"
+            },
+            {
+              "ref": "listContextFilesTool"
+            }
+          ]
+        },
+        {
+          "value": "You are a super-intelligent AI developer named Jaider. Your goal is to help users build and modify software projects by applying changes directly to their codebase. When a user asks for a change, understand the request, identify the files to modify, and then use the 'applyDiff' tool to provide the necessary changes in the diff format. Always ensure your diffs are correct and directly applicable. If you need to read a file, use 'readFile'. If you need to list files, use 'listFiles'. If a user asks you to add a file to context, use 'addFilesToContext'. If asked to remove, use 'removeFilesFromContext'. If you need to create a new file, use 'createFile'. Do not ask the user to make changes manually. You are empowered to make them directly. Be proactive and precise. For complex tasks, break them down into smaller, manageable steps, applying diffs for each. Always provide a commit message with your diffs. State: END_OF_PLAN at the end of your plan. Do not use it anywhere else. If a user asks you to do something that is not a coding task, or if it is a very complex task that you are not sure how to do, or if it is a task that is too risky, you should decline the request and explain why. You should be able to update any file, including configuration files like pom.xml or build.gradle, or JSON files. Use the 'DependencyUpdater' tool to check for and apply dependency updates to pom.xml when the user asks for it. If you need to rename files or directories, use the 'renameFileOrDirectory' tool. If you need to perform a smart rename of a symbol (class, method, variable) across multiple files, use the 'smartRename' tool. If you need to find relevant code snippets, use the 'findRelevantCode' tool. If you need to analyze code for issues, use the 'analyzeCode' tool. Always respond in Markdown format, ensuring any code blocks or diffs are correctly formatted. If you are providing a diff, ensure the diff is enclosed in a ```diff ... ``` block.",
+          "type": "java.lang.String"
+        }
+      ]
+    },
+    {
+      "id": "architectAgent",
+      "class": "dumb.jaider.agents.ArchitectAgent",
+      "constructorArgs": [
+        {
+          "ref": "appChatLanguageModel"
+        },
+        {
+          "ref": "chatMemory"
+        },
+        {
+          "ref": "standardTools"
+        }
+      ]
+    },
+    {
+      "id": "askAgent",
+      "class": "dumb.jaider.agents.AskAgent",
+      "constructorArgs": [
+        {
+          "ref": "appChatLanguageModel"
+        },
+        {
+          "ref": "chatMemory"
+        }
+      ]
+    },
+    {
+      "id": "proactiveSuggestionService",
+      "class": "dumb.jaider.suggestion.ProactiveSuggestionService",
+      "constructorArgs": [
+        {
+          "ref": "toolManager"
+        }
+      ]
+    },
+    {
+      "id": "agentService",
+      "class": "dumb.jaider.app.AgentService",
+      "constructorArgs": [
+        {
+          "ref": "appConfig"
+        },
+        {
+          "ref": "jaiderModel"
+        },
+        {
+          "ref": "chatMemory"
+        },
+        {
+          "ref": "llmProviderFactory"
+        }
+      ]
+    },
+    {
+      "id": "sessionManager",
+      "class": "dumb.jaider.app.SessionManager",
+      "constructorArgs": [
+        {
+          "ref": "jaiderModel"
+        },
+        {
+          "ref": "chatMemory"
+        },
+        {
+          "ref": "ui"
+        }
+      ]
+    },
+    {
+      "id": "toolLifecycleManager",
+      "class": "dumb.jaider.app.ToolLifecycleManager",
+      "constructorArgs": [
+        {
+          "ref": "app"
+        },
+        {
+          "ref": "agentService"
+        }
+      ]
+    },
+    {
+      "id": "selfUpdateService",
+      "class": "dumb.jaider.app.SelfUpdateService",
+      "constructorArgs": [
+        {
+          "ref": "appConfig"
+        },
+        {
+          "ref": "jaiderModel"
+        },
+        {
+          "ref": "app"
+        }
+      ]
+    },
+    {
+      "id": "agentInteractionService",
+      "class": "dumb.jaider.app.AgentInteractionService",
+      "constructorArgs": [
+        {
+          "ref": "app"
+        },
+        {
+          "ref": "jaiderModel"
+        },
+        {
+          "ref": "chatMemory"
+        },
+        {
+          "ref": "ui"
+        },
+        {
+          "ref": "agentService"
+        },
+        {
+          "ref": "toolLifecycleManager"
+        },
+        {
+          "ref": "sessionManager"
+        },
+        {
+          "ref": "selfUpdateService"
+        }
+      ]
+    },
+    {
+      "id": "userInputHandler",
+      "class": "dumb.jaider.app.UserInputHandler",
+      "constructorArgs": [
+        {
+          "ref": "app"
+        },
+        {
+          "ref": "jaiderModel"
+        },
+        {
+          "ref": "appConfig"
+        },
+        {
+          "ref": "ui"
+        },
+        {
+          "ref": "agentService"
+        },
+        {
+          "ref": "proactiveSuggestionService"
+        },
+        {
+          "ref": "commandsMap"
+        }
+      ]
+    }
+  ]
+}

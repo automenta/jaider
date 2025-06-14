@@ -17,12 +17,25 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 /**
- * Manages the instantiation and retrieval of components based on JSON definitions.
- * Supports instantiation via public constructors, public static factory methods,
- * and public instance factory methods on other managed components.
- * Handles resolution of constructor/method arguments, including references to other
- * components and literal values with type conversion.
- * Includes basic circular dependency detection and caching of singleton instances.
+ * Manages the instantiation and retrieval of components (services, tools, etc.)
+ * for the Jaider application. It functions as a simple dependency injection (DI) container.
+ * <p>
+ * Components are defined by a map of {@link JSONObject}s, where each key is a unique
+ * component ID and the value is a JSON object describing how to create the component.
+ * Supported instantiation strategies include:
+ * <ul>
+ *     <li>Constructor injection: Using the component's public constructor.</li>
+ *     <li>Static factory method: Calling a public static method on the component's class.</li>
+ *     <li>Instance factory method: Calling a public method on another managed component (factory bean).</li>
+ * </ul>
+ * The injector resolves constructor/method arguments, which can be:
+ * <ul>
+ *     <li>References to other components (using {@code "ref": "componentId"}).</li>
+ *     <li>Literal values (e.g., strings, numbers, booleans, using {@code "value": ..., "type": ...}).</li>
+ *     <li>Lists of values or references.</li>
+ * </ul>
+ * It caches created singleton instances and includes basic circular dependency detection
+ * to prevent infinite loops during component creation.
  */
 public class DependencyInjector {
 
@@ -31,11 +44,28 @@ public class DependencyInjector {
     private final Map<String, Object> singletonInstances = new HashMap<>();
     private final Set<String> currentlyInCreation = new HashSet<>();
 
+    /**
+     * Constructs a new DependencyInjector.
+     *
+     * @param componentDefinitions A map where keys are component IDs and values are
+     *                             JSONObjects defining how to instantiate the component.
+     *                             A defensive copy of this map is used internally.
+     */
     public DependencyInjector(Map<String, JSONObject> componentDefinitions) {
         this.componentDefinitions = new HashMap<>(componentDefinitions); // Use a copy
         logger.debug("DependencyInjector initialized with {} component definitions.", componentDefinitions.size());
     }
 
+    /**
+     * Registers an already created instance as a singleton component.
+     * If a component with the same ID is already registered, it will be overwritten.
+     * If no JSON definition exists for this ID and the instance is not null,
+     * a minimal definition (based on the instance's class) is added to allow
+     * it to be potentially used as a dependency by other JSON-defined components.
+     *
+     * @param id The unique ID for the component.
+     * @param instance The pre-existing instance to register.
+     */
     public void registerSingleton(String id, Object instance) {
         if (singletonInstances.containsKey(id)) {
             logger.warn("Overwriting existing singleton instance for id: {}", id);
@@ -43,20 +73,55 @@ public class DependencyInjector {
         singletonInstances.put(id, instance);
         logger.debug("Registered pre-existing singleton instance for id: {}", id);
 
+        // If a component is registered programmatically, and no JSON definition exists,
+        // create a minimal one so it can be referenced by other components if needed.
         if (!componentDefinitions.containsKey(id) && instance != null) {
             JSONObject definition = new JSONObject();
             definition.put("class", instance.getClass().getName());
+            // Note: This minimal definition doesn't include constructor/factory args.
+            // It's primarily useful if this manually registered instance is a simple bean
+            // or if other components only need its type for injection.
             componentDefinitions.put(id, definition);
             logger.debug("Added minimal component definition for pre-registered singleton: {}", id);
         }
     }
 
+    /**
+     * Clears the cache of singleton instances and the set tracking components
+     * currently under construction. This forces re-creation of components on subsequent
+     * {@code getComponent(String)} calls, based on their JSON definitions.
+     * Manually registered singletons (via {@code registerSingleton}) that do not have
+     * a corresponding JSON definition might not be available after clearing if they
+     * were only in the cache.
+     */
     public void clearCache() {
         singletonInstances.clear();
-        currentlyInCreation.clear();
+        currentlyInCreation.clear(); // Important for re-creation attempts after errors
         logger.debug("Singleton cache and creation tracking cleared.");
     }
 
+    /**
+     * Retrieves a component instance by its ID.
+     * <p>
+     * If the component has already been created and cached as a singleton, the cached
+     * instance is returned. Otherwise, the injector attempts to create the component
+     * based on its JSON definition. This process includes:
+     * <ol>
+     *     <li>Checking for circular dependencies.</li>
+     *     <li>Instantiating the component using its constructor or a factory method.</li>
+     *     <li>Resolving and injecting any required arguments (other components or literal values).</li>
+     *     <li>Caching the newly created instance as a singleton.</li>
+     * </ol>
+     *
+     * @param id The unique ID of the component to retrieve.
+     * @return The component instance.
+     * @throws ComponentNotFoundException if no definition is found for the given ID.
+     * @throws CircularDependencyException if a circular dependency is detected during instantiation.
+     * @throws ComponentInstantiationException if any error occurs during component creation
+     *         (e.g., class not found, method not found, constructor/factory invocation error,
+     *         argument type mismatch).
+     * @throws InvalidComponentDefinitionException if the JSON definition for the component is malformed.
+     */
     public Object getComponent(String id) {
         if (singletonInstances.containsKey(id)) {
             logger.debug("Returning cached singleton instance for id: {}", id);

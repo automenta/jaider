@@ -8,39 +8,93 @@ import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.stream.Collectors;
 
+/**
+ * Manages application configuration for Jaider.
+ * Configuration is loaded from {@code .jaider.json} in the project directory.
+ * If this file doesn't exist, defaults are loaded from {@code default-config.json}
+ * (a resource within the Jaider JAR) and a new {@code .jaider.json} is created.
+ * <p>
+ * This class provides access to various configuration settings, including LLM providers,
+ * API keys, model names, and component definitions for the dependency injector.
+ * API keys are resolved with the following precedence:
+ * <ol>
+ *     <li>Environment Variable (e.g., {@code OPENAI_API_KEY})</li>
+ *     <li>Specific top-level key in {@code .jaider.json} (e.g., {@code "openaiApiKey"})</li>
+ *     <li>Key within the {@code "apiKeys": {}} map in {@code .jaider.json} (e.g., {@code "openai"})</li>
+ * </ol>
+ * Component definitions are used to initialize the {@link DependencyInjector}.
+ */
 public class Config {
     private static final Logger logger = LoggerFactory.getLogger(Config.class);
-    final Path file;
+    private static final String DEFAULT_CONFIG_PATH = "/default-config.json"; // Path in resources
+    private final Path file; // Changed to private final, was package-private (final Path file)
     private JSONObject loadedJsonConfig; // Stores the raw JSON loaded from file or defaults
     private final Map<String, JSONObject> componentDefinitions = new HashMap<>();
     private transient DependencyInjector injector;
     private static final String COMPONENTS_KEY = "components";
 
-    // Field defaults
+    // Field defaults - these will be applied if not in default-config.json or .jaider.json
+    // However, the primary source of defaults is now default-config.json
     final Map<String, String> apiKeys = new HashMap<>();
-    public String llm = "ollama";
-    public String runCommand = "";
-    public String ollamaBaseUrl = "http://localhost:11434";
-    public String ollamaModelName = "llamablit";
-    public String genericOpenaiBaseUrl = "http://localhost:8080/v1";
-    public String genericOpenaiModelName = "local-model";
-    public String genericOpenaiEmbeddingModelName = "text-embedding-ada-002";
-    public String genericOpenaiApiKey = "";
-    public String openaiModelName = "gpt-4o-mini";
-    public String geminiApiKey = "";
-    public String geminiModelName = "gemini-1.5-flash-latest";
-    public String geminiEmbeddingModelName = "textembedding-gecko";
-    public String tavilyApiKey = "";
-    public String toolManifestsDir = "src/main/resources/tool-descriptors";
+    // Configuration fields are private final and accessed via getters
+    private final String llm;
+    private final String runCommand;
+    private final String ollamaBaseUrl;
+    private final String ollamaModelName;
+    private final String genericOpenaiBaseUrl;
+    private final String genericOpenaiModelName;
+    private final String genericOpenaiEmbeddingModelName;
+    private final String genericOpenaiApiKey;
+    private final String openaiModelName;
+    private final String geminiApiKey;
+    private final String geminiModelName;
+    private final String geminiEmbeddingModelName;
+    private final String tavilyApiKey;
+    private final String toolManifestsDir;
 
+    /**
+     * Constructs a new Config instance.
+     * It initializes configuration by attempting to load {@code .jaider.json} from the specified
+     * project directory. If not found, it loads defaults from internal resources and
+     * creates a new {@code .jaider.json}. It also initializes the dependency injector.
+     *
+     * @param projectDir The root directory of the project where {@code .jaider.json} is expected.
+     * @throws IllegalStateException if no component definitions are found after loading,
+     * indicating a critical configuration or packaging error.
+     */
     public Config(Path projectDir) {
         this.file = projectDir.resolve(".jaider.json");
+        // Initialize fields with temporary defaults before load()
+        // These will be overwritten by populateFieldsFromJson during the first load() call.
+        this.llm = "ollama";
+        this.ollamaBaseUrl = "http://localhost:11434";
+        this.ollamaModelName = "llamablit";
+        this.genericOpenaiBaseUrl = "http://localhost:8080/v1";
+        this.genericOpenaiModelName = "local-model";
+        this.genericOpenaiEmbeddingModelName = "text-embedding-ada-002";
+        this.genericOpenaiApiKey = "";
+        this.openaiModelName = "gpt-4o-mini";
+        this.geminiApiKey = "";
+        this.geminiModelName = "gemini-1.5-flash-latest";
+        this.geminiEmbeddingModelName = "textembedding-gecko";
+        this.tavilyApiKey = "";
+        this.toolManifestsDir = "src/main/resources/tool-descriptors";
+        this.runCommand = "";
+
+        // Removed duplicate load() and this.file assignment.
+        // The first this.file assignment is correct.
+        // load() is called once to populate fields.
         load(); // Populates fields and componentDefinitions from file or defaults
 
         if (this.componentDefinitions.isEmpty()) {
@@ -94,23 +148,89 @@ public class Config {
 
     private void populateFieldsFromJson(JSONObject json) {
         // Populate all other fields from JSON, using current field values as defaults
-        this.llm = json.optString("llmProvider", this.llm);
-        this.ollamaBaseUrl = json.optString("ollamaBaseUrl", this.ollamaBaseUrl);
-        // ... (all other simple fields as before) ...
-        this.genericOpenaiBaseUrl = json.optString("genericOpenaiBaseUrl", this.genericOpenaiBaseUrl);
-        this.genericOpenaiModelName = json.optString("genericOpenaiModelName", this.genericOpenaiModelName);
-        this.genericOpenaiEmbeddingModelName = json.optString("genericOpenaiEmbeddingModelName", this.genericOpenaiEmbeddingModelName);
-        this.genericOpenaiApiKey = json.optString("genericOpenaiApiKey", this.genericOpenaiApiKey);
-        this.openaiModelName = json.optString("openaiModelName", this.openaiModelName);
-        this.geminiApiKey = json.optString("geminiApiKey", this.geminiApiKey);
-        this.geminiModelName = json.optString("geminiModelName", this.geminiModelName);
-        this.geminiEmbeddingModelName = json.optString("geminiEmbeddingModelName", this.geminiEmbeddingModelName);
-        this.tavilyApiKey = json.optString("tavilyApiKey", this.tavilyApiKey);
-        this.toolManifestsDir = json.optString("toolManifestsDir", this.toolManifestsDir);
-        this.runCommand = json.optString("runCommand", "");
-        if (json.has("testCommand") && !json.has("runCommand")) { // Legacy
-             this.runCommand = json.optString("testCommand", "");
+        // Note: direct assignment here as these are final fields being set effectively once during load.
+        String llmVal = json.optString("llmProvider", this.llm);
+        String ollamaBaseUrlVal = json.optString("ollamaBaseUrl", this.ollamaBaseUrl);
+        String genericOpenaiBaseUrlVal = json.optString("genericOpenaiBaseUrl", this.genericOpenaiBaseUrl);
+        String genericOpenaiModelNameVal = json.optString("genericOpenaiModelName", this.genericOpenaiModelName);
+        String genericOpenaiEmbeddingModelNameVal = json.optString("genericOpenaiEmbeddingModelName", this.genericOpenaiEmbeddingModelName);
+        String genericOpenaiApiKeyVal = json.optString("genericOpenaiApiKey", this.genericOpenaiApiKey);
+        String openaiModelNameVal = json.optString("openaiModelName", this.openaiModelName);
+        String geminiApiKeyVal = json.optString("geminiApiKey", this.geminiApiKey);
+        String geminiModelNameVal = json.optString("geminiModelName", this.geminiModelName);
+        String geminiEmbeddingModelNameVal = json.optString("geminiEmbeddingModelName", this.geminiEmbeddingModelName);
+        String tavilyApiKeyVal = json.optString("tavilyApiKey", this.tavilyApiKey);
+        String toolManifestsDirVal = json.optString("toolManifestsDir", this.toolManifestsDir);
+
+        String runCommandVal = json.optString("runCommand", this.runCommand); // Default to current or initial ""
+        // Centralized legacy testCommand handling:
+        // If testCommand is present AND runCommand was NOT present or was empty, use testCommand.
+        if (json.has("testCommand")) {
+            String testCommandVal = json.optString("testCommand");
+            if (!testCommandVal.isEmpty() && (runCommandVal.isEmpty() || !json.has("runCommand"))) {
+                logger.info("Using legacy 'testCommand' value ('{}') for 'runCommand'.", testCommandVal);
+                runCommandVal = testCommandVal;
+            }
         }
+
+        // Assign to final fields using reflection.
+        // This is a workaround to allow final fields to be set after initial constructor defaults
+        // based on loaded JSON configuration. This method effectively completes the initialization
+        // of these final fields.
+        // It assumes populateFieldsFromJson is called as part of the object's construction sequence (via load()).
+        java.lang.reflect.Field llmField, ollamaBaseUrlField, genericOpenaiBaseUrlField, genericOpenaiModelNameField,
+                                genericOpenaiEmbeddingModelNameField, genericOpenaiApiKeyField, openaiModelNameField,
+                                geminiApiKeyField, geminiModelNameField, geminiEmbeddingModelNameField, tavilyApiKeyField,
+                                toolManifestsDirField, runCommandField;
+        try {
+            // Use getDeclaredField for private fields.
+            llmField = Config.class.getDeclaredField("llm");
+            ollamaBaseUrlField = Config.class.getDeclaredField("ollamaBaseUrl");
+            genericOpenaiBaseUrlField = Config.class.getDeclaredField("genericOpenaiBaseUrl");
+            genericOpenaiModelNameField = Config.class.getDeclaredField("genericOpenaiModelName");
+            genericOpenaiEmbeddingModelNameField = Config.class.getDeclaredField("genericOpenaiEmbeddingModelName");
+            genericOpenaiApiKeyField = Config.class.getDeclaredField("genericOpenaiApiKey");
+            openaiModelNameField = Config.class.getDeclaredField("openaiModelName");
+            geminiApiKeyField = Config.class.getDeclaredField("geminiApiKey");
+            geminiModelNameField = Config.class.getDeclaredField("geminiModelName");
+            geminiEmbeddingModelNameField = Config.class.getDeclaredField("geminiEmbeddingModelName");
+            tavilyApiKeyField = Config.class.getDeclaredField("tavilyApiKey");
+            toolManifestsDirField = Config.class.getDeclaredField("toolManifestsDir");
+            runCommandField = Config.class.getDeclaredField("runCommand");
+
+            llmField.setAccessible(true);
+            ollamaBaseUrlField.setAccessible(true);
+            genericOpenaiBaseUrlField.setAccessible(true);
+            genericOpenaiModelNameField.setAccessible(true);
+            genericOpenaiEmbeddingModelNameField.setAccessible(true);
+            genericOpenaiApiKeyField.setAccessible(true);
+            openaiModelNameField.setAccessible(true);
+            geminiApiKeyField.setAccessible(true);
+            geminiModelNameField.setAccessible(true);
+            geminiEmbeddingModelNameField.setAccessible(true);
+            tavilyApiKeyField.setAccessible(true);
+            toolManifestsDirField.setAccessible(true);
+            runCommandField.setAccessible(true);
+
+            llmField.set(this, llmVal);
+            ollamaBaseUrlField.set(this, ollamaBaseUrlVal);
+            genericOpenaiBaseUrlField.set(this, genericOpenaiBaseUrlVal);
+            genericOpenaiModelNameField.set(this, genericOpenaiModelNameVal);
+            genericOpenaiEmbeddingModelNameField.set(this, genericOpenaiEmbeddingModelNameVal);
+            genericOpenaiApiKeyField.set(this, genericOpenaiApiKeyVal);
+            openaiModelNameField.set(this, openaiModelNameVal);
+            geminiApiKeyField.set(this, geminiApiKeyVal);
+            geminiModelNameField.set(this, geminiModelNameVal);
+            geminiEmbeddingModelNameField.set(this, geminiEmbeddingModelNameVal);
+            tavilyApiKeyField.set(this, tavilyApiKeyVal);
+            toolManifestsDirField.set(this, toolManifestsDirVal);
+            runCommandField.set(this, runCommandVal);
+
+        } catch (NoSuchFieldException | IllegalAccessException e) {
+            logger.error("Error setting final fields via reflection", e);
+            throw new RuntimeException("Failed to populate final config fields", e);
+        }
+
 
         this.apiKeys.clear();
         JSONObject keys = json.optJSONObject("apiKeys");
@@ -137,136 +257,45 @@ public class Config {
     }
 
     private JSONObject getDefaultConfigAsJsonObject() {
-        JSONObject defaultConfig = new JSONObject();
-        // Populate simple fields
-        defaultConfig.put("llmProvider", "ollama"); // Default value
-        defaultConfig.put("ollamaBaseUrl", "http://localhost:11434");
-        defaultConfig.put("ollamaModelName", "llamablit");
-        defaultConfig.put("genericOpenaiBaseUrl", "http://localhost:8080/v1");
-        defaultConfig.put("genericOpenaiModelName", "local-model");
-        defaultConfig.put("genericOpenaiEmbeddingModelName", "text-embedding-ada-002");
-        defaultConfig.put("genericOpenaiApiKey", "");
-        defaultConfig.put("openaiModelName", "gpt-4o-mini");
-        defaultConfig.put("openaiApiKey", ""); // Specific key for OpenAI calls
-        defaultConfig.put("geminiApiKey", "");
-        defaultConfig.put("geminiModelName", "gemini-1.5-flash-latest");
-        defaultConfig.put("geminiEmbeddingModelName", "textembedding-gecko");
-        defaultConfig.put("tavilyApiKey", "");
-        defaultConfig.put("runCommand", "");
-        defaultConfig.put("toolManifestsDir", "src/main/resources/tool-descriptors");
-
-        JSONObject defaultKeys = new JSONObject();
-        defaultKeys.put("openai", "YOUR_OPENAI_API_KEY");
-        defaultKeys.put("anthropic", "YOUR_ANTHROPIC_API_KEY");
-        defaultKeys.put("google", "YOUR_GOOGLE_API_KEY"); // For Gemini
-        defaultKeys.put("tavily", "");
-        defaultKeys.put("genericOpenai", "");
-        defaultConfig.put("apiKeys", defaultKeys);
-
-        JSONArray components = new JSONArray();
-        // Foundational
-        components.put(new JSONObject().put("id", "chatMemory").put("class", "dev.langchain4j.memory.chat.MessageWindowChatMemory").put("staticFactoryMethod", "withMaxMessages").put("staticFactoryArgs", new JSONArray().put(new JSONObject().put("value", 20).put("type", "int"))));
-        components.put(new JSONObject().put("id", "llmProviderFactory").put("class", "dumb.jaider.llm.LlmProviderFactory").put("constructorArgs", new JSONArray().put(new JSONObject().put("ref", "appConfig")).put(new JSONObject().put("ref", "jaiderModel"))));
-        components.put(new JSONObject().put("id", "toolManager").put("class", "dumb.jaider.toolmanager.ToolManager").put("constructorArgs", new JSONArray().put(new JSONObject().put("value", this.toolManifestsDir).put("type", "java.lang.String"))));
-
-        // Tools & Refactoring
-        components.put(new JSONObject().put("id", "standardTools").put("class", "dumb.jaider.tools.StandardTools").put("constructorArgs", new JSONArray().put(new JSONObject().put("ref", "jaiderModel")).put(new JSONObject().put("ref", "appConfig")).put(new JSONObject().put("ref", "appEmbeddingModel"))));
-        components.put(new JSONObject().put("id", "parserRegistry").put("class", "dumb.jaider.refactoring.ParserRegistry"));
-        components.put(new JSONObject().put("id", "refactoringService").put("class", "dumb.jaider.refactoring.RefactoringService").put("constructorArgs", new JSONArray().put(new JSONObject().put("ref", "parserRegistry"))));
-        components.put(new JSONObject().put("id", "smartRenameTool").put("class", "dumb.jaider.tools.SmartRenameTool").put("constructorArgs", new JSONArray().put(new JSONObject().put("ref", "refactoringService"))));
-        components.put(new JSONObject().put("id", "listContextFilesTool").put("class", "dumb.jaider.tools.ListContextFilesTool").put("constructorArgs", new JSONArray().put(new JSONObject().put("ref", "jaiderModel"))));
-        components.put(new JSONObject().put("id", "staticAnalysisService").put("class", "dumb.jaider.staticanalysis.StaticAnalysisService").put("constructorArgs", new JSONArray().put(new JSONObject().put("ref", "toolManager"))));
-        components.put(new JSONObject().put("id", "analysisTools").put("class", "dumb.jaider.tools.AnalysisTools").put("constructorArgs", new JSONArray().put(new JSONObject().put("ref", "staticAnalysisService")).put(new JSONObject().put("ref", "jaiderModel"))));
-
-        // Self-Update Services
-        components.put(new JSONObject().put("id", "userInterfaceService").put("class", "dumb.jaider.ui.CommandLineUserInterfaceService")); // Assuming dumb.jaider.ui
-        components.put(new JSONObject().put("id", "gitService").put("class", "dumb.jaider.service.LocalGitService"));
-        components.put(new JSONObject().put("id", "buildManagerService").put("class", "dumb.jaider.service.BuildManagerService"));
-        components.put(new JSONObject().put("id", "restartService").put("class", "dumb.jaider.service.BasicRestartService"));
-        components.put(new JSONObject().put("id", "selfUpdateOrchestratorService").put("class", "dumb.jaider.service.SelfUpdateOrchestratorService")
-            .put("constructorArgs", new JSONArray()
-                .put(new JSONObject().put("ref", "jaiderModel"))
-                .put(new JSONObject().put("ref", "userInterfaceService"))
-                .put(new JSONObject().put("ref", "buildManagerService"))
-                .put(new JSONObject().put("ref", "gitService"))
-                .put(new JSONObject().put("ref", "restartService"))
-                .put(new JSONObject().put("ref", "appConfig"))
-                // .put(new JSONObject().put("ref", "app")) // If app is needed directly
-            ));
-        components.put(new JSONObject().put("id", "jaiderTools").put("class", "dumb.jaider.tools.JaiderTools")
-            .put("constructorArgs", new JSONArray()
-                .put(new JSONObject().put("ref", "jaiderModel"))
-                .put(new JSONObject().put("ref", "selfUpdateOrchestratorService"))
-            ));
-
-        // Agents (assuming constructors take individual tool refs or a toolset ref if defined)
-        JSONArray coderAgentTools = new JSONArray()
-            .put(new JSONObject().put("ref", "standardTools"))
-            .put(new JSONObject().put("ref", "jaiderTools"))
-            .put(new JSONObject().put("ref", "smartRenameTool"))
-            .put(new JSONObject().put("ref", "analysisTools"))
-            .put(new JSONObject().put("ref", "listContextFilesTool"));
-        components.put(new JSONObject().put("id", "coderAgent").put("class", "dumb.jaider.agents.CoderAgent")
-            .put("constructorArgs", new JSONArray()
-                .put(new JSONObject().put("ref", "appChatLanguageModel"))
-                .put(new JSONObject().put("ref", "chatMemory"))
-                .put(new JSONObject().put("list", coderAgentTools)) // Assuming CoderAgent can take a List<Object> of tools
-                .put(new JSONObject().put("value", "You are a super-intelligent AI developer named Jaider. Your goal is to help users build and modify software projects by applying changes directly to their codebase. When a user asks for a change, understand the request, identify the files to modify, and then use the 'applyDiff' tool to provide the necessary changes in the diff format. Always ensure your diffs are correct and directly applicable. If you need to read a file, use 'readFile'. If you need to list files, use 'listFiles'. If a user asks you to add a file to context, use 'addFilesToContext'. If asked to remove, use 'removeFilesFromContext'. If you need to create a new file, use 'createFile'. Do not ask the user to make changes manually. You are empowered to make them directly. Be proactive and precise. For complex tasks, break them down into smaller, manageable steps, applying diffs for each. Always provide a commit message with your diffs. State: END_OF_PLAN at the end of your plan. Do not use it anywhere else. If a user asks you to do something that is not a coding task, or if it is a very complex task that you are not sure how to do, or if it is a task that is too risky, you should decline the request and explain why. You should be able to update any file, including configuration files like pom.xml or build.gradle, or JSON files. Use the 'DependencyUpdater' tool to check for and apply dependency updates to pom.xml when the user asks for it. If you need to rename files or directories, use the 'renameFileOrDirectory' tool. If you need to perform a smart rename of a symbol (class, method, variable) across multiple files, use the 'smartRename' tool. If you need to find relevant code snippets, use the 'findRelevantCode' tool. If you need to analyze code for issues, use the 'analyzeCode' tool. Always respond in Markdown format, ensuring any code blocks or diffs are correctly formatted. If you are providing a diff, ensure the diff is enclosed in a ```diff ... ``` block.").put("type", "java.lang.String")) // System message
-            ));
-        components.put(new JSONObject().put("id", "architectAgent").put("class", "dumb.jaider.agents.ArchitectAgent")
-            .put("constructorArgs", new JSONArray()
-                .put(new JSONObject().put("ref", "appChatLanguageModel"))
-                .put(new JSONObject().put("ref", "chatMemory"))
-                .put(new JSONObject().put("ref", "standardTools"))
-            ));
-        components.put(new JSONObject().put("id", "askAgent").put("class", "dumb.jaider.agents.AskAgent")
-            .put("constructorArgs", new JSONArray()
-                .put(new JSONObject().put("ref", "appChatLanguageModel"))
-                .put(new JSONObject().put("ref", "chatMemory"))
-            ));
-
-        // Application Services (to be fetched by App.java)
-        components.put(new JSONObject().put("id", "proactiveSuggestionService").put("class", "dumb.jaider.suggestion.ProactiveSuggestionService").put("constructorArgs", new JSONArray().put(new JSONObject().put("ref", "toolManager"))));
-        components.put(new JSONObject().put("id", "agentService").put("class", "dumb.jaider.app.AgentService").put("constructorArgs", new JSONArray()
-            .put(new JSONObject().put("ref", "appConfig"))
-            .put(new JSONObject().put("ref", "jaiderModel"))
-            .put(new JSONObject().put("ref", "chatMemory"))
-            .put(new JSONObject().put("ref", "llmProviderFactory"))));
-        components.put(new JSONObject().put("id", "sessionManager").put("class", "dumb.jaider.app.SessionManager").put("constructorArgs", new JSONArray()
-            .put(new JSONObject().put("ref", "jaiderModel"))
-            .put(new JSONObject().put("ref", "chatMemory"))
-            .put(new JSONObject().put("ref", "ui")))); // ui is registered by App
-        components.put(new JSONObject().put("id", "toolLifecycleManager").put("class", "dumb.jaider.app.ToolLifecycleManager").put("constructorArgs", new JSONArray()
-            .put(new JSONObject().put("ref", "app")) // App instance
-            .put(new JSONObject().put("ref", "agentService"))));
-        components.put(new JSONObject().put("id", "selfUpdateService").put("class", "dumb.jaider.app.SelfUpdateService").put("constructorArgs", new JSONArray()
-            .put(new JSONObject().put("ref", "appConfig"))
-            .put(new JSONObject().put("ref", "jaiderModel"))
-            .put(new JSONObject().put("ref", "app"))));
-        components.put(new JSONObject().put("id", "agentInteractionService").put("class", "dumb.jaider.app.AgentInteractionService").put("constructorArgs", new JSONArray()
-            .put(new JSONObject().put("ref", "app"))
-            .put(new JSONObject().put("ref", "jaiderModel"))
-            .put(new JSONObject().put("ref", "chatMemory"))
-            .put(new JSONObject().put("ref", "ui"))
-            .put(new JSONObject().put("ref", "agentService"))
-            .put(new JSONObject().put("ref", "toolLifecycleManager"))
-            .put(new JSONObject().put("ref", "sessionManager"))
-            .put(new JSONObject().put("ref", "selfUpdateService"))));
-        components.put(new JSONObject().put("id", "userInputHandler").put("class", "dumb.jaider.app.UserInputHandler").put("constructorArgs", new JSONArray()
-            .put(new JSONObject().put("ref", "app"))
-            .put(new JSONObject().put("ref", "jaiderModel"))
-            .put(new JSONObject().put("ref", "appConfig"))
-            .put(new JSONObject().put("ref", "ui"))
-            .put(new JSONObject().put("ref", "agentService")) // UserInputHandler will get current agent from agentService via app
-            .put(new JSONObject().put("ref", "proactiveSuggestionService"))
-            .put(new JSONObject().put("ref", "commandsMap")) // Assuming commandsMap is registered by App
-            ));
-
-        defaultConfig.put(COMPONENTS_KEY, components);
-        logger.info("Generated default component definitions. Total components defined: {}", components.length());
-        return defaultConfig;
+        try (InputStream inputStream = Config.class.getResourceAsStream(DEFAULT_CONFIG_PATH)) {
+            if (inputStream == null) {
+                String errorMsg = "CRITICAL: Default configuration file not found in resources: " + DEFAULT_CONFIG_PATH;
+                logger.error(errorMsg);
+                throw new IOException(errorMsg); // Or a more specific runtime exception
+            }
+            String jsonText = new BufferedReader(
+                new InputStreamReader(inputStream, StandardCharsets.UTF_8))
+                .lines()
+                .collect(Collectors.joining("\n"));
+            JSONObject defaultConfig = new JSONObject(jsonText);
+            logger.info("Successfully loaded default configuration from {}", DEFAULT_CONFIG_PATH);
+            // Ensure toolManifestsDir is correctly set if it needs to be dynamic (though static path is fine)
+            // For now, we assume the value in default-config.json is correct.
+            // If it needed to be relative to project root, it would require more complex logic here or
+            // a placeholder in the JSON that gets replaced.
+            // Example: defaultConfig.put("toolManifestsDir", "some_dynamic_path_logic_here");
+            return defaultConfig;
+        } catch (IOException e) {
+            String errorMsg = "CRITICAL: IOException while reading default config from " + DEFAULT_CONFIG_PATH;
+            logger.error(errorMsg, e);
+            throw new RuntimeException(errorMsg, e); // This is a fatal error for the application
+        } catch (org.json.JSONException e) {
+            String errorMsg = "CRITICAL: JSONException while parsing default config from " + DEFAULT_CONFIG_PATH;
+            logger.error(errorMsg, e);
+            throw new RuntimeException(errorMsg, e); // This is also fatal
+        }
     }
 
+    /**
+     * Saves the provided configuration string to the {@code .jaider.json} file.
+     * After saving, it reloads the configuration and re-initializes the
+     * dependency injector with the new settings.
+     *
+     * @param newConfig The new configuration as a JSON string.
+     * @throws IOException if there's an error writing to the file.
+     * @throws org.json.JSONException if the newConfig string is not valid JSON.
+     * @throws IllegalStateException if component definitions become empty after reload.
+     */
     public void save(String newConfig) throws IOException {
         Path parentDir = file.getParent();
         if (parentDir != null && !Files.exists(parentDir)) {
@@ -311,14 +340,54 @@ public class Config {
         return null;
     }
 
+    /**
+     * Retrieves the Tavily API key.
+     * Resolution order: {@code TAVILY_API_KEY} env var > {@code "tavilyApiKey"} JSON key > {@code "tavily"} in {@code "apiKeys"} JSON map.
+     * @return The Tavily API key, or null if not found.
+     */
     public String getTavilyApiKey() { return getKeyValue("TAVILY_API_KEY", "tavilyApiKey", "tavily"); }
+
+    /**
+     * Retrieves the Google Gemini API key.
+     * Resolution order: {@code GEMINI_API_KEY} env var > {@code "geminiApiKey"} JSON key > {@code "google"} in {@code "apiKeys"} JSON map.
+     * @return The Gemini API key, or null if not found.
+     */
     public String getGeminiApiKey() { return getKeyValue("GEMINI_API_KEY", "geminiApiKey", "google"); }
+
+    /** @return The configured Gemini model name (e.g., "gemini-1.5-flash-latest"). */
     public String getGeminiModelName() { return this.geminiModelName; }
+
+    /** @return The configured Gemini embedding model name (e.g., "textembedding-gecko"). */
     public String getGeminiEmbeddingModelName() { return this.geminiEmbeddingModelName; }
+
+    /**
+     * Retrieves the API key for a generic OpenAI-compatible service.
+     * Resolution order: {@code GENERIC_OPENAI_API_KEY} env var > {@code "genericOpenaiApiKey"} JSON key > {@code "genericOpenai"} in {@code "apiKeys"} JSON map.
+     * @return The generic OpenAI API key, or null if not found.
+     */
     public String getGenericOpenaiApiKey() { return getKeyValue("GENERIC_OPENAI_API_KEY", "genericOpenaiApiKey", "genericOpenai"); }
+
+    /** @return The configured generic OpenAI embedding model name (e.g., "text-embedding-ada-002"). */
     public String getGenericOpenaiEmbeddingModelName() { return this.genericOpenaiEmbeddingModelName; }
+
+    /**
+     * Retrieves the OpenAI API key.
+     * Resolution order: {@code OPENAI_API_KEY} env var > {@code "openaiApiKey"} JSON key > {@code "openai"} in {@code "apiKeys"} JSON map.
+     * @return The OpenAI API key, or null if not found.
+     */
     public String getOpenaiApiKey() { return getKeyValue("OPENAI_API_KEY", "openaiApiKey", "openai"); }
+
+    /** @return The configured OpenAI model name (e.g., "gpt-4o-mini"). */
     public String getOpenaiModelName() { return this.openaiModelName; }
+
+    /**
+     * Retrieves an API key for the given provider key from the {@code "apiKeys"} map in the configuration.
+     * This method also checks for a corresponding environment variable (e.g., {@code PROVIDERKEYINMAP_API_KEY}).
+     * Environment variable takes precedence.
+     *
+     * @param providerKeyInMap The key for the provider in the "apiKeys" map (e.g., "openai", "google").
+     * @return The API key if found, otherwise null.
+     */
     public String getApiKey(String providerKeyInMap) {
         String envVarName = providerKeyInMap.toUpperCase() + "_API_KEY";
         String value = System.getenv(envVarName);
@@ -331,47 +400,96 @@ public class Config {
         if (Files.exists(file)) {
             try {
                 configToEdit = new JSONObject(Files.readString(file));
-                 logger.debug("Read existing config for editing: {}", file);
+                logger.debug("Read existing config for editing: {}", file);
             } catch (Exception e) {
-                logger.warn("Couldn't read existing config file {} for editing, starting with defaults: {}", file, e.getMessage(), e);
-                configToEdit = getDefaultConfigAsJsonObject();
+                logger.warn("Couldn't read existing config file {} for editing, starting with defaults from resource: {}", file, e.getMessage(), e);
+                configToEdit = getDefaultConfigAsJsonObject(); // Load from new resource method
             }
         } else {
-            logger.info("No config file found for editing at {}, starting with defaults.", file);
-            configToEdit = getDefaultConfigAsJsonObject();
+            logger.info("No config file found for editing at {}, starting with defaults from resource.", file);
+            configToEdit = getDefaultConfigAsJsonObject(); // Load from new resource method
         }
 
-        JSONObject baseConfig = getDefaultConfigAsJsonObject();
+        JSONObject baseConfig = getDefaultConfigAsJsonObject(); // Base is now from resource
+        // Overlay user's settings from .jaider.json onto the defaults from resource
         for (String key : configToEdit.keySet()) {
-            if (!COMPONENTS_KEY.equals(key) && !"apiKeys".equals(key)) {
-                 baseConfig.put(key, configToEdit.get(key));
+            // Overlay user's settings from .jaider.json onto the defaults from resource
+            // For simple fields, directly put from configToEdit if they exist
+            for (String k : JSONObject.getNames(configToEdit)) {
+                if (!COMPONENTS_KEY.equals(k) && !"apiKeys".equals(k) && !"testCommand".equals(k)) {
+                    baseConfig.put(k, configToEdit.get(k));
+                }
             }
-        }
-        if (configToEdit.has("apiKeys")) {
-            JSONObject fileApiKeys = configToEdit.getJSONObject("apiKeys");
-            JSONObject defaultApiKeys = baseConfig.getJSONObject("apiKeys");
-            for (String key : fileApiKeys.keySet()) {
-                defaultApiKeys.put(key, fileApiKeys.get(key));
+
+            // If user's config has "apiKeys", it replaces the default "apiKeys"
+            if (configToEdit.has("apiKeys")) {
+                baseConfig.put("apiKeys", configToEdit.getJSONObject("apiKeys"));
+                logger.debug("Using apiKeys object from user file for editing.");
+            } else {
+                logger.debug("User config file {} has no apiKeys, using default apiKeys for editing (already in baseConfig).", file);
             }
-        }
-        if (configToEdit.has(COMPONENTS_KEY) && configToEdit.getJSONArray(COMPONENTS_KEY).length() > 0) {
-            baseConfig.put(COMPONENTS_KEY, configToEdit.getJSONArray(COMPONENTS_KEY));
-            logger.debug("Using component definitions from file for editing.");
-        } else {
-            logger.debug("Using default component definitions for editing as file had none or was empty.");
+
+            // If user's config has "components" and it's not empty, it replaces default "components"
+            if (configToEdit.has(COMPONENTS_KEY) && configToEdit.getJSONArray(COMPONENTS_KEY).length() > 0) {
+                baseConfig.put(COMPONENTS_KEY, configToEdit.getJSONArray(COMPONENTS_KEY));
+                logger.debug("Using component definitions from user file for editing.");
+            } else {
+                logger.debug("User config file {} has no components or is empty, using default components for editing (already in baseConfig).", file);
+            }
+
+        } else { // No user file exists, baseConfig (from default-config.json) is complete as is.
+             logger.info("No existing user config file found at {}, using defaults from resource for editing.", file);
         }
 
-        if (baseConfig.has("testCommand") && !baseConfig.has("runCommand")) {
-            baseConfig.put("runCommand", baseConfig.getString("testCommand"));
-        }
-        baseConfig.remove("testCommand");
+        // `testCommand` is not written to the editable config; its logic is handled in `populateFieldsFromJson`.
+        // `runCommand` in baseConfig will reflect the correct value from defaults or user's file (via populateFieldsFromJson -> load -> this.runCommand)
+        // So, we ensure baseConfig's runCommand is set from the *loaded* this.runCommand if not already set by user's file.
+        // This ensures the editable config reflects the actual runCommand that would be used.
+        baseConfig.put("runCommand", this.getRunCommand()); // Use getter for currently loaded value
+        baseConfig.remove("testCommand"); // Ensure testCommand is not in the output for editing
 
-        if (!baseConfig.has("runCommand")) {
-            baseConfig.put("runCommand", this.runCommand);
-        }
         return baseConfig.toString(2);
     }
 
+    // --- Getters for Configuration Fields ---
+
+    /** @return The configured LLM provider name (e.g., "ollama", "openai"). */
+    public String getLlm() { return llm; }
+
+    /** @return The command string used for running validation or tests (e.g., "mvn test"). */
+    public String getRunCommand() { return runCommand; }
+
+    /** @return The base URL for the Ollama service (e.g., "http://localhost:11434"). */
+    public String getOllamaBaseUrl() { return ollamaBaseUrl; }
+
+    /** @return The model name for Ollama (e.g., "llamablit"). */
+    public String getOllamaModelName() { return ollamaModelName; }
+
+    /** @return The base URL for a generic OpenAI-compatible service (e.g., "http://localhost:8080/v1"). */
+    public String getGenericOpenaiBaseUrl() { return genericOpenaiBaseUrl; }
+
+    /** @return The model name for the generic OpenAI-compatible service (e.g., "local-model"). */
+    public String getGenericOpenaiModelName() { return genericOpenaiModelName; }
+
+    // Note: Javadoc for getGenericOpenaiEmbeddingModelName, getOpenaiModelName, getGeminiModelName,
+    // getGeminiEmbeddingModelName, getTavilyApiKey, getOpenaiApiKey, getGenericOpenaiApiKey, getGeminiApiKey
+    // are already added above their definitions.
+
+    /** @return The directory path for tool descriptor manifest files. */
+    public String getToolManifestsDir() { return toolManifestsDir; }
+
+
+    /**
+     * Retrieves a component instance of the specified type from the dependency injector.
+     *
+     * @param id The unique ID of the component to retrieve.
+     * @param type The expected class type of the component.
+     * @param <T> The type of the component.
+     * @return The component instance.
+     * @throws IllegalStateException if the dependency injector is not initialized.
+     * @throws ComponentNotFoundException if the component with the given ID is not found.
+     * @throws ComponentInstantiationException if the component cannot be instantiated or is of an incompatible type.
+     */
     public <T> T getComponent(String id, Class<T> type) {
         if (this.injector == null) {
             throw new IllegalStateException("DependencyInjector is not initialized.");

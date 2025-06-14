@@ -1,69 +1,64 @@
 package dumb.jaider.commands;
 
-import dumb.jaider.app.App;
+import dumb.jaider.app.AppContext;
 import dumb.jaider.model.JaiderModel;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.util.Collections;
-
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
-class HelpCommandTest {
+public class HelpCommandTest {
 
     @Mock
-    private AppContext appContext;
-
+    private AppContext mockAppContext;
     @Mock
-    private JaiderModel model;
-
-    @Mock // Mock the App class
-    private App app;
+    private JaiderModel mockJaiderModel;
 
     @InjectMocks
     private HelpCommand helpCommand;
 
     @BeforeEach
     void setUp() {
-        when(appContext.model()).thenReturn(model); // Corrected
-        when(appContext.app()).thenReturn(app); // Configure appContext to return mocked app
-        when(app.getAvailableAgentNames()).thenReturn(Collections.emptySet()); // Configure mocked app
+        when(mockAppContext.getJaiderModel()).thenReturn(mockJaiderModel);
     }
 
     @Test
-    void execute_shouldLogHelpTextToModel() {
-        helpCommand.execute(null, appContext); // Corrected // Argument is not used
+    void testExecute_logsHelpMessageForEachCommand() {
+        helpCommand.execute("", mockAppContext); // Argument to execute is typically ignored by HelpCommand
 
-        ArgumentCaptor<dev.langchain4j.data.message.AiMessage> messageCaptor = ArgumentCaptor.forClass(dev.langchain4j.data.message.AiMessage.class); // Specific to AiMessage
-        verify(model).addLog(messageCaptor.capture()); // Corrected
+        // Verify the main help title is logged
+        verify(mockJaiderModel).addLog(HelpCommand.ANSI_BOLD + "Jaider Commands:" + HelpCommand.ANSI_RESET);
 
-        String capturedHelpText = messageCaptor.getValue().text(); // AiMessage has .text()
-        assertNotNull(capturedHelpText);
-        assertTrue(capturedHelpText.contains("COMMANDS:"), "Help text should list available commands under 'COMMANDS:'.");
-        assertTrue(capturedHelpText.contains("/add <files...>"), "Help text should contain /add command.");
-        // Assertions for commands not currently listed in HelpCommand.java are commented out.
-        // Revisit these if HelpCommand.java is updated to include them (e.g., dynamically).
-        // assertTrue(capturedHelpText.contains("/ask <question>"), "Help text should contain /ask command."); // Not listed under COMMANDS
-        // assertTrue(capturedHelpText.contains("/commit <message>"), "Help text should contain /commit command."); // Not listed
-        // assertTrue(capturedHelpText.contains("/config"), "Help text should contain /config command."); // Not listed
-        assertTrue(capturedHelpText.contains("/edit-config"), "Help text should contain /edit-config command.");
-        assertTrue(capturedHelpText.contains("/exit"), "Help text should contain /exit command.");
-        assertTrue(capturedHelpText.contains("/help"), "Help text should contain /help command.");
-        assertTrue(capturedHelpText.contains("/index"), "Help text should contain /index command.");
-        assertTrue(capturedHelpText.contains("/mode <ModeName>"), "Help text should contain /mode command description under MODES.");
-        // Assertions for commands not currently listed in HelpCommand.java are commented out.
-        // Revisit these if HelpCommand.java is updated to include them (e.g., dynamically).
-        // assertTrue(capturedHelpText.contains("/reset"), "Help text should contain /reset command."); // Not listed
-        assertTrue(capturedHelpText.contains("/undo"), "Help text should contain /undo command.");
-        // Add more assertions if specific phrasing or other commands are critical
+        // Verify that addLog is called for each command's help string.
+        // This relies on the internal structure of COMMANDS_HELP in HelpCommand.
+        // A more robust approach would be to iterate COMMANDS_HELP if it were accessible,
+        // but for now, we verify based on the known commands.
+
+        // Example verifications for a few commands:
+        verify(mockJaiderModel).addLog(HelpCommand.ANSI_BOLD + "/add <file1> [file2] ..." + HelpCommand.ANSI_RESET + " - Add file(s) to the context. Supports glob patterns.");
+        verify(mockJaiderModel).addLog(HelpCommand.ANSI_BOLD + "/run [args]" + HelpCommand.ANSI_RESET + " - Run the validation command defined in config, passing optional arguments.");
+        verify(mockJaiderModel).addLog(HelpCommand.ANSI_BOLD + "/editconfig" + HelpCommand.ANSI_RESET + " - Edit the .jaider.json configuration file.");
+        // ... add more for other commands if desired, or use a times() verification.
+
+        // Verify based on the number of entries in COMMANDS_HELP
+        // Assuming COMMANDS_HELP is a Map or similar structure.
+        // If COMMANDS_HELP is private, we count based on the known number of help entries.
+        // From the provided HelpCommand snippet, there are 11 command help entries.
+        // So, 1 call for the title + 11 calls for each command's help text.
+        verify(mockJaiderModel, times(1 + HelpCommand.COMMANDS_HELP.size())).addLog(anyString());
+    }
+
+    @Test
+    void testExecute_withArgs_behaviorIsSameAsNoArgs() {
+        // HelpCommand is expected to ignore any arguments passed to it.
+        helpCommand.execute("some arguments that should be ignored", mockAppContext);
+
+        verify(mockJaiderModel).addLog(HelpCommand.ANSI_BOLD + "Jaider Commands:" + HelpCommand.ANSI_RESET);
+        verify(mockJaiderModel, times(1 + HelpCommand.COMMANDS_HELP.size())).addLog(anyString());
     }
 }

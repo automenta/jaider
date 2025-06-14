@@ -19,6 +19,24 @@ import java.util.ArrayList;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * Handles user input from the UI, parsing it to determine if it's a command
+ * or a message intended for the AI agent.
+ * <p>
+ * Responsibilities:
+ * <ul>
+ *     <li>Parses input to identify command invocations (lines starting with "/").</li>
+ *     <li>Routes known commands to their respective {@link Command} objects for execution.</li>
+ *     <li>Handles unknown commands by providing feedback to the user.</li>
+ *     <li>Forwards non-command input to the {@link AgentInteractionService} (via {@link App})
+ *         for processing by the current AI agent.</li>
+ *     <li>Manages interactions with {@link ProactiveSuggestionService} to display and
+ *         potentially accept or cancel suggestions based on user input.</li>
+ *     <li>Handles special input cases based on the application's current state (e.g.,
+ *         confirming a multi-step plan).</li>
+ *     <li>Supports direct tool invocation (lines starting with "!").</li>
+ * </ul>
+ */
 public class UserInputHandler {
     private static final Logger logger = LoggerFactory.getLogger(UserInputHandler.class);
 
@@ -30,11 +48,25 @@ public class UserInputHandler {
     private final ProactiveSuggestionService proactiveSuggestionService;
     private final Map<String, Command> commands;
 
+    /**
+     * Constructs a UserInputHandler.
+     *
+     * @param app The main application instance, used for state management and agent interaction.
+     * @param jaiderModel The application's data model, for logging and state updates.
+     * @param config The application configuration.
+     * @param ui The user interface instance, for redrawing.
+     * @param agent The current active agent (can be null if no agent is active).
+     *              Note: The direct 'agent' field seems to be from an older version based on tests.
+     *              Modern interaction likely goes through {@code App} or {@code AgentService}.
+     *              This constructor signature might need review against current App/AgentService structure.
+     * @param proactiveSuggestionService Service for generating and managing proactive suggestions.
+     * @param commands A map of command names to {@link Command} instances.
+     */
     public UserInputHandler(App app,
                             JaiderModel jaiderModel,
                             Config config,
                             UI ui,
-                            Agent agent,
+                            Agent agent, // Review: Is direct agent still passed or obtained via App/AgentService?
                             ProactiveSuggestionService proactiveSuggestionService,
                             Map<String, Command> commands) {
         this.app = app;
@@ -46,9 +78,37 @@ public class UserInputHandler {
         this.commands = commands;
     }
 
+    /**
+     * Handles a line of text input from the user.
+     * <p>
+     * The method first checks the application's current state. If the app is busy or
+     * waiting for a specific type of confirmation not related to general input,
+     * it may inform the user and return.
+     * <p>
+     * Otherwise, it processes the input:
+     * <ul>
+     *     <li>Input starting with "!" is treated as a direct tool invocation.</li>
+     *     <li>Input starting with "/" is treated as a command.</li>
+     *     <li>Other input is considered a message for the AI agent, which may also
+     *         trigger proactive suggestions.</li>
+     * </ul>
+     * After processing, the UI is typically redrawn.
+     *
+     * @param input The raw string input from the user.
+     */
     public void handleUserInput(String input) {
-        if (app.getState() != App.State.IDLE && app.getState() != App.State.WAITING_USER_PLAN_APPROVAL) {
-            jaiderModel.addLog(AiMessage.from("[Jaider] Please wait, I'm already working or waiting for approval."));
+        // Check app state; if busy or in a specific confirmation loop, might defer general input.
+        // The original check was: app.getState() != App.State.IDLE && app.getState() != App.State.WAITING_USER_PLAN_APPROVAL
+        // This needs to be re-evaluated based on all possible App.State values and their meaning for input handling.
+        // For example, if in WAITING_USER_CONFIRMATION, specific inputs like "yes"/"no" are expected.
+        // The current UserInputHandlerTest implies that some states (like WAITING_USER_CONFIRMATION) have special handlers
+        // that might take precedence or alter behavior for "yes"/"no".
+        // The provided code snippet for UserInputHandler does not show that specific state handling for "yes"/"no"
+        // before command/agent routing, which might be a discrepancy or handled within App/AgentInteractionService.
+        // For this Javadoc, we assume the general flow as per the provided method body.
+
+        if (app.getState() != App.State.IDLE && app.getState() != App.State.WAITING_USER_PLAN_APPROVAL && app.getState() != App.State.WAITING_USER_CONFIRMATION) { // Adjusted to allow input during WAITING_USER_CONFIRMATION
+            jaiderModel.addLog(AiMessage.from("[Jaider] Please wait, I'm currently busy or waiting for a different type of response."));
             ui.redraw(jaiderModel);
             return;
         }

@@ -1,538 +1,399 @@
 package dumb.jaider.config;
 
+import org.json.JSONArray;
+import org.json.JSONObject;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
+
+import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-class ConfigTest {
+public class ConfigTest {
+    private static final Logger logger = LoggerFactory.getLogger(ConfigTest.class);
 
     @TempDir
-    Path tempDir;
+    Path tempProjectDir;
 
-    private Path projectDir;
-    private Path configFilePath;
+    private Path jaiderConfigPath;
+    private JSONObject defaultConfigJsonReference; // Reference JSON loaded from resources
+
+    // Helper to load the main default config from resources for comparison
+    private JSONObject loadJsonFromResources(String resourcePath) throws IOException {
+        try (InputStream inputStream = Config.class.getResourceAsStream(resourcePath)) {
+            if (inputStream == null) {
+                throw new IOException("Resource file not found: " + resourcePath);
+            }
+            String jsonText = new BufferedReader(new InputStreamReader(inputStream, StandardCharsets.UTF_8))
+                    .lines().collect(Collectors.joining("\n"));
+            return new JSONObject(jsonText);
+        }
+    }
 
     @BeforeEach
     void setUp() throws IOException {
-        // Simulate a project directory within the temp directory
-        projectDir = tempDir.resolve("test-project");
-        Files.createDirectories(projectDir);
-        configFilePath = projectDir.resolve(".jaider.json"); // Corrected: Use literal filename
-        // Config.setProjectDir(projectDir.toString()); // Removed: Config projectDir is set via constructor
-    }
+        jaiderConfigPath = tempProjectDir.resolve(".jaider.json");
+        // Load the reference default config once for all tests
+        defaultConfigJsonReference = loadJsonFromResources("/default-config.json");
+        // Ensure a clean state: delete .jaider.json if it exists from a previous test run within the same @TempDir instance (though unlikely with @TempDir per method)
+        Files.deleteIfExists(jaiderConfigPath);
+         // Copy default-config.json to temp resources for Config class to load it.
+        Path tempResourceDir = tempProjectDir.resolve("src/main/resources");
+        Files.createDirectories(tempResourceDir);
+        Path tempDefaultConfig = tempResourceDir.resolve("default-config.json");
 
-    // --- Test Default Config Creation ---
-
-    @Test
-    void createDefaultConfig_whenFileDoesNotExist_shouldCreateAndLoadDefaults() throws IOException {
-        // Ensure the file does not exist initially (though @TempDir should handle this)
-        assertFalse(Files.exists(configFilePath), "Config file should not exist before test");
-
-        // Action: Load the config (which should trigger default config creation)
-        Config config = new Config(projectDir); // Config.load() is called in constructor
-
-        // Assertions
-        assertTrue(Files.exists(configFilePath), "Config file should have been created");
-
-        String content = Files.readString(configFilePath);
-        org.json.JSONObject jsonConfig = new org.json.JSONObject(content);
-
-        // Verify all default key-value pairs
-        assertEquals("ollama", jsonConfig.getString("llmProvider"));
-        assertEquals("http://localhost:11434", jsonConfig.getString("ollamaBaseUrl"));
-        assertEquals("llamablit", jsonConfig.getString("ollamaModelName"));
-        assertEquals("http://localhost:8080/v1", jsonConfig.getString("genericOpenaiBaseUrl"));
-        assertEquals("local-model", jsonConfig.getString("genericOpenaiModelName"));
-        assertEquals("", jsonConfig.getString("genericOpenaiApiKey"));
-        assertEquals("", jsonConfig.getString("geminiApiKey"));
-        assertEquals("gemini-1.5-flash-latest", jsonConfig.getString("geminiModelName"));
-        assertEquals("", jsonConfig.getString("tavilyApiKey"));
-        assertEquals("", jsonConfig.getString("runCommand")); // Default runCommand is empty
-
-        org.json.JSONObject apiKeysJson = jsonConfig.getJSONObject("apiKeys");
-        assertNotNull(apiKeysJson, "apiKeys object should exist");
-        assertEquals("YOUR_OPENAI_API_KEY", apiKeysJson.getString("openai"));
-        assertEquals("YOUR_ANTHROPIC_API_KEY", apiKeysJson.getString("anthropic"));
-        assertEquals("YOUR_GOOGLE_API_KEY", apiKeysJson.getString("google"));
-
-        // Also check the loaded config object's fields
-        assertEquals("ollama", config.llm);
-        assertEquals("http://localhost:11434", config.ollamaBaseUrl);
-        assertEquals("llamablit", config.ollamaModelName);
-        assertEquals("", config.runCommand);
-        assertEquals("YOUR_OPENAI_API_KEY", config.apiKeys.get("openai"));
-    }
-
-    // --- Test Loading Config (load()) ---
-
-    @Test
-    void load_withExistingValidConfig_shouldPopulateFieldsCorrectly() throws IOException {
-        // Setup: Create a pre-existing valid .jaider.json
-        String customConfigContent = """
-                {
-                  "llmProvider": "openai",
-                  "ollamaBaseUrl": "http://customhost:12345",
-                  "ollamaModelName": "customllamit",
-                  "genericOpenaiBaseUrl": "http://customhost:8081/v1",
-                  "genericOpenaiModelName": "custom-generic-model",
-                  "genericOpenaiApiKey": "custom-generic-key",
-                  "geminiApiKey": "custom-gemini-key",
-                  "geminiModelName": "custom-gemini-model",
-                  "tavilyApiKey": "custom-tavily-key",
-                  "runCommand": "mvn clean test",
-                  "apiKeys": {
-                    "openai": "sk-12345",
-                    "google": "g-abcdef"
-                  }
-                }""";
-        Files.writeString(configFilePath, customConfigContent);
-
-        // Action
-        Config config = new Config(projectDir);
-
-        // Assertions
-        assertEquals("openai", config.llm);
-        assertEquals("http://customhost:12345", config.ollamaBaseUrl);
-        assertEquals("customllamit", config.ollamaModelName);
-        assertEquals("http://customhost:8081/v1", config.genericOpenaiBaseUrl);
-        assertEquals("custom-generic-model", config.genericOpenaiModelName);
-        assertEquals("custom-generic-key", config.genericOpenaiApiKey);
-        assertEquals("custom-gemini-key", config.geminiApiKey);
-        assertEquals("custom-gemini-model", config.geminiModelName);
-        assertEquals("custom-tavily-key", config.tavilyApiKey);
-        assertEquals("mvn clean test", config.runCommand);
-
-        assertNotNull(config.apiKeys);
-        assertEquals("sk-12345", config.apiKeys.get("openai"));
-        assertEquals("g-abcdef", config.apiKeys.get("google"));
-        assertNull(config.apiKeys.get("anthropic"), "Anthropic key should be null as it's not in the custom config");
-    }
-
-    @Test
-    void load_withMissingOptionalFields_shouldUseDefaultValues() throws IOException {
-        // Setup: Create a .jaider.json with some fields missing
-        String partialConfigContent = """
-                {
-                  "llmProvider": "gemini",
-                  "geminiModelName": "gemini-pro",
-                  "apiKeys": {
-                    "google": "g-partialkey"
-                  }
-                }""";
-        Files.writeString(configFilePath, partialConfigContent);
-
-        // Action
-        Config config = new Config(projectDir);
-        Config defaultConfigForComparison = new Config(tempDir.resolve("default-project")); // to get default values easily
-
-        // Assertions for fields present in the partial config
-        assertEquals("gemini", config.llm);
-        assertEquals("gemini-pro", config.geminiModelName); // This was provided
-        assertNotNull(config.apiKeys);
-        assertEquals("g-partialkey", config.apiKeys.get("google"));
-
-        // Assertions for fields missing from partial config (should use defaults)
-        assertEquals(defaultConfigForComparison.ollamaBaseUrl, config.ollamaBaseUrl);
-        assertEquals(defaultConfigForComparison.ollamaModelName, config.ollamaModelName);
-        assertEquals(defaultConfigForComparison.genericOpenaiBaseUrl, config.genericOpenaiBaseUrl);
-        assertEquals(defaultConfigForComparison.genericOpenaiModelName, config.genericOpenaiModelName);
-        assertEquals(defaultConfigForComparison.genericOpenaiApiKey, config.genericOpenaiApiKey); // Default is ""
-        assertEquals(defaultConfigForComparison.geminiApiKey, config.geminiApiKey); // Default is ""
-        assertEquals(defaultConfigForComparison.tavilyApiKey, config.tavilyApiKey); // Default is ""
-        assertEquals(defaultConfigForComparison.runCommand, config.runCommand); // Default is ""
-
-        // Check that default API keys that were not in partial config are not there
-        assertNull(config.apiKeys.get("openai")); // Should not exist as it wasn't in partial and not in default map of config obj
-        assertNull(config.apiKeys.get("anthropic"));
-    }
-
-    @Test
-    void load_withEmptyConfig_shouldPopulateWithDefaults() throws IOException {
-        // Setup: Create an empty .jaider.json file
-        String emptyConfigContent = "{}";
-        Files.writeString(configFilePath, emptyConfigContent);
-
-        // Action
-        Config config = new Config(projectDir);
-        Config defaultConfigForComparison = new Config(tempDir.resolve("default-project-empty"));
-
-        // Assertions: All fields should have their default values
-        assertEquals(defaultConfigForComparison.llm, config.llm);
-        assertEquals(defaultConfigForComparison.ollamaBaseUrl, config.ollamaBaseUrl);
-        assertEquals(defaultConfigForComparison.ollamaModelName, config.ollamaModelName);
-        assertEquals(defaultConfigForComparison.genericOpenaiBaseUrl, config.genericOpenaiBaseUrl);
-        assertEquals(defaultConfigForComparison.genericOpenaiModelName, config.genericOpenaiModelName);
-        assertEquals(defaultConfigForComparison.genericOpenaiApiKey, config.genericOpenaiApiKey);
-        assertEquals(defaultConfigForComparison.geminiApiKey, config.geminiApiKey);
-        assertEquals(defaultConfigForComparison.geminiModelName, config.geminiModelName);
-        assertEquals(defaultConfigForComparison.tavilyApiKey, config.tavilyApiKey);
-        assertEquals(defaultConfigForComparison.runCommand, config.runCommand); // Default is ""
-
-        // For an empty JSON file, the apiKeys map in the Config object should be empty
-        assertTrue(config.apiKeys.isEmpty(), "apiKeys map should be empty when loading from an empty JSON object");
-    }
-
-    @Test
-    void load_withOldTestCommand_shouldMigrateToRunCommand() throws IOException {
-        // Setup: Create a .jaider.json with 'testCommand' and no 'runCommand'
-        String oldConfigContent = """
-                {
-                  "llmProvider": "ollama",
-                  "testCommand": "mvn verify",
-                  "apiKeys": {}
-                }""";
-        Files.writeString(configFilePath, oldConfigContent);
-
-        // Action
-        Config config = new Config(projectDir);
-
-        // Assertions
-        assertEquals("mvn verify", config.runCommand, "runCommand should be populated from testCommand");
-
-        // Verify that loading a config with both still prefers runCommand
-        String bothCommandsConfigContent = """
-                {
-                  "llmProvider": "ollama",
-                  "testCommand": "old command",
-                  "runCommand": "new command",
-                  "apiKeys": {}
-                }""";
-        Files.writeString(configFilePath, bothCommandsConfigContent);
-        Config config2 = new Config(projectDir);
-        assertEquals("new command", config2.runCommand, "runCommand should be preferred over testCommand");
-    }
-
-    // --- Test Saving Config (save()) ---
-
-    @Test
-    void save_newConfiguration_shouldUpdateFileAndReflectInLoad() throws IOException {
-        // Setup: Start with a default config
-        Config config = new Config(projectDir);
-        assertTrue(Files.exists(configFilePath), "Config file should be created by initial load.");
-
-        // New configuration to save
-        String newConfigJsonString = """
-                {
-                  "llmProvider": "openai",
-                  "ollamaBaseUrl": "http://newhost:54321",
-                  "ollamaModelName": "newllamit",
-                  "genericOpenaiBaseUrl": "http://newhost:8082/v2",
-                  "genericOpenaiModelName": "new-generic",
-                  "genericOpenaiApiKey": "new-generic-api-key",
-                  "geminiApiKey": "new-gemini-key",
-                  "geminiModelName": "new-gemini-pro",
-                  "tavilyApiKey": "new-tavily-key",
-                  "runCommand": "npm test",
-                  "apiKeys": {
-                    "openai": "sk-newkey",
-                    "google": "g-newkey",
-                    "customProvider": "custom-xyz"
-                  }
-                }""";
-
-        // Action: Save the new configuration
-        config.save(newConfigJsonString);
-
-        // Assertions for file content
-        String savedFileContent = Files.readString(configFilePath);
-        org.json.JSONObject expectedJson = new org.json.JSONObject(newConfigJsonString);
-        org.json.JSONObject actualJson = new org.json.JSONObject(savedFileContent);
-        // JSONObject.similar isn't available in the org.json version used, so compare key by key or toString
-        assertEquals(expectedJson.toString(2), actualJson.toString(2), "Saved file content should match the new configuration");
-
-        // Assertions for the current config object (should be updated by save->load)
-        assertEquals("openai", config.llm);
-        assertEquals("http://newhost:54321", config.ollamaBaseUrl);
-        assertEquals("newllamit", config.ollamaModelName);
-        assertEquals("npm test", config.runCommand);
-        assertEquals("sk-newkey", config.apiKeys.get("openai"));
-        assertEquals("custom-xyz", config.apiKeys.get("customProvider"));
-
-
-        // Assertions for a new load
-        Config reloadedConfig = new Config(projectDir);
-        assertEquals("openai", reloadedConfig.llm);
-        assertEquals("http://newhost:54321", reloadedConfig.ollamaBaseUrl);
-        assertEquals("newllamit", reloadedConfig.ollamaModelName);
-        assertEquals("http://newhost:8082/v2", reloadedConfig.genericOpenaiBaseUrl);
-        assertEquals("new-generic", reloadedConfig.genericOpenaiModelName);
-        assertEquals("new-generic-api-key", reloadedConfig.genericOpenaiApiKey);
-        assertEquals("new-gemini-key", reloadedConfig.geminiApiKey);
-        assertEquals("new-gemini-pro", reloadedConfig.geminiModelName);
-        assertEquals("new-tavily-key", reloadedConfig.tavilyApiKey);
-        assertEquals("npm test", reloadedConfig.runCommand);
-
-        assertNotNull(reloadedConfig.apiKeys);
-        assertEquals("sk-newkey", reloadedConfig.apiKeys.get("openai"));
-        assertEquals("g-newkey", reloadedConfig.apiKeys.get("google"));
-        assertEquals("custom-xyz", reloadedConfig.apiKeys.get("customProvider"));
-        assertNull(reloadedConfig.apiKeys.get("anthropic"), "Anthropic key should be null as it was not in the new config");
-    }
-
-    // --- Test API Key Retrieval (getApiKey()) ---
-
-    @Test
-    void getApiKey_fromConfigFile_shouldReturnCorrectKey() throws IOException {
-        // Setup: Create a .jaider.json with specific apiKeys
-        String configWithApiKeys = """
-                {
-                  "llmProvider": "ollama",
-                  "apiKeys": {
-                    "openai": "file_openai_key",
-                    "google": "file_google_key"
-                  }
-                }""";
-        Files.writeString(configFilePath, configWithApiKeys);
-
-        Config config = new Config(projectDir);
-
-        // Assertions
-        assertEquals("file_openai_key", config.getApiKey("openai"), "Should retrieve OpenAI key from config file");
-        assertEquals("file_google_key", config.getApiKey("google"), "Should retrieve Google key from config file");
-        assertNull(config.getApiKey("anthropic"), "Anthropic key should be null as it's not in config file (and no env var assumed)");
-        assertNull(config.getApiKey("CUSTOM_PROVIDER_API_KEY"), "Non-standard key should be null"); // Testing System.getenv interaction
-    }
-
-    @Test
-    void getApiKey_fromEnvironmentVariable_shouldReturnCorrectKey() {
-        // This test requires environment variables to be set.
-        // For example, set OPENAI_API_KEY="env_openai_key" before running the test.
-        // JUnit Pioneer's @SetEnvironmentVariable would be ideal here.
-        // Since it's not specified as available, this test will rely on manual setup or be limited.
-
-        // Setup: Ensure no config file exists or it doesn't contain the key we're testing for env var.
-        if (Files.exists(configFilePath)) {
-            try {
-                Files.delete(configFilePath);
-            } catch (IOException e) {
-                fail("Could not delete config file for env var test setup");
+        try (InputStream defaultConfigStream = Config.class.getResourceAsStream("/default-config.json")) {
+            if (defaultConfigStream == null) {
+                throw new IOException("Cannot find /default-config.json in classpath resources");
             }
+            Files.copy(defaultConfigStream, tempDefaultConfig);
         }
-        // Or, create a config file without the specific key
-        String configWithoutOpenAIKey = """
-                {
-                  "apiKeys": {
-                    "google": "file_google_key"
-                  }
-                }""";
-        try {
-            Files.writeString(configFilePath, configWithoutOpenAIKey);
-        } catch (IOException e) {
-            fail("Could not write config file for env var test setup");
-        }
+         logger.info("Temp project dir for test: {}", tempProjectDir);
+
+    }
+
+    private void writeUserConfig(String content) throws IOException {
+        Files.writeString(jaiderConfigPath, content, StandardCharsets.UTF_8);
+        logger.info("Wrote to {}:\n{}", jaiderConfigPath, content);
+    }
+
+    private String readUserConfig() throws IOException {
+        String content = Files.readString(jaiderConfigPath, StandardCharsets.UTF_8);
+        logger.info("Read from {}:\n{}", jaiderConfigPath, content);
+        return content;
+    }
+
+    private Config createConfig() {
+        // The Config class will try to load /default-config.json from classpath.
+        // For tests, we need to ensure it can find our reference one.
+        // The @BeforeEach already copied the default-config.json into a location
+        // that *should* be discoverable if the test classpath is set up correctly.
+        // However, Config internally uses Config.class.getResourceAsStream("/default-config.json")
+        // which might be problematic if the test execution environment doesn't place
+        // tempProjectDir.resolve("src/main/resources") on the classpath.
+
+        // For robust testing, it's better if Config could take the path to default config,
+        // but since it doesn't, we rely on the resource loading mechanism.
+        // The critical part is that Config() loads from tempProjectDir/.jaider.json for user settings.
+        return new Config(tempProjectDir);
+    }
+
+    // --- Config Loading Logic Tests ---
+
+    @Test
+    void testLoad_noExistingConfig_defaultsAppliedAndWritten() throws IOException {
+        Config config = createConfig();
+
+        // Assert that default values are loaded into Config fields
+        assertEquals(defaultConfigJsonReference.getString("llmProvider"), config.getLlm());
+        assertEquals(defaultConfigJsonReference.getString("ollamaBaseUrl"), config.getOllamaBaseUrl());
+        assertEquals(defaultConfigJsonReference.getString("ollamaModelName"), config.getOllamaModelName());
+        assertEquals(defaultConfigJsonReference.getString("toolManifestsDir"), config.getToolManifestsDir());
+        assertEquals(defaultConfigJsonReference.getString("runCommand"), config.getRunCommand());
 
 
-        Config config = new Config(projectDir);
-
-        // Attempt to retrieve a key that might be set as an environment variable
-        // This assertion depends on the environment where tests are run.
-        // If OPENAI_API_KEY is set to "env_openai_key", this should pass.
-        // String expectedEnvKey = System.getenv("OPENAI_API_KEY"); // This would be the actual check
-        // For now, we'll assert that it *could* return something if set, or null if not.
-        // To make this test runnable without guaranteed env vars, we can't make a hard assertion on a specific value.
-        // We are testing the logic: config file -> env var.
-        // So, if not in config, it *should* try getenv.
-
-        // Let's assume we cannot control env vars directly in this environment.
-        // The best we can do is check that if a key is NOT in apiKeys map, it returns null (as per current implementation if env var is also null)
-        // or it returns the env var if set.
-        // This test is inherently tricky without env var mocking.
-        // We'll test the fallback: if not in apiKeys, it returns null IF System.getenv also returns null.
-        // If System.getenv returns a value, that value should be returned.
-
-        // To make this test more deterministic without external setup, we can't assert a specific env var value.
-        // We can, however, assert that if a key is NOT in the file, getApiKey doesn't throw an error and returns null (if no env var).
-        assertNull(config.getApiKey("NON_EXISTENT_PROVIDER"), "Should be null if not in file and not in env");
-
-        // To truly test the environment variable part, manual setup is needed.
-        // For example, if you run: OPENAI_API_KEY="test_env_key" mvn test
-        // Then the following would be a valid test (but requires external setup):
-        // String envKey = System.getenv("OPENAI_API_KEY");
-        // if (envKey != null) {
-        //     assertEquals(envKey, config.getApiKey("OPENAI"));
-        // }
-        System.out.println("NOTE: getApiKey_fromEnvironmentVariable test is more of a placeholder due to inability to mock env vars directly in this tool's environment.");
-        System.out.println("To test properly, set e.g. TEST_PROVIDER_API_KEY=test_value and call config.getApiKey(\"TEST_PROVIDER\")");
-        // For the sake of having a runnable assertion here, let's check a known key that's unlikely to be a real env var.
-        assertNull(config.getApiKey("SOME_MADE_UP_PROVIDER_FOR_TESTING_ENV"), "Made up provider should not be in file or typical env.");
+        assertTrue(Files.exists(jaiderConfigPath), ".jaider.json should have been created");
+        JSONObject writtenConfig = new JSONObject(readUserConfig());
+        // Compare the generated .jaider.json with the reference default-config.json
+        assertTrue(writtenConfig.similar(defaultConfigJsonReference),
+                   "Written .jaider.json should be similar to default-config.json");
     }
 
     @Test
-    void getApiKey_fromConfigFileAndEnvironment_configFileShouldTakePrecedence() throws IOException {
-        // This test also has dependencies on environment variable setup.
-        // Assume OPENAI_API_KEY="env_openai_key" is set in the environment.
+    void testLoad_emptyUserConfig_mergedWithDefaults() throws IOException {
+        writeUserConfig("{}"); // Write an empty JSON object
+        Config config = createConfig();
 
-        // Setup: Create a .jaider.json with a specific key for OpenAI
-        String configFileOpenAI = """
-                {
-                  "apiKeys": {
-                    "OPENAI": "file_openai_key_override"
-                  }
-                }""";
-        Files.writeString(configFilePath, configFileOpenAI);
-        Config config = new Config(projectDir);
+        // Assert that Config fields are populated with values from default-config.json
+        assertEquals(defaultConfigJsonReference.getString("llmProvider"), config.getLlm());
+        assertEquals(defaultConfigJsonReference.getString("ollamaBaseUrl"), config.getOllamaBaseUrl());
+        // Check a few more defaults
+        assertEquals(defaultConfigJsonReference.getString("genericOpenaiModelName"), config.getGenericOpenaiModelName());
+        assertEquals(defaultConfigJsonReference.getJSONObject("apiKeys").getString("openai"), config.getApiKey("openai"));
 
-        // Even if OPENAI_API_KEY is set in env, the file should take precedence.
-        assertEquals("file_openai_key_override", config.getApiKey("OPENAI"),
-                "API key from config file should take precedence over environment variable.");
-
-        System.out.println("NOTE: getApiKey_fromConfigFileAndEnvironment_configFileShouldTakePrecedence test assumes an env var like OPENAI_API_KEY might be set.");
-        System.out.println("It verifies that the config file's value is used instead.");
+        // Ensure components are loaded from default
+        // This requires inspecting the internal componentDefinitions map or having a getter for it (which Config doesn't)
+        // For now, we assume if other defaults are loaded, components are too.
+        // A more thorough test would involve DependencyInjector and component retrieval.
     }
 
     @Test
-    void getApiKey_notFound_shouldReturnNull() throws IOException {
-        // Setup: Ensure no config file or an empty one, and assume no relevant env vars.
-        if (Files.exists(configFilePath)) {
-            Files.delete(configFilePath);
+    void testLoad_partialUserConfig_mergedCorrectly() throws IOException {
+        JSONObject partialConfig = new JSONObject();
+        partialConfig.put("llmProvider", "test-custom-llm");
+        partialConfig.put("ollamaBaseUrl", "http://customhost:12345");
+        JSONObject userApiKeys = new JSONObject().put("openai", "USER_OPENAI_KEY_PARTIAL");
+        partialConfig.put("apiKeys", userApiKeys);
+        JSONArray userComponents = new JSONArray().put(new JSONObject().put("id", "customComponent").put("class", "com.example.Custom"));
+        partialConfig.put("components", userComponents);
+
+        writeUserConfig(partialConfig.toString(2));
+        Config config = createConfig();
+
+        // Assert that fields from user's JSON override defaults
+        assertEquals("test-custom-llm", config.getLlm());
+        assertEquals("http://customhost:12345", config.getOllamaBaseUrl());
+
+        // Assert unspecified fields retain default values
+        assertEquals(defaultConfigJsonReference.getString("ollamaModelName"), config.getOllamaModelName());
+        assertEquals(defaultConfigJsonReference.getString("genericOpenaiBaseUrl"), config.getGenericOpenaiBaseUrl());
+
+        // Assert correct merging of apiKeys (user's key should be present, others from default)
+        assertEquals("USER_OPENAI_KEY_PARTIAL", config.getApiKey("openai"));
+        assertNotNull(config.getApiKey("google"), "Default Google API key should still be accessible if not overridden");
+        assertEquals(defaultConfigJsonReference.getJSONObject("apiKeys").getString("google"), config.getApiKey("google"));
+
+
+        // Assert component definitions (this is harder without direct access to componentDefinitions)
+        // We'd typically check if the DI system can resolve the custom component and default ones.
+        // For now, we trust populateFieldsFromJson handles it.
+        // A simple check could be to see if .jaider.json contains the user's component after initial load.
+        JSONObject writtenConfig = new JSONObject(readUserConfig());
+        assertTrue(writtenConfig.getJSONArray("components").similar(userComponents), "User components should be in .jaider.json");
+    }
+
+    @Test
+    void testLoad_fullUserConfig_userValuesApplied() throws IOException {
+        JSONObject fullUserConfig = new JSONObject(defaultConfigJsonReference.toString()); // Start with a copy of defaults
+        fullUserConfig.put("llmProvider", "full-user-llm");
+        fullUserConfig.put("ollamaBaseUrl", "http://fulluser:1111");
+        fullUserConfig.put("ollamaModelName", "full-user-model");
+        fullUserConfig.put("runCommand", "user-run-command");
+        JSONObject userApiKeys = new JSONObject()
+            .put("openai", "FULL_USER_OPENAI")
+            .put("google", "FULL_USER_GOOGLE");
+        fullUserConfig.put("apiKeys", userApiKeys);
+        JSONArray userComponents = new JSONArray().put(new JSONObject().put("id", "userOnlyComponent").put("class", "com.example.UserOnly"));
+        fullUserConfig.put("components", userComponents);
+
+        writeUserConfig(fullUserConfig.toString(2));
+        Config config = createConfig();
+
+        assertEquals("full-user-llm", config.getLlm());
+        assertEquals("http://fulluser:1111", config.getOllamaBaseUrl());
+        assertEquals("full-user-model", config.getOllamaModelName());
+        assertEquals("user-run-command", config.getRunCommand());
+        assertEquals("FULL_USER_OPENAI", config.getApiKey("openai"));
+        assertEquals("FULL_USER_GOOGLE", config.getApiKey("google"));
+
+        // Check that a default key not in user's apiKeys is now null or default from map if any
+        assertNull(config.getApiKey("anthropic"), "Anthropic key should be null as it was not in full user config's apiKeys");
+
+
+        JSONObject writtenConfig = new JSONObject(readUserConfig());
+        assertTrue(writtenConfig.getJSONArray("components").similar(userComponents));
+    }
+
+    @Test
+    void testLoad_malformedUserConfig_defaultsUsedAndWritten() throws IOException {
+        writeUserConfig("this is not valid json");
+        Config config = createConfig(); // Should log an error and apply defaults
+
+        // Assert that default values are loaded
+        assertEquals(defaultConfigJsonReference.getString("llmProvider"), config.getLlm());
+        assertEquals(defaultConfigJsonReference.getString("ollamaBaseUrl"), config.getOllamaBaseUrl());
+
+        // Assert .jaider.json is overwritten with default content
+        assertTrue(Files.exists(jaiderConfigPath));
+        JSONObject writtenConfig = new JSONObject(readUserConfig());
+        assertTrue(writtenConfig.similar(defaultConfigJsonReference),
+                   "Malformed .jaider.json should be overwritten with defaults.");
+    }
+
+    @Test
+    void testLoad_legacyTestCommand_runCommandUpdated() throws IOException {
+        JSONObject legacyConfig = new JSONObject();
+        legacyConfig.put("testCommand", "legacy-test-cmd");
+        writeUserConfig(legacyConfig.toString(2));
+
+        Config config = createConfig();
+        assertEquals("legacy-test-cmd", config.getRunCommand());
+
+        // Also check if runCommand was empty and testCommand was present
+        JSONObject legacyConfig2 = new JSONObject();
+        legacyConfig2.put("testCommand", "legacy-test-cmd-2");
+        legacyConfig2.put("runCommand", ""); // explicitly empty
+        writeUserConfig(legacyConfig2.toString(2));
+        Config config2 = createConfig();
+        assertEquals("legacy-test-cmd-2", config2.getRunCommand());
+
+        // Test that runCommand takes precedence if both exist
+        JSONObject bothCommandsConfig = new JSONObject();
+        bothCommandsConfig.put("testCommand", "legacy-cmd-ignored");
+        bothCommandsConfig.put("runCommand", "actual-run-cmd");
+        writeUserConfig(bothCommandsConfig.toString(2));
+        Config config3 = createConfig();
+        assertEquals("actual-run-cmd", config3.getRunCommand());
+    }
+
+    // --- API Key Retrieval Tests (Focus on JSON precedence first) ---
+
+    @Test
+    void testGetApiKey_specificJsonKeyPrecedence() throws IOException {
+        JSONObject userConf = new JSONObject();
+        userConf.put("openaiApiKey", "KEY_FROM_SPECIFIC_FIELD"); // Specific top-level key
+        JSONObject apiKeysMap = new JSONObject().put("openai", "KEY_FROM_APIKEYS_MAP");
+        userConf.put("apiKeys", apiKeysMap);
+        writeUserConfig(userConf.toString(2));
+
+        Config config = createConfig();
+        // getOpenaiApiKey() uses getKeyValue("OPENAI_API_KEY", "openaiApiKey", "openai")
+        // "openaiApiKey" is the specificJsonKey, "openai" is the genericApiKeyMapKey
+        assertEquals("KEY_FROM_SPECIFIC_FIELD", config.getOpenaiApiKey());
+    }
+
+    @Test
+    void testGetApiKey_apiKeyMapPrecedence() throws IOException {
+        JSONObject userConf = new JSONObject();
+        // No specific top-level "openaiApiKey" field
+        JSONObject apiKeysMap = new JSONObject().put("openai", "KEY_FROM_APIKEYS_MAP_ONLY");
+        userConf.put("apiKeys", apiKeysMap);
+        writeUserConfig(userConf.toString(2));
+
+        Config config = createConfig();
+        assertEquals("KEY_FROM_APIKEYS_MAP_ONLY", config.getOpenaiApiKey());
+    }
+
+    @Test
+    void testGetApiKey_defaultFromDefaultConfigWhenNotInUserMap() throws IOException {
+        writeUserConfig("{\"apiKeys\": { \"someOtherKey\": \"someValue\" }}"); // User config has apiKeys but not 'openai'
+        Config config = createConfig();
+        // Should fall back to the "openai" key from default-config.json's apiKeys map
+        assertEquals(defaultConfigJsonReference.getJSONObject("apiKeys").getString("openai"), config.getOpenaiApiKey());
+    }
+
+    @Test
+    void testGetApiKey_notFound() throws IOException {
+        JSONObject userConf = new JSONObject();
+        // No "nonExistentApiKey" field, and "nonexistent" not in default apiKeys map
+        JSONObject apiKeysMap = new JSONObject().put("somekey", "somevalue");
+        userConf.put("apiKeys", apiKeysMap);
+        writeUserConfig(userConf.toString(2));
+
+        Config config = createConfig();
+        assertNull(config.getApiKey("nonexistentKey"), "API key not found should return null");
+    }
+
+    // --- Save Method Tests ---
+    @Test
+    void testSave_validConfig_fileUpdatedAndReloaded() throws IOException {
+        Config config = createConfig(); // Initial load with defaults
+
+        JSONObject newConfigJson = new JSONObject();
+        newConfigJson.put("llmProvider", "saved-llm");
+        newConfigJson.put("ollamaBaseUrl", "http://savedhost:54321");
+        newConfigJson.put("runCommand", "saved-run-cmd");
+        JSONObject newApiKeys = new JSONObject().put("openai", "SAVED_OPENAI_KEY");
+        newConfigJson.put("apiKeys", newApiKeys);
+        // Add components to ensure they are saved too
+        JSONArray newComponents = new JSONArray().put(new JSONObject().put("id", "savedComponent").put("class", "com.example.Saved"));
+        newConfigJson.put("components", newComponents);
+
+
+        config.save(newConfigJson.toString(2));
+
+        // Assert .jaider.json content matches newConfigString
+        JSONObject savedFileJson = new JSONObject(readUserConfig());
+        assertTrue(savedFileJson.similar(newConfigJson), "Saved .jaider.json content should match the new config string.");
+
+        // Assert Config object's fields are updated
+        assertEquals("saved-llm", config.getLlm());
+        assertEquals("http://savedhost:54321", config.getOllamaBaseUrl());
+        assertEquals("saved-run-cmd", config.getRunCommand());
+        assertEquals("SAVED_OPENAI_KEY", config.getOpenaiApiKey());
+
+        // Tough to check components directly without a getter in Config.java
+        // We trust that if other fields reloaded, components did too.
+        // The DI injector should have been updated.
+    }
+
+    @Test
+    void testSave_malformedConfig_throwsException() {
+        Config config = createConfig();
+        String malformedJson = "this is not json";
+
+        assertThrows(org.json.JSONException.class, () -> {
+            config.save(malformedJson);
+        }, "Saving malformed JSON should throw a JSONException");
+    }
+
+    // --- readForEditing() Method Tests ---
+
+    @Test
+    void testReadForEditing_noUserConfig_returnsDefaultJson() throws IOException {
+        Config config = createConfig(); // Loads defaults
+        String editingJsonString = config.readForEditing();
+        JSONObject editingJson = new JSONObject(editingJsonString);
+
+        // The returned JSON should be similar to default-config.json
+        // but with "testCommand" potentially removed if it was only in defaults and runCommand took its place.
+        // getDefaultConfigAsJsonObject() inside Config.java is the source for defaults in readForEditing().
+        JSONObject defaultsForEditing = new JSONObject(defaultConfigJsonReference.toString());
+        defaultsForEditing.remove("testCommand"); // testCommand is not included for editing.
+        if (!defaultsForEditing.has("runCommand") && defaultConfigJsonReference.has("testCommand")) {
+             // This case should not happen if populateFieldsFromJson correctly sets runCommand from testCommand
         }
-        // Create a config with no apiKeys or an empty apiKeys map
-        String configWithoutKeys = """
-                {
-                  "llmProvider": "ollama"
-                }""";
-        Files.writeString(configFilePath, configWithoutKeys);
 
 
-        Config config = new Config(projectDir); // Loads the config without apiKeys
-
-        // Assertions
-        assertNull(config.getApiKey("openai"), "OpenAI key should be null if not in config and not in env");
-        assertNull(config.getApiKey("nonexistent"), "Nonexistent key should be null");
-        assertTrue(config.apiKeys.isEmpty(), "Internal apiKeys map should be empty");
-    }
-
-    // --- Test Reading for Editing (readForEditing()) ---
-
-    @Test
-    void readForEditing_withExistingConfig_shouldReturnJsonWithAllFields() throws IOException {
-        // Setup: Create a .jaider.json with some specific and some missing fields
-        String partialConfigContent = """
-                {
-                  "llmProvider": "custom_provider",
-                  "ollamaModelName": "custom_ollama_model",
-                  "apiKeys": {
-                    "custom_api": "key123"
-                  }
-                }""";
-        Files.writeString(configFilePath, partialConfigContent);
-
-        Config config = new Config(projectDir); // This loads the partial config
-
-        // Action
-        String jsonForEditing = config.readForEditing();
-        org.json.JSONObject editedJson = new org.json.JSONObject(jsonForEditing);
-
-        // Assertions: Check that all fields are present, either from file or defaults
-        assertEquals("custom_provider", editedJson.getString("llmProvider"));
-        assertEquals(config.ollamaBaseUrl, editedJson.getString("ollamaBaseUrl")); // Default value
-        assertEquals("custom_ollama_model", editedJson.getString("ollamaModelName"));
-        assertEquals(config.genericOpenaiBaseUrl, editedJson.getString("genericOpenaiBaseUrl")); // Default
-        assertEquals(config.genericOpenaiModelName, editedJson.getString("genericOpenaiModelName")); // Default
-        assertEquals(config.genericOpenaiApiKey, editedJson.getString("genericOpenaiApiKey")); // Default
-        assertEquals(config.geminiApiKey, editedJson.getString("geminiApiKey")); // Default
-        assertEquals(config.geminiModelName, editedJson.getString("geminiModelName")); // Default
-        assertEquals(config.tavilyApiKey, editedJson.getString("tavilyApiKey")); // Default
-
-        // config.runCommand is null for this test case as partialConfigContent doesn't define it or testCommand
-        // and readForEditing puts JSONObject.NULL if the field is null.
-        if (config.runCommand == null) {
-            assertTrue(editedJson.isNull("runCommand"), "runCommand should be JSON null if config field is null");
-        } else {
-            assertEquals(config.runCommand, editedJson.getString("runCommand"));
-        }
-
-        assertTrue(editedJson.has("apiKeys"), "apiKeys should be present");
-        org.json.JSONObject apiKeysJson = editedJson.getJSONObject("apiKeys");
-        assertEquals("key123", apiKeysJson.getString("custom_api"));
-        // Default API keys (like openai, google, anthropic) are NOT added by readForEditing if they weren't in the original file's apiKeys
-        // and not in the config object's apiKeys map.
-        // The config.apiKeys map itself is populated from the file. readForEditing uses the content of that map.
-        assertFalse(apiKeysJson.has("openai"), "Default openai key should not be added if not in original apiKeys");
+        assertTrue(editingJson.similar(defaultsForEditing),
+            "JSON for editing should be similar to default config when no user config exists.");
     }
 
     @Test
-    void readForEditing_withNonExistentConfig_shouldReturnJsonWithDefaults() throws IOException {
-        // Setup: Ensure config file does not exist
-        if (Files.exists(configFilePath)) {
-            Files.delete(configFilePath);
-        }
-        assertFalse(Files.exists(configFilePath), "Config file should not exist at the start of this test.");
+    void testReadForEditing_withUserConfig_returnsMergedJson() throws IOException {
+        JSONObject userConfig = new JSONObject();
+        userConfig.put("llmProvider", "user-llm-for-editing");
+        userConfig.put("ollamaBaseUrl", "http://userhost:8888");
+        JSONObject userApiKeys = new JSONObject().put("openai", "USER_EDIT_KEY").put("customKey", "USER_CUSTOM");
+        userConfig.put("apiKeys", userApiKeys);
+        JSONArray userComponents = new JSONArray().put(new JSONObject().put("id", "userEditComponent").put("class", "com.example.UserEdit"));
+        userConfig.put("components", userComponents);
+        userConfig.put("testCommand", "user-test-cmd-ignored"); // Should be ignored in favor of runCommand or removed
+        userConfig.put("runCommand", "user-run-cmd-for-editing");
 
-        // Action: Create Config (this will create and load defaults), then read for editing
-        Config config = new Config(projectDir); // Creates default .jaider.json and loads it
-        String jsonForEditing = config.readForEditing();
-        org.json.JSONObject editedJson = new org.json.JSONObject(jsonForEditing);
 
-        // Assertions: Check that all fields are present with their default values
-        assertEquals(config.llm, editedJson.getString("llmProvider")); // Default "ollama"
-        assertEquals(config.ollamaBaseUrl, editedJson.getString("ollamaBaseUrl"));
-        assertEquals(config.ollamaModelName, editedJson.getString("ollamaModelName"));
-        assertEquals(config.genericOpenaiBaseUrl, editedJson.getString("genericOpenaiBaseUrl"));
-        assertEquals(config.genericOpenaiModelName, editedJson.getString("genericOpenaiModelName"));
-        assertEquals(config.genericOpenaiApiKey, editedJson.getString("genericOpenaiApiKey"));
-        assertEquals(config.geminiApiKey, editedJson.getString("geminiApiKey"));
-        assertEquals(config.geminiModelName, editedJson.getString("geminiModelName"));
-        assertEquals(config.tavilyApiKey, editedJson.getString("tavilyApiKey"));
-        assertEquals(config.runCommand, editedJson.getString("runCommand")); // Default ""
+        writeUserConfig(userConfig.toString(2));
+        Config config = createConfig(); // Load user config over defaults
 
-        assertTrue(editedJson.has("apiKeys"), "apiKeys object should exist");
-        org.json.JSONObject apiKeysJson = editedJson.getJSONObject("apiKeys");
+        String editingJsonString = config.readForEditing();
+        JSONObject editingJson = new JSONObject(editingJsonString);
 
-        // Because createDefaultConfig() was called and then loaded, the config object's apiKeys map
-        // will contain the default placeholder keys. readForEditing() uses this map.
-        assertEquals("YOUR_OPENAI_API_KEY", apiKeysJson.getString("openai"));
-        assertEquals("YOUR_ANTHROPIC_API_KEY", apiKeysJson.getString("anthropic"));
-        assertEquals("YOUR_GOOGLE_API_KEY", apiKeysJson.getString("google"));
+        // Assert user values override defaults
+        assertEquals("user-llm-for-editing", editingJson.getString("llmProvider"));
+        assertEquals("http://userhost:8888", editingJson.getString("ollamaBaseUrl"));
+        assertEquals("user-run-cmd-for-editing", editingJson.getString("runCommand"));
+        assertFalse(editingJson.has("testCommand"), "testCommand should not be in the editing JSON output.");
+
+        // Assert apiKeys and components are from user config (entirely replaced)
+        assertTrue(editingJson.getJSONObject("apiKeys").similar(userApiKeys), "apiKeys in editing JSON should be from user config.");
+        assertTrue(editingJson.getJSONArray("components").similar(userComponents), "components in editing JSON should be from user config.");
+
+        // Assert default values are present for fields not in user config
+        assertEquals(defaultConfigJsonReference.getString("ollamaModelName"), editingJson.getString("ollamaModelName"));
     }
+     @Test
+    void testReadForEditing_emptyUserConfig_returnsDefaultJson() throws IOException {
+        writeUserConfig("{}"); // Empty user config
+        Config config = createConfig();
+        String editingJsonString = config.readForEditing();
+        JSONObject editingJson = new JSONObject(editingJsonString);
 
-    @Test
-    void readForEditing_withOldTestCommand_shouldMigrateToRunCommandInJson() throws IOException {
-        // Setup: Create a .jaider.json with 'testCommand' and no 'runCommand'
-        String oldConfigContent = """
-                {
-                  "llmProvider": "ollama",
-                  "testCommand": "legacy test command",
-                  "apiKeys": {}
-                }""";
-        Files.writeString(configFilePath, oldConfigContent);
+        JSONObject defaultsForEditing = new JSONObject(defaultConfigJsonReference.toString());
+        defaultsForEditing.remove("testCommand"); // testCommand is not included for editing.
 
-        Config config = new Config(projectDir); // Loads config, config.runCommand becomes "legacy test command"
-
-        // Action
-        String jsonForEditing = config.readForEditing();
-        org.json.JSONObject editedJson = new org.json.JSONObject(jsonForEditing);
-
-        // Assertions
-        assertTrue(editedJson.has("runCommand"), "JSON should have runCommand after editing");
-        assertEquals("legacy test command", editedJson.getString("runCommand"),
-                "runCommand in JSON should be populated from old testCommand");
-        assertFalse(editedJson.has("testCommand"), "testCommand should be removed from JSON after editing");
-
-        // Ensure other fields are still there (e.g., llmProvider)
-        assertEquals("ollama", editedJson.getString("llmProvider"));
-
-        // Test case: if both testCommand and runCommand exist, runCommand is preferred and testCommand is removed.
-        String bothCommandsContent = """
-                {
-                  "llmProvider": "ollama",
-                  "testCommand": "should be ignored and removed",
-                  "runCommand": "should be kept",
-                  "apiKeys": {}
-                }""";
-        Files.writeString(configFilePath, bothCommandsContent);
-        Config configBoth = new Config(projectDir);
-        String jsonForEditingBoth = configBoth.readForEditing();
-        org.json.JSONObject editedJsonBoth = new org.json.JSONObject(jsonForEditingBoth);
-
-        assertTrue(editedJsonBoth.has("runCommand"));
-        assertEquals("should be kept", editedJsonBoth.getString("runCommand"));
-        assertFalse(editedJsonBoth.has("testCommand"), "testCommand should be removed even if runCommand also exists");
+        assertTrue(editingJson.similar(defaultsForEditing),
+                   "JSON for editing should be similar to default config when user config is empty.");
     }
 }
