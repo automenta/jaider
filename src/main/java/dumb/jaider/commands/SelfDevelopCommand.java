@@ -1,56 +1,42 @@
 package dumb.jaider.commands;
 
-import dumb.jaider.app.AppContext;
-import dumb.jaider.master.coder.CoderAgent; // Assuming this is the correct package for CoderAgent
+import dumb.jaider.commands.AppContext; // Corrected import
+import dumb.jaider.agents.CoderAgent;   // Corrected import
+import dev.langchain4j.data.message.AiMessage; // For logging
 
-public class SelfDevelopCommand implements Command<String> {
-
-    @Override
-    public String keyword() {
-        return "self-develop";
-    }
+public class SelfDevelopCommand implements Command { // Implement non-generic Command interface
 
     @Override
-    public String description() {
-        return "Initiates a self-development task for Jaider. Arg: <task_description>";
-    }
-
-    @Override
-    public String execute(String args, AppContext context) {
+    public void execute(String args, AppContext context) { // Return void
         if (args == null || args.trim().isEmpty()) {
-            return "Usage: /self-develop <task_description>";
+            context.model().addLog(AiMessage.from("Usage: /self-develop <task_description>"));
+            return;
         }
 
-        Object agentObject = context.app().getAgent("Coder"); // Renamed for clarity
+        Object agentObject = context.app().getAgent("Coder");
         if (agentObject == null) {
-            return "Error: CoderAgent not found.";
+            context.model().addLog(AiMessage.from("Error: CoderAgent not found."));
+            return;
         }
 
         if (!(agentObject instanceof CoderAgent)) {
-            // Corrected the import path in my mental model, it should be dumb.jaider.agents.CoderAgent
-            // If the actual class is dumb.jaider.master.coder.CoderAgent, this check is fine.
-            return "Error: CoderAgent not available or of wrong type. Expected dumb.jaider.master.coder.CoderAgent but found " + agentObject.getClass().getName();
+            context.model().addLog(AiMessage.from("Error: CoderAgent not available or of wrong type. Expected dumb.jaider.agents.CoderAgent but found " + agentObject.getClass().getName()));
+            return;
         }
 
-        CoderAgent coderAgent = (CoderAgent) agentObject; // Use the correctly typed variable
+        CoderAgent coderAgent = (CoderAgent) agentObject;
 
         String constructedPrompt;
         String lowerCaseArgs = args.toLowerCase().trim();
 
-        // Check if the CoderAgent class is the one from dumb.jaider.master.coder
-        // This is just a placeholder for the actual check needed based on file structure.
-        // The original code had: import dumb.jaider.master.coder.CoderAgent;
-        // If that's the case, the instanceof check should be against that.
-        // For the sake of this subtask, assume the type check above is correct.
-
         if (lowerCaseArgs.equals("update project dependencies") || lowerCaseArgs.equals("update dependencies")) {
             constructedPrompt = String.format(
-                "Task: Enhance Jaider's Capabilities - Update Dependencies\n" + // Fixed missing \n
+                "Task: Enhance Jaider's Capabilities - Update Dependencies\n" +
                 "------------------------------------\n" +
-                "Description: %s\n" + // This will be the user's input e.g., "update project dependencies"
+                "Description: %s\n" +
                 "------------------------------------\n" +
-                "Jaider's self-development task is to implement the following feature or improvement:\n\n" + // Fixed missing \n
-                "'%s'\n\n" + // User's input again
+                "Jaider's self-development task is to implement the following feature or improvement:\n\n" +
+                "'%s'\n\n" +
                 "Instructions for CoderAgent:\n" +
                 "1. This task requires updating the project's Maven dependencies.\n" +
                 "2. Use the \"DependencyUpdater\" tool to identify outdated dependencies and get the necessary diffs for `pom.xml`.\n" +
@@ -65,7 +51,7 @@ public class SelfDevelopCommand implements Command<String> {
                 "5. Propose each dependency update one by one. Do not batch them into a single `proposeSelfUpdate` call.\n" +
                 "6. If the \"DependencyUpdater\" tool returns an empty list (indicating no updates found), or if it returns an error structure,\n" +
                 "   report this outcome back to the user clearly. For example: \"No dependencies found to update.\" or \"Error while checking for dependency updates: [error details]\".\n" +
-                "   Do not attempt to call `proposeSelfUpdate` if there are no valid updates or if an error occurred.\n\n" + // Fixed missing \n
+                "   Do not attempt to call `proposeSelfUpdate` if there are no valid updates or if an error occurred.\n\n" +
                 "Please proceed with implementing this task.",
                 args, args
             );
@@ -74,37 +60,35 @@ public class SelfDevelopCommand implements Command<String> {
             constructedPrompt = String.format(
                 "Task: Enhance Jaider's Capabilities\n" +
                 "------------------------------------\n" +
-                "Description: %s\n" + // User's input
+                "Description: %s\n" +
                 "------------------------------------\n" +
-                "Jaider's self-development task is to implement the following feature or improvement:\n\n" + // Fixed missing \n
-                "'%s'\n\n" + // User's input again
+                "Jaider's self-development task is to implement the following feature or improvement:\n\n" +
+                "'%s'\n\n" +
                 "Instructions for CoderAgent:\n" +
                 "1. Analyze the request and understand the required changes to Jaider's codebase.\n" +
                 "2. Identify the relevant files and modules that need modification or creation.\n" +
                 "3. If new files are needed (e.g., new commands, services, tools), plan their structure, content, and interactions carefully.\n" +
                 "4. Generate the necessary code changes using the `proposeSelfUpdate` tool.\n" +
                 "   - For each file to be changed or created, call `proposeSelfUpdate` once.\n" +
-                "   - Ensure generated diffs are in the standard unified diff format (e.g., output of `diff -u`).\n" + // Clarified diff format
+                "   - Ensure generated diffs are in the standard unified diff format (e.g., output of `diff -u`).\n" +
                 "   - Provide clear, descriptive commit messages for each proposed update.\n" +
                 "5. If multiple steps or files are involved, propose them sequentially. Explain your overall plan if it's complex.\n" +
-                "6. If you need to read existing files to inform your changes, use tools like `readFile` or `findRelevantCode`.\n" + // Corrected tool name based on typical availability
+                "6. If you need to read existing files to inform your changes, use tools like `readFile` or `findRelevantCode`.\n" +
                 "7. The `proposeSelfUpdate` tool handles user review and the actual application, build, test, and commit process.\n" +
                 "8. Aim for modular, well-documented, and correct code. Ensure new Java code compiles and follows project conventions.\n" +
-                "9. If the task is vague, ask for clarification. If the task seems too complex for a single step, break it down.\n\n" + // Fixed missing \n
+                "9. If the task is vague, ask for clarification. If the task seems too complex for a single step, break it down.\n\n" +
                 "Please proceed with implementing this task.",
                 args, args
             );
         }
 
         try {
-            // Ensure coderAgent is the variable name used if agentObject was cast to it.
-            return coderAgent.act(constructedPrompt);
+            String agentResponse = coderAgent.act(constructedPrompt);
+            context.model().addLog(AiMessage.from(agentResponse)); // Log agent's response
         } catch (Exception e) {
-            // It's good practice to log to Jaider's logger if available, instead of System.err
-            // For now, System.err is kept as per original code.
             System.err.println("Error executing CoderAgent.act for task '" + args + "': " + e.getMessage());
-            e.printStackTrace(); // Stack trace is useful for debugging.
-            return "Error: An unexpected error occurred while executing the self-development task with CoderAgent. Details: " + e.getMessage();
+            e.printStackTrace();
+            context.model().addLog(AiMessage.from("Error: An unexpected error occurred while executing the self-development task with CoderAgent. Details: " + e.getMessage()));
         }
     }
 }

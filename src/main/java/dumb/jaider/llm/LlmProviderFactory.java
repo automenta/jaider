@@ -44,14 +44,26 @@ public class LlmProviderFactory {
 
         if (this.tokenizer == null && this.chatModel instanceof Tokenizer) {
             this.tokenizer = (Tokenizer) this.chatModel;
-        } else if (this.tokenizer == null) {
+        }
+        // Ensure a chat model was actually initialized
+        if (this.chatModel == null) {
+            throw new dumb.jaider.app.exceptions.ChatModelInitializationException("Failed to initialize any chat model provider after trying all configured options.");
         }
         return this.chatModel;
     }
 
     public Tokenizer createTokenizer() {
         if (this.tokenizer == null) {
-            if (this.chatModel == null) createChatModel();
+            if (this.chatModel == null) {
+                createChatModel(); // This might throw ChatModelInitializationException
+            }
+            // If chatModel was successfully created but is not a Tokenizer, or still null
+            if (this.chatModel instanceof Tokenizer) {
+                this.tokenizer = (Tokenizer) this.chatModel;
+            }
+        }
+        if (this.tokenizer == null) {
+            throw new dumb.jaider.app.exceptions.TokenizerInitializationException("Failed to initialize tokenizer. Chat model might be null or not a Tokenizer instance.");
         }
         return this.tokenizer;
     }
