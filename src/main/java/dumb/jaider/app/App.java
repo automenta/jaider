@@ -109,6 +109,7 @@ public class App {
         commands.put("/summarize", new SummarizeCommand());
         commands.put("/accept", new AcceptSuggestionCommand()); // Added /accept
         commands.put("/a", new AcceptSuggestionCommand());      // Added /a as alias
+        commands.put("/run", new RunCommand());
     }
 
     public synchronized void update() {

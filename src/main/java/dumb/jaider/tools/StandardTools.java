@@ -144,10 +144,18 @@ public class StandardTools {
             return resultJson.toString();
         }
 
-        String commandToExecute = config.runCommand;
+        String baseCommand = config.runCommand;
+        String commandToExecute;
+
+        if (commandArgs == null || commandArgs.trim().isEmpty()) {
+            commandToExecute = baseCommand;
+        } else {
+            commandToExecute = baseCommand + " " + commandArgs.trim();
+        }
 
         try {
-            ProcessBuilder pb = new ProcessBuilder(commandToExecute.split("\\s+"))
+            // Ensure ProcessBuilder splits the commandToExecute correctly
+            ProcessBuilder pb = new ProcessBuilder(commandToExecute.trim().split("\\s+"))
                     .directory(model.dir.toFile())
                     .redirectErrorStream(true);
             Process process = pb.start();
