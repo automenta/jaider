@@ -110,6 +110,7 @@ public class App {
         commands.put("/accept", new AcceptSuggestionCommand()); // Added /accept
         commands.put("/a", new AcceptSuggestionCommand());      // Added /a as alias
         commands.put("/run", new RunCommand());
+        commands.put("/self-develop", new SelfDevelopCommand());
     }
 
     public synchronized void update() {
@@ -262,6 +263,10 @@ public class App {
         return model.dir;
     }
     public Set<String> getAvailableAgentNames() { return agents.keySet(); } // Added method
+
+    public Agent getAgent(String name) { // Added method to get a specific agent
+        return agents.get(name);
+    }
 
     public void setStatePublic(State newState) {
         this.state = newState;

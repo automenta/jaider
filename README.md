@@ -24,6 +24,7 @@ Jaider is an interactive, command-line AI programming assistant designed to help
 *   **Undo Functionality:** The `/undo` command attempts to revert the last applied diff. It uses `git checkout` for modified files and deletes newly created files.
 *   **Session Management:** Jaider can save and restore your session, including files in context and chat history.
 *   **Configuration via `.jaider.json`:** Most settings are externalized for easy customization.
+*   **Self-Development Capability:** Jaider can modify its own codebase using the /self-develop command, allowing for AI-driven improvements and feature additions to Jaider itself.
 
 ## Configuration (`.jaider.json`)
 
@@ -117,6 +118,7 @@ Key configurable fields include:
 *   `/mode <Coder|Architect|Ask>`: Switch between agent modes.
 *   `/add <file(s)...>`: Add one or more files (space-separated) to the agent's context.
 *   `/run [args...]`: Executes the command specified in `runCommand` from `.jaider.json`. (Note: argument passing to the command is a planned enhancement).
+*   `/self-develop <task_description>`: Instructs Jaider's CoderAgent to attempt to modify Jaider's own source code to achieve the given task. The agent will propose changes via a diff, which requires user approval before being applied, built, tested, and committed. This triggers a full restart of Jaider upon success. Example: `/self-develop Add a new configuration option to .jaider.json.`
 *   `/index`: Creates/updates a semantic index of your project's codebase for the `findRelevantCode` tool.
 *   `/undo`: Attempts to revert the last applied diff.
     *   For files modified by the patch, it uses `git checkout <file>` to revert to the last committed state.
@@ -136,6 +138,7 @@ Agents (primarily the CoderAgent) can use the following tools:
 *   `commitChanges(commit_message)`: Stages all current changes and commits them with the given message.
 *   `findRelevantCode(query)`: Searches the indexed codebase for snippets relevant to the query.
 *   `searchWeb(query)`: Performs a web search using Tavily to find information online.
+*   `proposeSelfUpdate(filePath, diffContent, commitMessage)`: (Used by CoderAgent during self-development) Proposes an update to Jaider's own codebase. This stages the update for user review and triggers the self-update orchestration process (apply, build, test, commit, restart).
 
 ## Getting Started
 
