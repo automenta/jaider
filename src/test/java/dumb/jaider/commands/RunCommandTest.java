@@ -1,8 +1,11 @@
 package dumb.jaider.commands;
 
-import dumb.jaider.app.AppContext;
+import dumb.jaider.commands.AppContext;
 import dumb.jaider.app.App;
 import dumb.jaider.model.JaiderModel;
+import dev.langchain4j.data.message.AiMessage;
+import dev.langchain4j.data.message.ChatMessage;
+import dev.langchain4j.data.message.UserMessage;
 import dumb.jaider.agents.Agent;
 import dumb.jaider.tools.StandardTools; // Assuming StandardTools is the correct class
 import org.junit.jupiter.api.BeforeEach;
@@ -37,8 +40,8 @@ public class RunCommandTest {
 
     @BeforeEach
     void setUp() {
-        when(mockAppContext.getJaiderModel()).thenReturn(mockJaiderModel);
-        when(mockAppContext.getApp()).thenReturn(mockApp);
+        when(mockAppContext.model()).thenReturn(mockJaiderModel);
+        when(mockAppContext.app()).thenReturn(mockApp);
     }
 
     @Test
@@ -47,7 +50,7 @@ public class RunCommandTest {
 
         runCommand.execute("some_args", mockAppContext);
 
-        verify(mockJaiderModel).addLog("No active agent to run the command.");
+        verify(mockJaiderModel).addLog(AiMessage.from("[RunCommand] Error: No active agent found."));
         verifyNoInteractions(mockStandardTools); // Ensure no tool interaction if no agent
     }
 
@@ -55,11 +58,11 @@ public class RunCommandTest {
     void testExecute_agentHasNoStandardTools_logsError() {
         when(mockApp.getCurrentAgent()).thenReturn(mockAgent);
         // Agent returns an empty set of tools, or a set without StandardTools
-        when(mockAgent.getTools()).thenReturn(Collections.emptySet());
+        when(mockAgent.tools()).thenReturn(Collections.emptySet());
 
         runCommand.execute("some_args", mockAppContext);
 
-        verify(mockJaiderModel).addLog("StandardTools not available for the current agent.");
+        verify(mockJaiderModel).addLog(AiMessage.from("[RunCommand] Error: StandardTools not available for the current agent."));
         verifyNoInteractions(mockStandardTools);
     }
 
@@ -69,11 +72,11 @@ public class RunCommandTest {
         Object otherTool = new Object(); // A dummy tool instance
         Set<Object> tools = new HashSet<>();
         tools.add(otherTool);
-        when(mockAgent.getTools()).thenReturn(tools);
+        when(mockAgent.tools()).thenReturn(tools);
 
         runCommand.execute("some_args", mockAppContext);
 
-        verify(mockJaiderModel).addLog("StandardTools not available for the current agent.");
+        verify(mockJaiderModel).addLog(AiMessage.from("[RunCommand] Error: StandardTools not available for the current agent."));
         verifyNoInteractions(mockStandardTools);
     }
 
@@ -83,15 +86,16 @@ public class RunCommandTest {
         when(mockApp.getCurrentAgent()).thenReturn(mockAgent);
         Set<Object> tools = new HashSet<>();
         tools.add(mockStandardTools); // Add the mocked StandardTools
-        when(mockAgent.getTools()).thenReturn(tools);
-        when(mockStandardTools.runValidationCommand(anyString())).thenReturn("Validation OK");
+        when(mockAgent.tools()).thenReturn(tools);
+        String result = "Validation OK";
+        when(mockStandardTools.runValidationCommand(anyString())).thenReturn(result);
 
         String commandArgs = "test_command_args";
         runCommand.execute(commandArgs, mockAppContext);
 
-        verify(mockJaiderModel).addLog("Executing validation command: " + commandArgs);
+        verify(mockJaiderModel).addLog(AiMessage.from("[RunCommand] Executing run command with args: '" + commandArgs + "'"));
         verify(mockStandardTools).runValidationCommand(commandArgs);
-        verify(mockJaiderModel).addLog("Validation result: Validation OK");
+        verify(mockJaiderModel).addLog(AiMessage.from("[RunCommand Result]\n" + result));
     }
 
     @Test
@@ -99,14 +103,15 @@ public class RunCommandTest {
         when(mockApp.getCurrentAgent()).thenReturn(mockAgent);
         Set<Object> tools = new HashSet<>();
         tools.add(mockStandardTools);
-        when(mockAgent.getTools()).thenReturn(tools);
-        when(mockStandardTools.runValidationCommand(eq(""))).thenReturn("Validation with empty args OK");
+        when(mockAgent.tools()).thenReturn(tools);
+        String result = "Validation with empty args OK";
+        when(mockStandardTools.runValidationCommand(eq(""))).thenReturn(result);
 
         runCommand.execute(null, mockAppContext); // Null args
 
-        verify(mockJaiderModel).addLog("Executing validation command: "); // Logs with empty string
+        verify(mockJaiderModel).addLog(AiMessage.from("[RunCommand] Executing run command with args: ''")); // Logs with empty string
         verify(mockStandardTools).runValidationCommand(""); // Called with empty string
-        verify(mockJaiderModel).addLog("Validation result: Validation with empty args OK");
+        verify(mockJaiderModel).addLog(AiMessage.from("[RunCommand Result]\n" + result));
     }
 
 
@@ -115,7 +120,7 @@ public class RunCommandTest {
         when(mockApp.getCurrentAgent()).thenReturn(mockAgent);
         Set<Object> tools = new HashSet<>();
         tools.add(mockStandardTools);
-        when(mockAgent.getTools()).thenReturn(tools);
+        when(mockAgent.tools()).thenReturn(tools);
 
         String commandArgs = "test_args_for_exception";
         String exceptionMessage = "Command execution failed badly!";
@@ -125,8 +130,8 @@ public class RunCommandTest {
 
         runCommand.execute(commandArgs, mockAppContext);
 
-        verify(mockJaiderModel).addLog("Executing validation command: " + commandArgs);
+        verify(mockJaiderModel).addLog(AiMessage.from("[RunCommand] Executing run command with args: '" + commandArgs + "'"));
         verify(mockStandardTools).runValidationCommand(commandArgs);
-        verify(mockJaiderModel).addLog("Error executing command: " + exceptionMessage);
+        verify(mockJaiderModel).addLog(AiMessage.from("[RunCommand] Error executing validation command: " + exceptionMessage));
     }
 }

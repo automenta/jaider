@@ -34,7 +34,7 @@ class LlmProviderFactoryTest {
     @Test
     void testCreateChatModel_OpenAIProvider_ShouldReturnOpenAiChatModel() {
         // Arrange
-        when(mockConfig.llm).thenReturn("openai");
+        when(mockConfig.getLlm()).thenReturn("openai");
         when(mockConfig.getOpenaiApiKey()).thenReturn("test-api-key");
         when(mockConfig.getOpenaiModelName()).thenReturn("gpt-4o-mini");
 
@@ -52,7 +52,7 @@ class LlmProviderFactoryTest {
     @Test
     void testCreateChatModel_OpenAIProvider_MissingApiKey_ShouldStillReturnModel() {
         // Arrange
-        when(mockConfig.llm).thenReturn("openai");
+        when(mockConfig.getLlm()).thenReturn("openai");
         when(mockConfig.getOpenaiApiKey()).thenReturn(null); // Simulate missing API key in config
         when(mockConfig.getOpenaiModelName()).thenReturn("gpt-4o-mini");
         // Langchain4j's OpenAiChatModel might pick up API key from env var OPENAI_API_KEY
@@ -69,7 +69,7 @@ class LlmProviderFactoryTest {
     @Test
     void testCreateEmbeddingModel_OpenAIProvider_ShouldReturnOpenAiEmbeddingModel() {
         // Arrange
-        when(mockConfig.llm).thenReturn("openai");
+        when(mockConfig.getLlm()).thenReturn("openai");
         when(mockConfig.getOpenaiApiKey()).thenReturn("test-api-key");
         // Assuming a default embedding model name is used if not explicitly configured for embeddings yet
         // The implementation uses "text-embedding-ada-002"
@@ -85,7 +85,7 @@ class LlmProviderFactoryTest {
     @Test
     void testCreateEmbeddingModel_OpenAIProvider_MissingApiKey_ShouldStillReturnModel() {
         // Arrange
-        when(mockConfig.llm).thenReturn("openai");
+        when(mockConfig.getLlm()).thenReturn("openai");
         when(mockConfig.getOpenaiApiKey()).thenReturn(null); // Simulate missing API key in config
 
         // Act
@@ -99,7 +99,7 @@ class LlmProviderFactoryTest {
     @Test
     void testCreateChatModel_OpenAIProvider_ExceptionDuringCreation_ShouldReturnNull() {
         // Arrange
-        when(mockConfig.llm).thenReturn("openai");
+        when(mockConfig.getLlm()).thenReturn("openai");
         when(mockConfig.getOpenaiApiKey()).thenReturn("test-api-key");
         when(mockConfig.getOpenaiModelName()).thenReturn("gpt-4o-mini");
 
@@ -151,7 +151,7 @@ class LlmProviderFactoryTest {
     @Test
     void testCreateEmbeddingModel_OpenAIProvider_ExceptionDuringCreation_ShouldFallBackToNoOp() {
         // Arrange
-        when(mockConfig.llm).thenReturn("openai");
+        when(mockConfig.getLlm()).thenReturn("openai");
         when(mockConfig.getOpenaiApiKey()).thenReturn("test-api-key");
         // To cause an exception, we'd need to make OpenAiEmbeddingModel.builder().build() fail.
         // This is hard without knowing internal validation of Langchain4j.
@@ -202,7 +202,7 @@ class LlmProviderFactoryTest {
     @Test
     void testCreateEmbeddingModel_GeminiProvider_ShouldReturnVertexAiEmbeddingModel() {
         // Arrange
-        when(mockConfig.llm).thenReturn("gemini");
+        when(mockConfig.getLlm()).thenReturn("gemini");
         when(mockConfig.getGeminiEmbeddingModelName()).thenReturn("textembedding-gecko@001");
         // Note: This test's behavior depends on GOOGLE_CLOUD_PROJECT and GOOGLE_CLOUD_LOCATION environment variables.
 
@@ -225,7 +225,7 @@ class LlmProviderFactoryTest {
     @Test
     void testCreateEmbeddingModel_GeminiProvider_MissingProjectEnvVar_ShouldFallBackToNoOp() {
         // Arrange
-        when(mockConfig.llm).thenReturn("gemini");
+        when(mockConfig.getLlm()).thenReturn("gemini");
         when(mockConfig.getGeminiEmbeddingModelName()).thenReturn("textembedding-gecko");
         // This test is most effective if GOOGLE_CLOUD_PROJECT is confirmed to be unset in the test environment.
 
@@ -247,7 +247,7 @@ class LlmProviderFactoryTest {
     @Test
     void testCreateEmbeddingModel_GeminiProvider_UsesDefaultModelNameIfNotConfigured() {
         // Arrange
-        when(mockConfig.llm).thenReturn("gemini");
+        when(mockConfig.getLlm()).thenReturn("gemini");
         when(mockConfig.getGeminiEmbeddingModelName()).thenReturn(null); // Simulate not configured in .jaider.json
 
         // Act
@@ -269,7 +269,7 @@ class LlmProviderFactoryTest {
     @Test
     void testCreateChatModel_GenericOpenAIProvider_ShouldReturnOpenAiChatModel() {
         // Arrange
-        when(mockConfig.llm).thenReturn("genericOpenai");
+        when(mockConfig.getLlm()).thenReturn("genericOpenai");
         when(mockConfig.getGenericOpenaiBaseUrl()).thenReturn("http://localhost:8080/v1");
         when(mockConfig.getGenericOpenaiApiKey()).thenReturn("test-generic-api-key");
         when(mockConfig.getGenericOpenaiModelName()).thenReturn("generic-model");
@@ -287,7 +287,7 @@ class LlmProviderFactoryTest {
     @Test
     void testCreateEmbeddingModel_GenericOpenAIProvider_ShouldReturnOpenAiEmbeddingModel() {
         // Arrange
-        when(mockConfig.llm).thenReturn("genericOpenai");
+        when(mockConfig.getLlm()).thenReturn("genericOpenai");
         when(mockConfig.getGenericOpenaiBaseUrl()).thenReturn("http://localhost:8080/v1");
         when(mockConfig.getGenericOpenaiApiKey()).thenReturn("test-generic-api-key");
         when(mockConfig.getGenericOpenaiEmbeddingModelName()).thenReturn("generic-embedding-model");
@@ -303,7 +303,7 @@ class LlmProviderFactoryTest {
     @Test
     void testCreateChatModel_GenericOpenAIProvider_MissingApiKey_ShouldStillAttempt() {
         // Arrange
-        when(mockConfig.llm).thenReturn("genericOpenai");
+        when(mockConfig.getLlm()).thenReturn("genericOpenai");
         when(mockConfig.getGenericOpenaiBaseUrl()).thenReturn("http://localhost:8080/v1");
         when(mockConfig.getGenericOpenaiApiKey()).thenReturn(null); // API key is null
         when(mockConfig.getGenericOpenaiModelName()).thenReturn("generic-model");
@@ -323,7 +323,7 @@ class LlmProviderFactoryTest {
     @Test
     void testCreateEmbeddingModel_GenericOpenAIProvider_MissingApiKey_ShouldStillAttempt() {
         // Arrange
-        when(mockConfig.llm).thenReturn("genericOpenai");
+        when(mockConfig.getLlm()).thenReturn("genericOpenai");
         when(mockConfig.getGenericOpenaiBaseUrl()).thenReturn("http://localhost:8080/v1");
         when(mockConfig.getGenericOpenaiApiKey()).thenReturn(null); // API key is null
         when(mockConfig.getGenericOpenaiEmbeddingModelName()).thenReturn("generic-embedding-model");
@@ -343,7 +343,7 @@ class LlmProviderFactoryTest {
     @Test
     void testCreateChatModel_GenericOpenAIProvider_ExceptionDuringCreation_ShouldReturnNull() {
         // Arrange
-        when(mockConfig.llm).thenReturn("genericOpenai");
+        when(mockConfig.getLlm()).thenReturn("genericOpenai");
         when(mockConfig.getGenericOpenaiBaseUrl()).thenReturn("http://invalid-url-that-causes-immediate-error"); // Invalid URL
         when(mockConfig.getGenericOpenaiApiKey()).thenReturn("test-generic-api-key");
         when(mockConfig.getGenericOpenaiModelName()).thenReturn("generic-model");
@@ -359,7 +359,7 @@ class LlmProviderFactoryTest {
     @Test
     void testCreateEmbeddingModel_GenericOpenAIProvider_ExceptionDuringCreation_ShouldFallBackToNoOp() {
         // Arrange
-        when(mockConfig.llm).thenReturn("genericOpenai");
+        when(mockConfig.getLlm()).thenReturn("genericOpenai");
         // Forcing an error in OpenAiEmbeddingModel.builder() is tricky.
         // Let's assume an invalid base URL might cause an issue during build() or first request.
         // Langchain4j builders are quite resilient. An empty or malformed URL might be one way.

@@ -185,11 +185,11 @@ public class DependencyInjectorTest {
     void testRegisterAndGetComponent_simpleSingleton() {
         defineComponent("compA_id", "dumb.jaider.app.DependencyInjectorTest$ComponentA");
 
-        ComponentA instance1 = injector.getComponent("compA_id");
+        ComponentA instance1 = (ComponentA) injector.getComponent("compA_id");
         assertNotNull(instance1);
         assertEquals("ComponentA_DefaultName", instance1.name);
 
-        ComponentA instance2 = injector.getComponent("compA_id");
+        ComponentA instance2 = (ComponentA) injector.getComponent("compA_id");
         assertSame(instance1, instance2, "Singleton instance should be the same");
     }
 
@@ -211,7 +211,7 @@ public class DependencyInjectorTest {
         definition.put("constructorArgs", ctorArgs);
         injector = new DependencyInjector(new HashMap<>(componentDefinitions)); // re-init with updated def
 
-        ComponentWithValCon instance = injector.getComponent("compVal_id");
+        ComponentWithValCon instance = (ComponentWithValCon) injector.getComponent("compVal_id");
         assertNotNull(instance);
         assertEquals("text value", instance.text);
         assertEquals(99, instance.number);
@@ -230,14 +230,14 @@ public class DependencyInjectorTest {
         injector = new DependencyInjector(new HashMap<>(componentDefinitions));
 
 
-        ComponentWithMixedCon instanceMixed = injector.getComponent("compMixed_id");
+        ComponentWithMixedCon instanceMixed = (ComponentWithMixedCon) injector.getComponent("compMixed_id");
         assertNotNull(instanceMixed);
         assertEquals("mixed string", instanceMixed.textVal);
         assertNotNull(instanceMixed.compARef);
         assertEquals("ComponentA_DefaultName", instanceMixed.compARef.name);
         assertEquals(77, instanceMixed.intVal);
 
-        ComponentA instanceA = injector.getComponent("compA_ref_id");
+        ComponentA instanceA = (ComponentA) injector.getComponent("compA_ref_id");
         assertSame(instanceA, instanceMixed.compARef, "Referenced dependency should be the same singleton instance");
     }
 
@@ -250,12 +250,12 @@ public class DependencyInjectorTest {
         injector = new DependencyInjector(new HashMap<>(componentDefinitions));
 
 
-        ComponentBWithDep instanceB = injector.getComponent("compB_with_dep_id");
+        ComponentBWithDep instanceB = (ComponentBWithDep) injector.getComponent("compB_with_dep_id");
         assertNotNull(instanceB);
         assertNotNull(instanceB.depA);
         assertEquals("ComponentA_DefaultName", instanceB.depA.name);
 
-        ComponentA instanceA = injector.getComponent("compA_dep_id");
+        ComponentA instanceA = (ComponentA) injector.getComponent("compA_dep_id");
         assertSame(instanceA, instanceB.depA);
     }
 
@@ -269,7 +269,7 @@ public class DependencyInjectorTest {
         def.put("constructorArgs", ctorArgs);
         injector = new DependencyInjector(new HashMap<>(componentDefinitions));
 
-        ComponentWithListVal instance = injector.getComponent("listValComp_id");
+        ComponentWithListVal instance = (ComponentWithListVal) injector.getComponent("listValComp_id");
         assertNotNull(instance);
         assertNotNull(instance.namesList);
         assertEquals(2, instance.namesList.size());
@@ -290,13 +290,13 @@ public class DependencyInjectorTest {
         def.put("constructorArgs", ctorArgs);
         injector = new DependencyInjector(new HashMap<>(componentDefinitions));
 
-        ComponentWithListRef instance = injector.getComponent("listRefComp_id");
+        ComponentWithListRef instance = (ComponentWithListRef) injector.getComponent("listRefComp_id");
         assertNotNull(instance);
         assertNotNull(instance.componentAList);
         assertEquals(2, instance.componentAList.size());
 
-        ComponentA compA1FromInjector = injector.getComponent("compA_for_list1");
-        ComponentA compA2FromInjector = injector.getComponent("compA_for_list2");
+        ComponentA compA1FromInjector = (ComponentA) injector.getComponent("compA_for_list1");
+        ComponentA compA2FromInjector = (ComponentA) injector.getComponent("compA_for_list2");
 
         assertSame(compA1FromInjector, instance.componentAList.get(0));
         assertSame(compA2FromInjector, instance.componentAList.get(1));
@@ -317,7 +317,7 @@ public class DependencyInjectorTest {
         def.put("constructorArgs", ctorArgs);
         injector = new DependencyInjector(new HashMap<>(componentDefinitions));
 
-        ComponentWithListMixed instance = injector.getComponent("listMixedComp_id");
+        ComponentWithListMixed instance = (ComponentWithListMixed) injector.getComponent("listMixedComp_id");
         assertNotNull(instance);
         assertNotNull(instance.mixedItemsList);
         assertEquals(3, instance.mixedItemsList.size());
@@ -331,7 +331,7 @@ public class DependencyInjectorTest {
     void testGetComponent_staticFactoryMethod_noArgs() {
         defineComponentWithFactory("factoryNoArgs_id", "dumb.jaider.app.DependencyInjectorTest$ComponentWithStaticFactoryNoArgs", "createInstance");
         // injector re-init is handled by defineComponentWithFactory -> defineComponent
-        ComponentWithStaticFactoryNoArgs instance = injector.getComponent("factoryNoArgs_id");
+        ComponentWithStaticFactoryNoArgs instance = (ComponentWithStaticFactoryNoArgs) injector.getComponent("factoryNoArgs_id");
         assertNotNull(instance);
         assertEquals("FactoryNoArgsInstance", instance.identifier);
     }
@@ -347,7 +347,7 @@ public class DependencyInjectorTest {
         injector = new DependencyInjector(new HashMap<>(componentDefinitions));
 
 
-        ComponentWithStaticFactoryWithArgs instance = injector.getComponent("factoryWithArgs_id");
+        ComponentWithStaticFactoryWithArgs instance = (ComponentWithStaticFactoryWithArgs) injector.getComponent("factoryWithArgs_id");
         assertNotNull(instance);
         assertEquals("ValueForFactory", instance.stringArg);
         assertNotNull(instance.componentArg);
@@ -377,7 +377,7 @@ public class DependencyInjectorTest {
         def.put("staticFactoryArgs", factoryMethodArgs);
         injector = new DependencyInjector(new HashMap<>(componentDefinitions));
 
-        ComponentWithStaticFactoryWithListArgs instance = injector.getComponent("factoryListArgs_id");
+        ComponentWithStaticFactoryWithListArgs instance = (ComponentWithStaticFactoryWithListArgs) injector.getComponent("factoryListArgs_id");
         assertNotNull(instance);
         assertEquals(2, instance.stringListArg.size());
         assertEquals("str1", instance.stringListArg.get(0));
@@ -490,9 +490,9 @@ public class DependencyInjectorTest {
     void testClearCache_componentsRecreated() {
         defineComponent("compA_cache_test_id", "dumb.jaider.app.DependencyInjectorTest$ComponentA");
 
-        ComponentA instanceOne = injector.getComponent("compA_cache_test_id");
+        ComponentA instanceOne = (ComponentA) injector.getComponent("compA_cache_test_id");
         injector.clearCache();
-        ComponentA instanceTwo = injector.getComponent("compA_cache_test_id");
+        ComponentA instanceTwo = (ComponentA) injector.getComponent("compA_cache_test_id");
 
         assertNotNull(instanceOne);
         assertNotNull(instanceTwo);
@@ -508,11 +508,11 @@ public class DependencyInjectorTest {
         injector = new DependencyInjector(new HashMap<>());
         injector.registerSingleton("manualCompA_id", manualExternalInstance);
 
-        ComponentA retrievedInst = injector.getComponent("manualCompA_id");
+        ComponentA retrievedInst = (ComponentA) injector.getComponent("manualCompA_id");
         assertSame(manualExternalInstance, retrievedInst);
         assertEquals("ManuallyRegisteredExternalInstance", retrievedInst.name);
 
-        ComponentA retrievedInst2 = injector.getComponent("manualCompA_id");
+        ComponentA retrievedInst2 = (ComponentA) injector.getComponent("manualCompA_id");
         assertSame(manualExternalInstance, retrievedInst2); // Should still be the same (singleton)
 
         injector.clearCache();
@@ -520,7 +520,7 @@ public class DependencyInjectorTest {
         // However, the current implementation of clearCache simply clears the 'cache' map.
         // If registerSingleton adds to this same cache, then it would be cleared.
         // Let's test the behavior:
-        ComponentA retrievedAfterClear = injector.getComponent("manualCompA_id");
+        ComponentA retrievedAfterClear = (ComponentA) injector.getComponent("manualCompA_id");
         assertSame(manualExternalInstance, retrievedAfterClear, "Manually registered singleton should ideally survive a simple cache clear if it's not re-instantiable from definitions.");
         // The above assertion depends on how registerSingleton and clearCache interact.
         // If registerSingleton relies on the same 'cache' that is cleared, then this might fail.
@@ -540,19 +540,19 @@ public class DependencyInjectorTest {
         defineComponentInMap("override_id", "dumb.jaider.app.DependencyInjectorTest$ComponentA", defsForOverride);
         injector = new DependencyInjector(defsForOverride);
 
-        ComponentA jsonDefinedInstance = injector.getComponent("override_id"); // Created from JSON
+        ComponentA jsonDefinedInstance = (ComponentA) injector.getComponent("override_id"); // Created from JSON
         jsonDefinedInstance.name = "JSON_Version";
 
         ComponentA manualOverrideInstance = new ComponentA();
         manualOverrideInstance.name = "ManualOverride_Version";
         injector.registerSingleton("override_id", manualOverrideInstance); // Override with manual instance
 
-        ComponentA currentInstance = injector.getComponent("override_id");
+        ComponentA currentInstance = (ComponentA) injector.getComponent("override_id");
         assertSame(manualOverrideInstance, currentInstance, "Should be the manually overridden instance.");
         assertEquals("ManualOverride_Version", currentInstance.name);
 
         injector.clearCache();
-        ComponentA afterClearInstance = injector.getComponent("override_id"); // Should recreate from JSON
+        ComponentA afterClearInstance = (ComponentA) injector.getComponent("override_id"); // Should recreate from JSON
         assertNotSame(manualOverrideInstance, afterClearInstance, "After clear, should be a new instance from JSON def.");
         assertEquals("ComponentA_DefaultName", afterClearInstance.name, "Name should be from default constructor of new instance.");
     }
