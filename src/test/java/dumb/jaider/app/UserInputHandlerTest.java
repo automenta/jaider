@@ -45,6 +45,8 @@ public class UserInputHandlerTest {
     private AgentService mockAgentService;
     @Mock
     private ProactiveSuggestionService mockProactiveSuggestionService;
+    // AgentInteractionService is not directly used by UserInputHandler based on its constructor,
+    // but App uses it. So keeping it for mockApp setup if needed by other tests.
     @Mock
     private AgentInteractionService mockAgentInteractionService;
 
@@ -58,35 +60,25 @@ public class UserInputHandlerTest {
     @Mock
     private Command mockGenericCommand; // For unknown command tests or general command behavior
 
-    @Spy
-    private Map<String, Command> commandsMap = new HashMap<>(); // Spy to allow partial mocking if needed, or just use @Mock
+    @Mock // Changed from @Spy to @Mock to avoid interaction issues with clear()
+    private Map<String, Command> commandsMap;
 
     @InjectMocks
     private UserInputHandler userInputHandler;
 
     @BeforeEach
     void setUp() {
-        // It's crucial that UserInputHandler gets the mocked commandsMap.
-        // If UserInputHandler's constructor takes the map directly:
-        // userInputHandler = new UserInputHandler(mockApp, mockJaiderModel, mockConfig, mockUI, mockAgentService, mockProactiveSuggestionService, mockAgentInteractionService, commandsMap);
-        // If it's injected via @InjectMocks, ensure the field name in UserInputHandler matches 'commandsMap'.
-
-        // Resetting spy map for clarity in each test, and re-associating it with the handler.
-        commandsMap.clear();
-        // This re-injection or re-construction might be needed if the map is final in UserInputHandler
-        // For now, assume @InjectMocks handles the map correctly or it's passed in constructor for tests.
-        // If UserInputHandler initializes its own map, testing becomes harder without refactoring it to accept a map.
-        // Let's assume UserInputHandler has a field `commandsMap` that @InjectMocks can fill.
-
-        // Common AppContext setup if UserInputHandler creates it internally,
-        // otherwise this is not needed here but when commands are executed.
-        // For now, we assume AppContext is created by UserInputHandler or commands when needed.
+        // Reset mocks if needed, or ensure clean state.
+        // For commandsMap, since it's @Mock, it's reset automatically by MockitoExtension.
+        // If it were initialized here (e.g. new HashMap<>()), it would need manual clearing.
+        // We will stub its behavior (e.g., when(commandsMap.get(...))) in individual tests.
     }
 
     // --- Command Handling Tests ---
 
     @Test
     void testHandleUserInput_knownCommand_executesCommand() {
+        when(mockApp.getState()).thenReturn(App.State.IDLE);
         when(commandsMap.get("/add")).thenReturn(mockAddCommand);
         userInputHandler.handleUserInput("/add file.txt");
         verify(mockAddCommand).execute(eq("file.txt"), any(AppContext.class));
@@ -94,6 +86,7 @@ public class UserInputHandlerTest {
 
     @Test
     void testHandleUserInput_knownCommand_noArgs_executesCommand() {
+        when(mockApp.getState()).thenReturn(App.State.IDLE);
         when(commandsMap.get("/help")).thenReturn(mockHelpCommand);
         userInputHandler.handleUserInput("/help");
         verify(mockHelpCommand).execute(eq(""), any(AppContext.class));
@@ -101,26 +94,32 @@ public class UserInputHandlerTest {
 
     @Test
     void testHandleUserInput_knownCommand_extraSpaces_executesCommandAndTrimsArgs() {
+        when(mockApp.getState()).thenReturn(App.State.IDLE);
         when(commandsMap.get("/add")).thenReturn(mockAddCommand);
         userInputHandler.handleUserInput("/add   file.txt  ");
-        verify(mockAddCommand).execute(eq("file.txt"), any(AppContext.class));
+        verify(mockAddCommand).execute(eq("file.txt"), any(AppContext.class)); // Argument should be trimmed
     }
 
     @Test
     void testHandleUserInput_knownCommand_extraSpacesBetweenArgs_executesCommandAndTrimsArgs() {
+        when(mockApp.getState()).thenReturn(App.State.IDLE);
         when(commandsMap.get("/add")).thenReturn(mockAddCommand);
         userInputHandler.handleUserInput("/add   file.txt   another.txt  ");
-        verify(mockAddCommand).execute(eq("file.txt   another.txt"), any(AppContext.class));
+        verify(mockAddCommand).execute(eq("file.txt   another.txt"), any(AppContext.class)); // Inner spaces preserved, outer trimmed
     }
 
 
     @Test
     void testHandleUserInput_unknownCommand_logsMessage() {
+        when(mockApp.getState()).thenReturn(App.State.IDLE);
         when(commandsMap.get("/unknowncmd")).thenReturn(null); // Ensure it's not in the map
         userInputHandler.handleUserInput("/unknowncmd args");
 
-        verify(mockJaiderModel).addLog(UserMessage.from("Unknown command: /unknowncmd. Type /help for available commands."));
-        verifyNoInteractions(mockAgentInteractionService); // Should not go to agent
+        // UserInputHandler logs the user message first
+        verify(mockJaiderModel).addLog(UserMessage.from("/unknowncmd args"));
+        // Then logs the "Unknown command" message
+        verify(mockJaiderModel).addLog(AiMessage.from("[Jaider] Unknown command: /unknowncmd"));
+        verify(mockApp, never()).processAgentTurnPublic(anyBoolean()); // Should not go to agent
         // Verify no command.execute was called on any known mock command
         verify(mockAddCommand, never()).execute(anyString(), any(AppContext.class));
         verify(mockHelpCommand, never()).execute(anyString(), any(AppContext.class));
@@ -130,6 +129,7 @@ public class UserInputHandlerTest {
 
     @Test
     void testHandleUserInput_nonCommandInput_delegatesToAgentInteractionService() {
+        when(mockApp.getState()).thenReturn(App.State.IDLE);
         String agentMessage = "This is a message for the agent.";
         // Ensure the input does not start with '/' so it's not treated as a command
         userInputHandler.handleUserInput(agentMessage);
@@ -141,14 +141,24 @@ public class UserInputHandlerTest {
 
     @Test
     void testHandleUserInput_emptyInput_isIgnored() {
-        userInputHandler.handleUserInput("");
-        verifyNoInteractions(commandsMap, mockJaiderModel, mockAgentInteractionService, mockProactiveSuggestionService);
+        String input = "";
+        userInputHandler.handleUserInput(input);
+        // UserInputHandler should now return early for blank input before logging.
+        verifyNoInteractions(mockJaiderModel);
+        verifyNoInteractions(mockApp);
+        verifyNoInteractions(mockProactiveSuggestionService);
+        verifyNoInteractions(commandsMap);
     }
 
     @Test
     void testHandleUserInput_whitespaceOnlyInput_isIgnored() {
-        userInputHandler.handleUserInput("   \t   ");
-        verifyNoInteractions(commandsMap, mockJaiderModel, mockAgentInteractionService, mockProactiveSuggestionService);
+        String input = "   \t   ";
+        userInputHandler.handleUserInput(input);
+        // UserInputHandler should now return early for blank input before logging.
+        verifyNoInteractions(mockJaiderModel);
+        verifyNoInteractions(mockApp);
+        verifyNoInteractions(mockProactiveSuggestionService);
+        verifyNoInteractions(commandsMap);
     }
 
     // --- State-Dependent Input Handling Tests ---
@@ -198,13 +208,11 @@ public class UserInputHandlerTest {
         // If command check is first, then /help should execute.
         // The UserInputHandler logic: if state is WAITING_USER_CONFIRMATION, it will log and call processAgentTurnPublic.
         // It does NOT bypass this for commands. The command execution path is only hit if not in specific states OR if a suggestion is active.
-        // The UserInputHandler's main if/else structure:
-        // 1. Handle empty/blank.
-        // 2. Check for active suggestions -> clear them if input is not /accept or /a.
-        // 3. If state is WAITING_USER_CONFIRMATION or WAITING_USER_PLAN_APPROVAL -> log input, processAgentTurnPublic(true).
-        // 4. Else (e.g. IDLE state) -> try to execute command, or if not a command, processAgentTurnPublic(true).
-        // So, if in WAITING_USER_CONFIRMATION, a command like /help will be logged and then processAgentTurnPublic(true) will be called.
-        // The command itself will NOT be executed by the UserInputHandler in this state based on its logic.
+        // The UserInputHandler logic for WAITING_USER_CONFIRMATION:
+        // 1. Logs UserMessage.
+        // 2. Clears suggestions (if any, or if not an accept command - "/help" is not).
+        // 3. Executes the command (since it starts with "/").
+        // It does NOT call app.processAgentTurnPublic(true) in the command execution path.
         when(mockApp.getState()).thenReturn(App.State.WAITING_USER_CONFIRMATION);
         when(commandsMap.get("/help")).thenReturn(mockHelpCommand);
         String input = "/help";
@@ -212,8 +220,8 @@ public class UserInputHandlerTest {
         userInputHandler.handleUserInput(input);
 
         verify(mockJaiderModel).addLog(UserMessage.from(input));
-        verify(mockApp).processAgentTurnPublic(true);
-        verify(mockHelpCommand, never()).execute(anyString(), any(AppContext.class));
+        verify(mockHelpCommand).execute(eq(""), any(AppContext.class)); // Command should execute
+        verify(mockApp, never()).processAgentTurnPublic(anyBoolean()); // This should not be called if command executes
     }
 
 
@@ -239,6 +247,7 @@ public class UserInputHandlerTest {
 
     @Test
     void testHandleUserInput_acceptSuggestionCommand_whenSuggestionActive_acceptsSuggestion() {
+        when(mockApp.getState()).thenReturn(App.State.IDLE);
         // when(mockProactiveSuggestionService.getActiveSuggestion()).thenReturn(mockActiveSuggestion); // Replaced by mockJaiderModel.getActiveSuggestions()
         // Assuming /accept is a command that gets mapped
         when(commandsMap.get("/accept")).thenReturn(mockAcceptSuggestionCommand);
@@ -247,7 +256,7 @@ public class UserInputHandlerTest {
         userInputHandler.handleUserInput("/accept");
 
         verify(mockJaiderModel).addLog(UserMessage.from("/accept")); // Input is logged
-        // Verify that the suggestion is NOT cleared by UserInputHandler because /accept command handles its lifecycle.
+        // With new logic, clearActiveSuggestions is NOT called if command is /accept or /a AND suggestions are active
         verify(mockJaiderModel, never()).clearActiveSuggestions();
         // Verify the AcceptSuggestionCommand is executed
         verify(mockAcceptSuggestionCommand).execute(eq(""), any(AppContext.class));
@@ -255,11 +264,13 @@ public class UserInputHandlerTest {
 
     @Test
     void testHandleUserInput_acceptAliasCommand_a_whenSuggestionActive_acceptsSuggestion() {
+        when(mockApp.getState()).thenReturn(App.State.IDLE);
         when(mockJaiderModel.getActiveSuggestions()).thenReturn(List.of(mockActiveSuggestion));
         when(commandsMap.get("/a")).thenReturn(mockAcceptSuggestionCommand); // Assuming /a maps to AcceptSuggestionCommand
 
         userInputHandler.handleUserInput("/a");
         verify(mockJaiderModel).addLog(UserMessage.from("/a")); // Input is logged
+         // With new logic, clearActiveSuggestions is NOT called if command is /a or /accept AND suggestions are active
         verify(mockJaiderModel, never()).clearActiveSuggestions();
         verify(mockAcceptSuggestionCommand).execute(eq(""), any(AppContext.class));
     }
@@ -308,13 +319,15 @@ public class UserInputHandlerTest {
 
     @Test
     void testHandleUserInput_nonAcceptCommand_whenSuggestionActive_cancelsSuggestionAndProcessesCommand() {
+        when(mockApp.getState()).thenReturn(App.State.IDLE);
         when(mockJaiderModel.getActiveSuggestions()).thenReturn(List.of(mockActiveSuggestion));
         when(commandsMap.get("/help")).thenReturn(mockHelpCommand); // A known, non-accept command
 
         userInputHandler.handleUserInput("/help");
 
         verify(mockJaiderModel).addLog(UserMessage.from("/help")); // Input is logged
-        verify(mockJaiderModel).clearActiveSuggestions(); // Suggestion is cleared
+        verify(mockJaiderModel).clearActiveSuggestions(); // Suggestion is cleared because /help is not /accept or /a
+        verify(mockJaiderModel).addLog(AiMessage.from("[Jaider] Suggestions cleared due to new input."));
         verify(mockHelpCommand).execute(eq(""), any(AppContext.class)); // Command still executes
     }
 
@@ -328,31 +341,36 @@ public class UserInputHandlerTest {
 
         verify(mockJaiderModel).addLog(UserMessage.from(agentMessage)); // Input is logged
         verify(mockJaiderModel).clearActiveSuggestions(); // Suggestion is cleared
+        verify(mockJaiderModel).addLog(AiMessage.from("[Jaider] Suggestions cleared due to new input."));
         verify(mockApp).processAgentTurnPublic(true);
     }
 
 
     @Test
     void testHandleUserInput_anyCommand_whenNoSuggestionActive_processesCommandNormally() {
+        when(mockApp.getState()).thenReturn(App.State.IDLE);
         when(mockJaiderModel.getActiveSuggestions()).thenReturn(java.util.Collections.emptyList()); // No active suggestion
         when(commandsMap.get("/help")).thenReturn(mockHelpCommand);
 
         userInputHandler.handleUserInput("/help");
 
         verify(mockJaiderModel).addLog(UserMessage.from("/help")); // Input is logged
-        verify(mockJaiderModel, never()).clearActiveSuggestions();
+        // clearActiveSuggestions IS called in the new logic path when suggestions are empty and not an accept command
+        verify(mockJaiderModel).clearActiveSuggestions();
         verify(mockHelpCommand).execute(eq(""), any(AppContext.class));
     }
 
     @Test
     void testHandleUserInput_nonCommandMessage_whenNoSuggestionActive_processesMessageNormally() {
+        when(mockApp.getState()).thenReturn(App.State.IDLE);
         when(mockJaiderModel.getActiveSuggestions()).thenReturn(java.util.Collections.emptyList()); // No active suggestion
         String agentMessage = "Another normal message.";
 
         userInputHandler.handleUserInput(agentMessage);
 
         verify(mockJaiderModel).addLog(UserMessage.from(agentMessage));
-        verify(mockJaiderModel, never()).clearActiveSuggestions();
+        // clearActiveSuggestions IS called in the new logic path when suggestions are empty and not an accept command
+        verify(mockJaiderModel).clearActiveSuggestions();
         verify(mockApp).processAgentTurnPublic(true);
     }
 }

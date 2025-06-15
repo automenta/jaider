@@ -44,7 +44,7 @@ public class UserInputHandler {
     private final JaiderModel jaiderModel;
     private final Config config;
     private final UI ui;
-    private final Agent agent;
+    private final AgentService agentService; // Changed from Agent to AgentService
     private final ProactiveSuggestionService proactiveSuggestionService;
     private final Map<String, Command> commands;
 
@@ -66,14 +66,14 @@ public class UserInputHandler {
                             JaiderModel jaiderModel,
                             Config config,
                             UI ui,
-                            Agent agent, // Review: Is direct agent still passed or obtained via App/AgentService?
+                            AgentService agentService, // Changed from Agent to AgentService
                             ProactiveSuggestionService proactiveSuggestionService,
                             Map<String, Command> commands) {
         this.app = app;
         this.jaiderModel = jaiderModel;
         this.config = config;
         this.ui = ui;
-        this.agent = agent;
+        this.agentService = agentService; // Changed assignment
         this.proactiveSuggestionService = proactiveSuggestionService;
         this.commands = commands;
     }
@@ -97,6 +97,12 @@ public class UserInputHandler {
      * @param input The raw string input from the user.
      */
     public void handleUserInput(String input) {
+        if (input == null || input.isBlank()) {
+            // Optionally log or handle blank input, but for now, just ignore.
+            // ui.redraw(jaiderModel); // Redraw if some status message should indicate ignored input.
+            return;
+        }
+
         // Check app state; if busy or in a specific confirmation loop, might defer general input.
         // The original check was: app.getState() != App.State.IDLE && app.getState() != App.State.WAITING_USER_PLAN_APPROVAL
         // This needs to be re-evaluated based on all possible App.State values and their meaning for input handling.
@@ -113,13 +119,34 @@ public class UserInputHandler {
             return;
         }
         jaiderModel.addLog(UserMessage.from(input));
-        jaiderModel.clearActiveSuggestions();
+
+        // Handle suggestions: clear them if the input is not an accept command
+        boolean isAcceptCommand = input.trim().equals("/accept") || input.trim().equals("/a");
+        if (!jaiderModel.getActiveSuggestions().isEmpty() && !isAcceptCommand) {
+            jaiderModel.clearActiveSuggestions();
+            jaiderModel.addLog(AiMessage.from("[Jaider] Suggestions cleared due to new input."));
+        } else if (jaiderModel.getActiveSuggestions().isEmpty()) {
+            // If there were no suggestions, or if it was an accept command (which handles its own suggestion state),
+            // ensure suggestions are cleared if it wasn't specifically an accept command that might have already done so.
+            // This ensures that if suggestions were present but the command was not /accept or /a, they are cleared.
+            // If they were not present, this call does nothing.
+            // If it was /accept or /a, they handle their own suggestion state via their command logic.
+            // This simplified logic ensures suggestions are cleared unless an accept command is issued.
+            if (!isAcceptCommand) { // If not an accept command, and suggestions might have been active or not.
+                 jaiderModel.clearActiveSuggestions(); // Clear any residual/stale suggestions.
+            }
+        }
+
 
         if (input.startsWith("!")) {
             handleDirectToolInvocation(input);
         } else if (input.startsWith("/")) {
             execute(input);
         } else {
+            // If it's not a command, and not an accept action (which would be a command),
+            // then it's a message for the agent.
+            // If suggestions were active and this input is not clearing them via a non-accept command,
+            // they should have been cleared above.
             ToolManager toolManager = null;
             try {
                 toolManager = config.getComponent("toolManager", ToolManager.class);
@@ -128,8 +155,9 @@ public class UserInputHandler {
             }
 
             List<Object> internalToolInstances = new ArrayList<>();
-            if(agent != null && agent.tools() != null) {
-                internalToolInstances.addAll(agent.tools());
+            Agent currentAgent = agentService.getCurrentAgent(); // Get current agent
+            if(currentAgent != null && currentAgent.tools() != null) {
+                internalToolInstances.addAll(currentAgent.tools());
             }
 
             List<ActiveSuggestion> activeSuggestions = proactiveSuggestionService.generateSuggestions(input, internalToolInstances);
@@ -149,7 +177,8 @@ public class UserInputHandler {
         String toolName = parts[0];
         String toolArgsJson = (parts.length > 1) ? parts[1] : "{}";
 
-        if (agent == null || agent.tools() == null || agent.tools().isEmpty()) {
+        Agent currentAgent = agentService.getCurrentAgent(); // Get current agent
+        if (currentAgent == null || currentAgent.tools() == null || currentAgent.tools().isEmpty()) {
             jaiderModel.addLog(AiMessage.from("[Jaider] No agent active or agent has no tools. Cannot execute: " + toolName));
             app.finishTurnPublic(null);
             return;
@@ -178,9 +207,9 @@ public class UserInputHandler {
     }
 
     private void execute(String input) {
-        var parts = input.split("\\s+", 2);
+        var parts = input.trim().split("\\s+", 2); // Trim input before splitting
         var commandName = parts[0];
-        var args = parts.length > 1 ? parts[1] : "";
+        var args = parts.length > 1 ? parts[1].trim() : ""; // Trim arguments as well
 
         var command = commands.get(commandName);
         if (command != null) {

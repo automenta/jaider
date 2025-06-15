@@ -9,6 +9,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockedConstruction;
 import org.mockito.Mockito;
+import org.mockito.ArgumentCaptor; // Added import
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.io.ByteArrayInputStream;
@@ -17,6 +18,7 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Arrays; // Added import
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -30,8 +32,9 @@ class StaticAnalysisServiceTest {
     @Mock
     private ToolManager toolManager;
 
-    @Mock
-    private ToolDescriptor toolDescriptor; // Reusable mock for some tests
+    // Removed class-level @Mock for ToolDescriptor; will be created locally in tests
+    // @Mock
+    // private ToolDescriptor toolDescriptor;
 
     @Mock
     private Process process; // Reusable mock for process
@@ -51,23 +54,23 @@ class StaticAnalysisServiceTest {
     @Test
     void getAvailableAnalyzers_shouldReturnFilteredAnalyzers() {
         ToolDescriptor analyzer1 = mock(ToolDescriptor.class);
-        when(analyzer1.getCategory()).thenReturn("static-analyzer");
-        when(analyzer1.getToolName()).thenReturn("Analyzer1");
+        lenient().when(analyzer1.getCategory()).thenReturn("static-analyzer");
+        lenient().when(analyzer1.getToolName()).thenReturn("Analyzer1");
 
         ToolDescriptor nonAnalyzer = mock(ToolDescriptor.class);
-        when(nonAnalyzer.getCategory()).thenReturn("formatter");
-        when(nonAnalyzer.getToolName()).thenReturn("Formatter1");
+        lenient().when(nonAnalyzer.getCategory()).thenReturn("formatter");
+        lenient().when(nonAnalyzer.getToolName()).thenReturn("Formatter1");
 
         ToolDescriptor analyzer2 = mock(ToolDescriptor.class);
-        when(analyzer2.getCategory()).thenReturn("STATIC-ANALYZER"); // Test case-insensitivity
-        when(analyzer2.getToolName()).thenReturn("Analyzer2");
+        lenient().when(analyzer2.getCategory()).thenReturn("STATIC-ANALYZER"); // Test case-insensitivity
+        lenient().when(analyzer2.getToolName()).thenReturn("Analyzer2");
 
         Map<String, ToolDescriptor> descriptors = Map.of(
                 "Analyzer1", analyzer1,
                 "Formatter1", nonAnalyzer,
                 "Analyzer2", analyzer2
         );
-        when(toolManager.getToolDescriptors()).thenReturn(descriptors);
+        lenient().when(toolManager.getToolDescriptors()).thenReturn(descriptors); // toolManager is @Mock
 
         List<ToolDescriptor> result = staticAnalysisService.getAvailableAnalyzers();
 
@@ -85,17 +88,32 @@ class StaticAnalysisServiceTest {
         Map<String, Object> defaultConfig = Map.of("semgrepConfig", "auto");
         String sampleOutput = "{\"results\": []}"; // Minimal valid Semgrep JSON
 
-        when(toolManager.getToolDescriptor(toolName)).thenReturn(toolDescriptor);
-        when(toolDescriptor.getCategory()).thenReturn("static-analyzer");
+        ToolDescriptor localToolDescriptor = mock(ToolDescriptor.class); // Local mock
+        when(toolManager.getToolDescriptor(toolName)).thenReturn(localToolDescriptor);
+        when(localToolDescriptor.getCategory()).thenReturn("static-analyzer");
         when(toolManager.provisionTool(toolName)).thenReturn(true);
-        when(toolDescriptor.getAnalysisCommandPattern()).thenReturn(commandPattern);
-        when(toolDescriptor.getDefaultConfig()).thenReturn(defaultConfig);
-        when(toolDescriptor.getResultsParserClass()).thenReturn(parserClass);
+        when(localToolDescriptor.getAnalysisCommandPattern()).thenReturn(commandPattern);
+        when(localToolDescriptor.getDefaultConfig()).thenReturn(defaultConfig);
+        when(localToolDescriptor.getResultsParserClass()).thenReturn(parserClass);
 
         // Mock ProcessBuilder and Process
         try (MockedConstruction<ProcessBuilder> mockedPbConstruction = Mockito.mockConstruction(
                 ProcessBuilder.class,
                 (mock, context) -> {
+                    Object rawCommandArg = context.arguments().get(0);
+                    List<String> actualCommand;
+                    if (rawCommandArg instanceof List) {
+                        actualCommand = (List<String>) rawCommandArg;
+                    } else if (rawCommandArg instanceof String[]) {
+                        actualCommand = Arrays.asList((String[]) rawCommandArg);
+                    } else {
+                        fail("Unexpected command argument type: " + rawCommandArg.getClass().getName());
+                        return;
+                    }
+                    // Expected command for this test
+                    List<String> expectedCommand = List.of("semgrep", "scan", "--config", "auto", "--json", targetPath.toAbsolutePath().toString());
+                    assertEquals(expectedCommand, actualCommand, "ProcessBuilder command mismatch");
+
                     when(mock.directory(any(File.class))).thenReturn(mock); // Chain call
                     when(mock.start()).thenReturn(process);
                 })) {
@@ -104,22 +122,13 @@ class StaticAnalysisServiceTest {
             when(process.getErrorStream()).thenReturn(new ByteArrayInputStream("".getBytes(StandardCharsets.UTF_8)));
             when(process.waitFor()).thenReturn(0);
 
-            // Mock the SemgrepResultsParser if it's too complex, or use the real one
-            // For this test, we'll use the real one and expect it to parse correctly.
-            // If SemgrepResultsParser had external dependencies or complex logic, mocking it would be better.
-            // For now, assume SemgrepResultsParser is simple enough.
-            List<StaticAnalysisIssue> expectedIssues = Collections.emptyList(); // Based on "{\"results\": []}"
-
+            List<StaticAnalysisIssue> expectedIssues = Collections.emptyList();
             List<StaticAnalysisIssue> actualIssues = staticAnalysisService.runAnalysis(toolName, targetPath, Collections.emptyMap());
-
             assertEquals(expectedIssues, actualIssues);
 
-            // Verify ProcessBuilder was called correctly
-            ProcessBuilder constructedPb = mockedPbConstruction.constructed().getFirst();
-            verify(constructedPb).command(eq(List.of("semgrep", "scan", "--config", "auto", "--json", "/path/to/target")));
-
-            // Verify that the parser was instantiated and used (implicitly tested by getting results)
-            // To explicitly verify, you might need to mock the parser if it were passed in or if this was a more integrated test.
+            // Verification of command is now done inside the mockConstruction context
+            // ProcessBuilder constructedPb = mockedPbConstruction.constructed().getFirst();
+            // No need to verify constructedPb.command() separately if verifying constructor args.
         }
     }
 
@@ -132,18 +141,31 @@ class StaticAnalysisServiceTest {
         String sampleOutput = "{\"results\": []}";
         Map<String, String> runtimeOptions = Map.of("semgrepConfig", "custom_rules");
 
-
-        when(toolManager.getToolDescriptor(toolName)).thenReturn(toolDescriptor);
-        when(toolDescriptor.getCategory()).thenReturn("static-analyzer");
+        ToolDescriptor localToolDescriptor = mock(ToolDescriptor.class); // Local mock
+        when(toolManager.getToolDescriptor(toolName)).thenReturn(localToolDescriptor);
+        when(localToolDescriptor.getCategory()).thenReturn("static-analyzer");
         when(toolManager.provisionTool(toolName)).thenReturn(true);
-        when(toolDescriptor.getAnalysisCommandPattern()).thenReturn(commandPattern);
-        when(toolDescriptor.getDefaultConfig()).thenReturn(defaultConfig); // Default config
-        when(toolDescriptor.getResultsParserClass()).thenReturn(parserClass);
+        when(localToolDescriptor.getAnalysisCommandPattern()).thenReturn(commandPattern);
+        when(localToolDescriptor.getDefaultConfig()).thenReturn(defaultConfig); // Default config
+        when(localToolDescriptor.getResultsParserClass()).thenReturn(parserClass);
 
 
         try (MockedConstruction<ProcessBuilder> mockedPbConstruction = Mockito.mockConstruction(
                 ProcessBuilder.class,
                 (mock, context) -> {
+                    Object rawCommandArg = context.arguments().get(0);
+                    List<String> actualCommand;
+                    if (rawCommandArg instanceof List) {
+                        actualCommand = (List<String>) rawCommandArg;
+                    } else if (rawCommandArg instanceof String[]) {
+                        actualCommand = Arrays.asList((String[]) rawCommandArg);
+                    } else {
+                        fail("Unexpected command argument type: " + rawCommandArg.getClass().getName());
+                        return;
+                    }
+                    List<String> expectedCommand = List.of("semgrep", "scan", "--config", "custom_rules", "--json", targetPath.toAbsolutePath().toString());
+                    assertEquals(expectedCommand, actualCommand, "ProcessBuilder command mismatch for runtime options");
+
                     when(mock.directory(any(File.class))).thenReturn(mock);
                     when(mock.start()).thenReturn(process);
                 })) {
@@ -154,8 +176,7 @@ class StaticAnalysisServiceTest {
 
             staticAnalysisService.runAnalysis(toolName, targetPath, runtimeOptions);
 
-            ProcessBuilder constructedPb = mockedPbConstruction.constructed().getFirst();
-            verify(constructedPb).command(eq(List.of("semgrep", "scan", "--config", "custom_rules", "--json", "/path/to/target")));
+            // Verification of command is now done inside the mockConstruction context
         }
     }
 
@@ -163,7 +184,7 @@ class StaticAnalysisServiceTest {
     @Test
     void runAnalysis_toolNotFound() {
         String toolName = "UnknownTool";
-        when(toolManager.getToolDescriptor(toolName)).thenReturn(null);
+        when(toolManager.getToolDescriptor(toolName)).thenReturn(null); // This uses the class-level toolManager mock
 
         IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> staticAnalysisService.runAnalysis(toolName, targetPath, Collections.emptyMap()));
         assertEquals("No descriptor found for tool: " + toolName, exception.getMessage());
@@ -172,8 +193,9 @@ class StaticAnalysisServiceTest {
     @Test
     void runAnalysis_toolNotStaticAnalyzer() {
         String toolName = "NotAnAnalyzer";
-        when(toolManager.getToolDescriptor(toolName)).thenReturn(toolDescriptor);
-        when(toolDescriptor.getCategory()).thenReturn("formatter"); // Not a static-analyzer
+        ToolDescriptor localToolDescriptor = mock(ToolDescriptor.class); // Local mock
+        when(toolManager.getToolDescriptor(toolName)).thenReturn(localToolDescriptor);
+        when(localToolDescriptor.getCategory()).thenReturn("formatter"); // Not a static-analyzer
 
         IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> staticAnalysisService.runAnalysis(toolName, targetPath, Collections.emptyMap()));
         assertEquals("Tool " + toolName + " is not categorized as a static-analyzer.", exception.getMessage());
@@ -182,8 +204,9 @@ class StaticAnalysisServiceTest {
     @Test
     void runAnalysis_provisioningFails() {
         String toolName = "Semgrep";
-        when(toolManager.getToolDescriptor(toolName)).thenReturn(toolDescriptor);
-        when(toolDescriptor.getCategory()).thenReturn("static-analyzer");
+        ToolDescriptor localToolDescriptor = mock(ToolDescriptor.class); // Local mock
+        when(toolManager.getToolDescriptor(toolName)).thenReturn(localToolDescriptor);
+        when(localToolDescriptor.getCategory()).thenReturn("static-analyzer");
         when(toolManager.provisionTool(toolName)).thenReturn(false); // Provisioning fails
 
         RuntimeException exception = assertThrows(RuntimeException.class, () -> staticAnalysisService.runAnalysis(toolName, targetPath, Collections.emptyMap()));
@@ -193,10 +216,11 @@ class StaticAnalysisServiceTest {
     @Test
     void runAnalysis_commandPatternMissing() {
         String toolName = "ToolWithNoCommand";
-        when(toolManager.getToolDescriptor(toolName)).thenReturn(toolDescriptor);
-        when(toolDescriptor.getCategory()).thenReturn("static-analyzer");
+        ToolDescriptor localToolDescriptor = mock(ToolDescriptor.class); // Local mock
+        when(toolManager.getToolDescriptor(toolName)).thenReturn(localToolDescriptor);
+        when(localToolDescriptor.getCategory()).thenReturn("static-analyzer");
         when(toolManager.provisionTool(toolName)).thenReturn(true);
-        when(toolDescriptor.getAnalysisCommandPattern()).thenReturn(null); // Command pattern is missing
+        when(localToolDescriptor.getAnalysisCommandPattern()).thenReturn(null); // Command pattern is missing
 
         IllegalStateException exception = assertThrows(IllegalStateException.class, () -> staticAnalysisService.runAnalysis(toolName, targetPath, Collections.emptyMap()));
         assertEquals("Analysis command pattern is not defined for tool: " + toolName, exception.getMessage());
@@ -207,12 +231,13 @@ class StaticAnalysisServiceTest {
     void runAnalysis_parserClassNotFound() throws InterruptedException {
         String toolName = "Semgrep";
         String invalidParserClass = "com.example.NonExistentParser";
-        when(toolManager.getToolDescriptor(toolName)).thenReturn(toolDescriptor);
-        when(toolDescriptor.getCategory()).thenReturn("static-analyzer");
+        ToolDescriptor localToolDescriptor = mock(ToolDescriptor.class); // Local mock
+        when(toolManager.getToolDescriptor(toolName)).thenReturn(localToolDescriptor);
+        when(localToolDescriptor.getCategory()).thenReturn("static-analyzer");
         when(toolManager.provisionTool(toolName)).thenReturn(true);
-        when(toolDescriptor.getAnalysisCommandPattern()).thenReturn("semgrep scan {targetPath}");
-        when(toolDescriptor.getResultsParserClass()).thenReturn(invalidParserClass);
-        when(toolDescriptor.getDefaultConfig()).thenReturn(Collections.emptyMap());
+        when(localToolDescriptor.getAnalysisCommandPattern()).thenReturn("semgrep scan {targetPath}");
+        when(localToolDescriptor.getResultsParserClass()).thenReturn(invalidParserClass);
+        when(localToolDescriptor.getDefaultConfig()).thenReturn(Collections.emptyMap());
 
 
         try (MockedConstruction<ProcessBuilder> mockedPbConstruction = Mockito.mockConstruction(
@@ -234,12 +259,13 @@ class StaticAnalysisServiceTest {
     @Test
     void runAnalysis_processExecutionError() {
         String toolName = "Semgrep";
-        when(toolManager.getToolDescriptor(toolName)).thenReturn(toolDescriptor);
-        when(toolDescriptor.getCategory()).thenReturn("static-analyzer");
+        ToolDescriptor localToolDescriptor = mock(ToolDescriptor.class); // Local mock
+        when(toolManager.getToolDescriptor(toolName)).thenReturn(localToolDescriptor);
+        lenient().when(localToolDescriptor.getCategory()).thenReturn("static-analyzer");
         when(toolManager.provisionTool(toolName)).thenReturn(true);
-        when(toolDescriptor.getAnalysisCommandPattern()).thenReturn("semgrep scan {targetPath}");
-        when(toolDescriptor.getResultsParserClass()).thenReturn("dumb.jaider.staticanalysis.SemgrepResultsParser");
-         when(toolDescriptor.getDefaultConfig()).thenReturn(Map.of("semgrepConfig", "auto"));
+        lenient().when(localToolDescriptor.getAnalysisCommandPattern()).thenReturn("semgrep scan {targetPath}");
+        lenient().when(localToolDescriptor.getResultsParserClass()).thenReturn("dumb.jaider.staticanalysis.SemgrepResultsParser");
+        lenient().when(localToolDescriptor.getDefaultConfig()).thenReturn(Map.of("semgrepConfig", "auto"));
 
 
         try (MockedConstruction<ProcessBuilder> mockedPbConstruction = Mockito.mockConstruction(
@@ -263,12 +289,13 @@ class StaticAnalysisServiceTest {
         String commandPattern = "rawtool {targetPath}";
         String rawToolOutput = "This is some raw output from the tool.";
 
-        when(toolManager.getToolDescriptor(toolName)).thenReturn(toolDescriptor);
-        when(toolDescriptor.getCategory()).thenReturn("static-analyzer");
+        ToolDescriptor localToolDescriptor = mock(ToolDescriptor.class); // Local mock
+        when(toolManager.getToolDescriptor(toolName)).thenReturn(localToolDescriptor);
+        when(localToolDescriptor.getCategory()).thenReturn("static-analyzer");
         when(toolManager.provisionTool(toolName)).thenReturn(true);
-        when(toolDescriptor.getAnalysisCommandPattern()).thenReturn(commandPattern);
-        when(toolDescriptor.getResultsParserClass()).thenReturn(null); // No parser defined
-        when(toolDescriptor.getDefaultConfig()).thenReturn(Collections.emptyMap());
+        when(localToolDescriptor.getAnalysisCommandPattern()).thenReturn(commandPattern);
+        when(localToolDescriptor.getResultsParserClass()).thenReturn(null); // No parser defined
+        when(localToolDescriptor.getDefaultConfig()).thenReturn(Collections.emptyMap());
 
 
         try (MockedConstruction<ProcessBuilder> mockedPbConstruction = Mockito.mockConstruction(

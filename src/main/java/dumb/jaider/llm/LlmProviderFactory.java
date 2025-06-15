@@ -57,10 +57,14 @@ public class LlmProviderFactory {
             }
             if (this.chatModel instanceof Tokenizer) {
                 this.tokenizer = (Tokenizer) this.chatModel;
+            } else { // ADDED FALLBACK
+                model.addLog(AiMessage.from("[Jaider] WARNING: Chat model is not a Tokenizer or is null after createChatModel(). Using a NoOpTokenizer."));
+                this.tokenizer = new NoOpTokenizer();
             }
         }
         if (this.tokenizer == null) {
-            throw new dumb.jaider.app.exceptions.TokenizerInitializationException("Failed to initialize tokenizer. Chat model might be null or not a Tokenizer instance.");
+            // This path should ideally not be reached if NoOpTokenizer instantiation is successful.
+            throw new dumb.jaider.app.exceptions.TokenizerInitializationException("Failed to initialize tokenizer even after attempting fallback to NoOpTokenizer.");
         }
         return this.tokenizer;
     }

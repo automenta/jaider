@@ -3,6 +3,7 @@ package dumb.jaider.commands;
 import dumb.jaider.commands.AppContext;
 import dumb.jaider.app.App;
 import dumb.jaider.model.JaiderModel;
+import dev.langchain4j.data.message.AiMessage; // Added import
 import dev.langchain4j.data.message.ChatMessage;
 import dev.langchain4j.data.message.UserMessage;
 import org.junit.jupiter.api.BeforeEach;
@@ -10,6 +11,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.Spy; // Added import
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.nio.file.Path;
@@ -24,45 +26,45 @@ import static org.junit.jupiter.api.Assertions.*;
 public class AddCommandTest {
 
     @Mock
-    private AppContext mockAppContext;
-    @Mock
-    private JaiderModel mockJaiderModel;
+    private AppContext mockAppContext; // Removed duplicate
+    @Spy
+    private JaiderModel mockJaiderModel = new JaiderModel();
     @Mock
     private App mockApp;
 
-    @InjectMocks
-    private AddCommand addCommand;
+    private AddCommand addCommand; // Removed @InjectMocks
 
     @BeforeEach
     void setUp() {
+        addCommand = new AddCommand(); // Manually instantiate
         // Standard mocking behavior for AppContext
         when(mockAppContext.model()).thenReturn(mockJaiderModel);
-        when(mockAppContext.app()).thenReturn(mockApp);
+        // when(mockAppContext.app()).thenReturn(mockApp); // Moved to specific tests
+        // Clear the files set on the spied/real JaiderModel before each test
+        mockJaiderModel.files.clear(); // Removed incorrect assignment, clear is enough for Spy
     }
 
     @Test
     void testExecute_nullArgs_showsUsage() {
         addCommand.execute(null, mockAppContext);
-        verify(mockJaiderModel).addLog(UserMessage.from("Usage: /add <file1> [file2] ..."));
+        verify(mockJaiderModel).addLog(AiMessage.from("Usage: /add <file1> [file2] ..."));
         verify(mockApp, never()).updateTokenCountPublic();
     }
 
     @Test
     void testExecute_emptyArgsString_showsUsage() {
         addCommand.execute("   ", mockAppContext); // Test with whitespace only
-        verify(mockJaiderModel).addLog(UserMessage.from("Usage: /add <file1> [file2] ..."));
+        verify(mockJaiderModel).addLog(AiMessage.from("Usage: /add <file1> [file2] ..."));
         verify(mockApp, never()).updateTokenCountPublic();
     }
 
     @Test
     void testExecute_withValidArgs_addsFilesToModelAndUpdatesTokenCount() {
         Path projectRoot = Paths.get("/test/project");
-        when(mockJaiderModel.getDir()).thenReturn(projectRoot);
+        // Use doReturn().when() for spy, or ensure getDir() is not final if it's a real method call on spy
+        doReturn(projectRoot).when(mockJaiderModel).getDir();
+        when(mockAppContext.app()).thenReturn(mockApp); // Stubbing moved here
 
-        // JaiderModel.files is a public final field, initialized to a new HashSet.
-        // AddCommand will directly add to this set.
-        // Clear before test execution to ensure a clean state.
-        mockJaiderModel.files.clear();
 
         String args = "fileOne.txt subdir/fileTwo.java";
         addCommand.execute(args, mockAppContext);
@@ -72,7 +74,7 @@ public class AddCommandTest {
         assertEquals(2, mockJaiderModel.files.size());
 
         verify(mockApp).updateTokenCountPublic();
-        verify(mockJaiderModel).addLog(UserMessage.from("Added to context: fileOne.txt, subdir/fileTwo.java"));
+        verify(mockJaiderModel).addLog(AiMessage.from("Added to context: fileOne.txt, subdir/fileTwo.java"));
     }
 
     @Test
@@ -80,13 +82,11 @@ public class AddCommandTest {
         Path projectRoot = Paths.get("/test/project");
         Path file1Path = projectRoot.resolve("file1.txt");
 
-        // Initialize the JaiderModel's files set for this test case
-        // Clear first to ensure a clean state for this test method for the files set
-        mockJaiderModel.files.clear();
+        // mockJaiderModel.files is already cleared in setUp
         mockJaiderModel.files.add(file1Path); // Pre-add file1.txt
 
-        when(mockJaiderModel.getDir()).thenReturn(projectRoot);
-        // The problematic "mockJaiderModel.files = modelFiles;" was already removed by a previous step.
+        doReturn(projectRoot).when(mockJaiderModel).getDir();
+        when(mockAppContext.app()).thenReturn(mockApp); // Stubbing moved here
 
         String args = "file1.txt newFile.css"; // file1.txt is a duplicate
         addCommand.execute(args, mockAppContext);
@@ -96,12 +96,8 @@ public class AddCommandTest {
         assertEquals(2, mockJaiderModel.files.size(), "Set should contain two unique files.");
 
         verify(mockApp).updateTokenCountPublic(); // Called because newFile.css was added
-        // Verify log message for newly added files. AddCommand might log duplicates differently or not at all.
-        // Assuming it logs only newly added files or a combined message.
-        // If AddCommand is expected to inform about duplicates, that would be another verify.
-        verify(mockJaiderModel).addLog(argThat(message -> message instanceof UserMessage && ((UserMessage)message).singleText().contains("Added to context:")));
-        verify(mockJaiderModel).addLog(argThat(message -> message instanceof UserMessage && ((UserMessage)message).singleText().contains("newFile.css")));
-        // Optionally, if it logs about existing files:
-        // verify(mockJaiderModel).addLog(UserMessage.from("file1.txt already in context"));
+        verify(mockJaiderModel).addLog(AiMessage.from("Added to context: file1.txt, newFile.css"));
+        // If AddCommand is supposed to log about duplicates separately, that verify would go here.
+        // Current AddCommand implementation doesn't explicitly log duplicates, just the final list.
     }
 }
