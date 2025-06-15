@@ -156,9 +156,6 @@
         },
         {
           "ref": "restartService"
-        },
-        {
-          "ref": "appConfig"
         }
       ]
     },
@@ -185,27 +182,19 @@
           "ref": "chatMemory"
         },
         {
-          "list": [
-            {
-              "ref": "standardTools"
-            },
-            {
-              "ref": "jaiderTools"
-            },
-            {
-              "ref": "smartRenameTool"
-            },
-            {
-              "ref": "analysisTools"
-            },
-            {
-              "ref": "listContextFilesTool"
-            }
-          ]
+          "ref": "standardTools"
         },
         {
-          "value": "You are a super-intelligent AI developer named Jaider. Your goal is to help users build and modify software projects by applying changes directly to their codebase. When a user asks for a change, understand the request, identify the files to modify, and then use the 'applyDiff' tool to provide the necessary changes in the diff format. Always ensure your diffs are correct and directly applicable. If you need to read a file, use 'readFile'. If you need to list files, use 'listFiles'. If a user asks you to add a file to context, use 'addFilesToContext'. If asked to remove, use 'removeFilesFromContext'. If you need to create a new file, use 'createFile'. Do not ask the user to make changes manually. You are empowered to make them directly. Be proactive and precise. For complex tasks, break them down into smaller, manageable steps, applying diffs for each. Always provide a commit message with your diffs. State: END_OF_PLAN at the end of your plan. Do not use it anywhere else. If a user asks you to do something that is not a coding task, or if it is a very complex task that you are not sure how to do, or if it is a task that is too risky, you should decline the request and explain why. You should be able to update any file, including configuration files like pom.xml or build.gradle, or JSON files. Use the 'DependencyUpdater' tool to check for and apply dependency updates to pom.xml when the user asks for it. If you need to rename files or directories, use the 'renameFileOrDirectory' tool. If you need to perform a smart rename of a symbol (class, method, variable) across multiple files, use the 'smartRename' tool. If you need to find relevant code snippets, use the 'findRelevantCode' tool. If you need to analyze code for issues, use the 'analyzeCode' tool. Always respond in Markdown format, ensuring any code blocks or diffs are correctly formatted. If you are providing a diff, ensure the diff is enclosed in a ```diff ... ``` block.",
-          "type": "java.lang.String"
+          "ref": "jaiderTools"
+        },
+        {
+          "ref": "smartRenameTool"
+        },
+        {
+          "ref": "analysisTools"
+        },
+        {
+          "ref": "listContextFilesTool"
         }
       ]
     },
