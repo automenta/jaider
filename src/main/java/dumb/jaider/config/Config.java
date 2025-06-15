@@ -77,11 +77,15 @@ public class Config {
         this.file = projectDir.resolve(".jaider.json");
         // Initialize fields with temporary defaults before load()
         // These will be overwritten by populateFieldsFromJson during the first load() call.
-        this.llm = "ollama";
-        this.ollamaBaseUrl = "http://localhost:11434";
-        this.ollamaModelName = "llamablit";
-        this.genericOpenaiBaseUrl = "http://localhost:8080/v1";
-        this.genericOpenaiModelName = "local-model";
+        // Initial defaults are set here, but they are primarily for the reflection mechanism
+        // to have a value if populateFieldsFromJson is called with a JSON that's missing some keys
+        // before the true defaults from default-config.json are merged.
+        // The true source of defaults is default-config.json.
+        this.llm = "ollama"; // Default, will be overridden
+        this.ollamaBaseUrl = "http://localhost:11434"; // Default, will be overridden
+        this.ollamaModelName = "llamablit"; // Default, will be overridden
+        this.genericOpenaiBaseUrl = "http://localhost:8080/v1"; // Default, will be overridden
+        this.genericOpenaiModelName = "local-model"; // Default, will be overridden
         this.genericOpenaiEmbeddingModelName = "text-embedding-ada-002";
         this.genericOpenaiApiKey = "";
         this.openaiModelName = "gpt-4o-mini";
@@ -115,13 +119,14 @@ public class Config {
             try {
                 String content = Files.readString(file);
                 logger.info("Loading configuration from file: {}", file);
-                JSONObject j = new JSONObject(content);
-                this.loadedJsonConfig = j;
-                populateFieldsFromJson(j); // This will populate fields and componentDefinitions
+                JSONObject userJson = new JSONObject(content);
+                // populateFieldsFromJson will handle merging with defaults
+                populateFieldsFromJson(userJson);
                 loadedSuccessfully = true;
                 logger.info("Successfully loaded and parsed configuration from {}.", file);
             } catch (Exception e) { // Catch parsing errors or IOException
                 logger.error("Error reading or parsing config file ({}): {}. Applying defaults.", file, e.getMessage(), e);
+                // Fall through to load defaults
             }
         } else {
             logger.info("Config file {} not found.", file);
@@ -129,56 +134,86 @@ public class Config {
 
         if (!loadedSuccessfully) {
             logger.warn("Applying and writing default configuration to {}.", file);
-            JSONObject defaultConfigJson = getDefaultConfigAsJsonObject();
-            this.loadedJsonConfig = defaultConfigJson; // Keep a copy of the raw default JSON
-            populateFieldsFromJson(defaultConfigJson); // Populate fields and componentDefinitions from defaults
+            // Defaults are loaded within populateFieldsFromJson if userJson is null or partial
+            populateFieldsFromJson(new JSONObject()); // Pass empty JSON, defaults will be primary
 
             try {
+                // Write the fully resolved config (which would be defaults if no user file)
+                // to .jaider.json
                 Path parentDir = file.getParent();
                 if (parentDir != null && !Files.exists(parentDir)) {
                     Files.createDirectories(parentDir);
                 }
-                Files.writeString(file, this.loadedJsonConfig.toString(2)); // Write the generated default JSON
-                logger.info("Written default configuration to: {}", file);
+                // Write the fully resolved and merged config (this.loadedJsonConfig)
+                Files.writeString(file, this.loadedJsonConfig.toString(2));
+                logger.info("Written effective (default/merged) configuration to: {}", file);
             } catch (IOException e) {
-                logger.warn("Failed to write default config to file: {} - {}", file, e.getMessage(), e);
+                logger.warn("Failed to write effective config to file: {} - {}", file, e.getMessage(), e);
             }
         }
     }
 
-    private void populateFieldsFromJson(JSONObject json) {
-        // Populate all other fields from JSON, using current field values as defaults
-        // Note: direct assignment here as these are final fields being set effectively once during load.
-        String llmVal = json.optString("llmProvider", this.llm);
-        String ollamaBaseUrlVal = json.optString("ollamaBaseUrl", this.ollamaBaseUrl);
-        String genericOpenaiBaseUrlVal = json.optString("genericOpenaiBaseUrl", this.genericOpenaiBaseUrl);
-        String genericOpenaiModelNameVal = json.optString("genericOpenaiModelName", this.genericOpenaiModelName);
-        String genericOpenaiEmbeddingModelNameVal = json.optString("genericOpenaiEmbeddingModelName", this.genericOpenaiEmbeddingModelName);
-        String genericOpenaiApiKeyVal = json.optString("genericOpenaiApiKey", this.genericOpenaiApiKey);
-        String openaiModelNameVal = json.optString("openaiModelName", this.openaiModelName);
-        String geminiApiKeyVal = json.optString("geminiApiKey", this.geminiApiKey);
-        String geminiModelNameVal = json.optString("geminiModelName", this.geminiModelName);
-        String geminiEmbeddingModelNameVal = json.optString("geminiEmbeddingModelName", this.geminiEmbeddingModelName);
-        String tavilyApiKeyVal = json.optString("tavilyApiKey", this.tavilyApiKey);
-        String toolManifestsDirVal = json.optString("toolManifestsDir", this.toolManifestsDir);
+    private void populateFieldsFromJson(JSONObject userJsonInput) {
+        JSONObject defaultConfigJson = getDefaultConfigAsJsonObject();
+        JSONObject mergedJson = new JSONObject(defaultConfigJson.toString()); // Start with a deep copy of defaults
 
-        String runCommandVal = json.optString("runCommand", this.runCommand); // Default to current or initial ""
-        // Centralized legacy testCommand handling:
-        // If testCommand is present AND runCommand was NOT present or was empty, use testCommand.
-        if (json.has("testCommand")) {
-            String testCommandVal = json.optString("testCommand");
-            if (!testCommandVal.isEmpty() && (runCommandVal.isEmpty() || !json.has("runCommand"))) {
+        // Overlay userJsonInput onto mergedJson
+        if (userJsonInput != null) {
+            for (String key : userJsonInput.keySet()) {
+                if (COMPONENTS_KEY.equals(key) && userJsonInput.optJSONArray(COMPONENTS_KEY) != null && userJsonInput.getJSONArray(COMPONENTS_KEY).length() > 0) {
+                    mergedJson.put(COMPONENTS_KEY, userJsonInput.getJSONArray(COMPONENTS_KEY)); // Replace components array
+                } else if ("apiKeys".equals(key) && userJsonInput.optJSONObject("apiKeys") != null) {
+                    // Deep merge for apiKeys: start with default apiKeys (already in mergedJson), then overlay user's
+                    JSONObject userApiKeys = userJsonInput.getJSONObject("apiKeys");
+                    JSONObject mergedApiKeys = mergedJson.optJSONObject("apiKeys"); // Should be the one from defaults
+                    if (mergedApiKeys == null) mergedApiKeys = new JSONObject(); // Should not happen if defaults are sound
+
+                    for (String k : userApiKeys.keySet()) {
+                        mergedApiKeys.put(k, userApiKeys.get(k)); // User's key overrides default's key
+                    }
+                    mergedJson.put("apiKeys", mergedApiKeys); // Put the updated map back
+                } else {
+                    mergedJson.put(key, userJsonInput.get(key)); // User value overrides default for other keys
+                }
+            }
+        }
+        this.loadedJsonConfig = mergedJson; // Store the fully merged configuration
+
+        // Populate all other fields from the merged JSON
+        String llmVal = mergedJson.optString("llmProvider", this.llm); // Fallback to initial hardcoded if key missing (should not happen with defaults)
+        String ollamaBaseUrlVal = mergedJson.optString("ollamaBaseUrl", this.ollamaBaseUrl);
+        String ollamaModelNameVal = mergedJson.optString("ollamaModelName", this.ollamaModelName); // Added this line
+        String genericOpenaiBaseUrlVal = mergedJson.optString("genericOpenaiBaseUrl", this.genericOpenaiBaseUrl);
+        String genericOpenaiModelNameVal = mergedJson.optString("genericOpenaiModelName", this.genericOpenaiModelName);
+        String genericOpenaiEmbeddingModelNameVal = mergedJson.optString("genericOpenaiEmbeddingModelName", this.genericOpenaiEmbeddingModelName);
+        String genericOpenaiApiKeyVal = mergedJson.optString("genericOpenaiApiKey", this.genericOpenaiApiKey);
+        String openaiModelNameVal = mergedJson.optString("openaiModelName", this.openaiModelName);
+        String geminiApiKeyVal = mergedJson.optString("geminiApiKey", this.geminiApiKey);
+        String geminiModelNameVal = mergedJson.optString("geminiModelName", this.geminiModelName);
+        String geminiEmbeddingModelNameVal = mergedJson.optString("geminiEmbeddingModelName", this.geminiEmbeddingModelName);
+        String tavilyApiKeyVal = mergedJson.optString("tavilyApiKey", this.tavilyApiKey);
+        String toolManifestsDirVal = mergedJson.optString("toolManifestsDir", this.toolManifestsDir);
+
+        String runCommandVal = mergedJson.optString("runCommand", this.runCommand);
+        if (mergedJson.has("testCommand")) {
+            String testCommandVal = mergedJson.optString("testCommand");
+            if (!testCommandVal.isEmpty() && (runCommandVal.isEmpty() || !mergedJson.has("runCommand"))) {
                 logger.info("Using legacy 'testCommand' value ('{}') for 'runCommand'.", testCommandVal);
                 runCommandVal = testCommandVal;
             }
         }
+        // Ensure testCommand is not part of the final effective 'runCommand' if 'runCommand' was explicitly set.
+        // The logic above already handles this, but we ensure loadedJsonConfig reflects the final decision for runCommand.
+        this.loadedJsonConfig.put("runCommand", runCommandVal);
+        this.loadedJsonConfig.remove("testCommand");
+
 
         // Assign to final fields using reflection.
         // This is a workaround to allow final fields to be set after initial constructor defaults
         // based on loaded JSON configuration. This method effectively completes the initialization
         // of these final fields.
         // It assumes populateFieldsFromJson is called as part of the object's construction sequence (via load()).
-        java.lang.reflect.Field llmField, ollamaBaseUrlField, genericOpenaiBaseUrlField, genericOpenaiModelNameField,
+        java.lang.reflect.Field llmField, ollamaBaseUrlField, ollamaModelNameField, genericOpenaiBaseUrlField, genericOpenaiModelNameField,
                                 genericOpenaiEmbeddingModelNameField, genericOpenaiApiKeyField, openaiModelNameField,
                                 geminiApiKeyField, geminiModelNameField, geminiEmbeddingModelNameField, tavilyApiKeyField,
                                 toolManifestsDirField, runCommandField;
@@ -186,6 +221,7 @@ public class Config {
             // Use getDeclaredField for private fields.
             llmField = Config.class.getDeclaredField("llm");
             ollamaBaseUrlField = Config.class.getDeclaredField("ollamaBaseUrl");
+            ollamaModelNameField = Config.class.getDeclaredField("ollamaModelName");
             genericOpenaiBaseUrlField = Config.class.getDeclaredField("genericOpenaiBaseUrl");
             genericOpenaiModelNameField = Config.class.getDeclaredField("genericOpenaiModelName");
             genericOpenaiEmbeddingModelNameField = Config.class.getDeclaredField("genericOpenaiEmbeddingModelName");
@@ -200,6 +236,7 @@ public class Config {
 
             llmField.setAccessible(true);
             ollamaBaseUrlField.setAccessible(true);
+            ollamaModelNameField.setAccessible(true); // Added
             genericOpenaiBaseUrlField.setAccessible(true);
             genericOpenaiModelNameField.setAccessible(true);
             genericOpenaiEmbeddingModelNameField.setAccessible(true);
@@ -214,6 +251,7 @@ public class Config {
 
             llmField.set(this, llmVal);
             ollamaBaseUrlField.set(this, ollamaBaseUrlVal);
+            ollamaModelNameField.set(this, ollamaModelNameVal); // Added
             genericOpenaiBaseUrlField.set(this, genericOpenaiBaseUrlVal);
             genericOpenaiModelNameField.set(this, genericOpenaiModelNameVal);
             genericOpenaiEmbeddingModelNameField.set(this, genericOpenaiEmbeddingModelNameVal);
@@ -231,17 +269,16 @@ public class Config {
             throw new RuntimeException("Failed to populate final config fields", e);
         }
 
-
         this.apiKeys.clear();
-        JSONObject keys = json.optJSONObject("apiKeys");
+        JSONObject keys = mergedJson.optJSONObject("apiKeys"); // Use mergedJson
         if (keys != null) {
             keys.keySet().forEach(key -> this.apiKeys.put(key, keys.getString(key)));
         }
 
         this.componentDefinitions.clear(); // Clear before populating
-        if (json.has(COMPONENTS_KEY)) {
-            JSONArray componentDefsArray = json.getJSONArray(COMPONENTS_KEY);
-            logger.info("Attempting to load {} component definitions from provided JSON.", componentDefsArray.length());
+        if (mergedJson.has(COMPONENTS_KEY)) { // Use mergedJson
+            JSONArray componentDefsArray = mergedJson.getJSONArray(COMPONENTS_KEY);
+            logger.info("Attempting to load {} component definitions from merged JSON.", componentDefsArray.length());
             for (int i = 0; i < componentDefsArray.length(); i++) {
                 JSONObject componentDef = componentDefsArray.getJSONObject(i);
                 if (componentDef.has("id") && componentDef.has("class")) {
@@ -250,9 +287,10 @@ public class Config {
                     logger.warn("Skipping component definition due to missing 'id' or 'class': {}", componentDef.toString(2));
                 }
             }
-            logger.info("Successfully populated {} component definitions from JSON source.", this.componentDefinitions.size());
+            logger.info("Successfully populated {} component definitions from merged JSON source.", this.componentDefinitions.size());
         } else {
-            logger.warn("No '{}' key found in JSON source. No component definitions loaded from this source.", COMPONENTS_KEY);
+            // This should ideally not happen if defaults always provide components
+            logger.warn("No '{}' key found in merged JSON source. This might indicate an issue with default config.", COMPONENTS_KEY);
         }
     }
 

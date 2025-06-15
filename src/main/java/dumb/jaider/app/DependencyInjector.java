@@ -151,13 +151,13 @@ public class DependencyInjector {
             }
             logger.info("Successfully created and cached component: {}", id);
             return instance;
-        } catch (ComponentInstantiationException | ComponentNotFoundException | InvalidComponentDefinitionException e) {
-            // These are already specific, just rethrow
+        } catch (CircularDependencyException | ComponentNotFoundException | ComponentInstantiationException | InvalidComponentDefinitionException e) {
+            // These are specific custom exceptions, re-throw them directly.
             throw e;
         } catch (Exception e) { // Catch any other unexpected error during creation
+            logger.error("Unexpected error during component creation for id '{}': {}", id, e.getMessage(), e);
             throw new ComponentInstantiationException(id, "Unexpected error during component creation.", e);
-        }
-        finally {
+        } finally {
             currentlyInCreation.remove(id);
             logger.debug("Finished creation attempt for component: {}", id);
         }
@@ -268,13 +268,34 @@ public class DependencyInjector {
                 logger.debug("Resolving 'list' argument: element type '{}', size '{}'", listType, listArray.length());
                 List<Object> listValues = new ArrayList<>();
                 for (int j = 0; j < listArray.length(); j++) {
-                    // Assuming list elements are simple values for now, not refs or nested lists
-                    // This could be enhanced to support complex list elements
-                    Object listItemValue = listArray.get(j);
-                     try {
-                        listValues.add(convertLiteralValue(listItemValue, listType));
-                    } catch (NumberFormatException e) {
-                        throw new InvalidComponentDefinitionException(componentId, "Failed to parse list value '" + listItemValue + "' to type '" + listType + "' for argument " + i + " during " + creationType + " creation.");
+                    Object listItem = listArray.get(j);
+                    if (listItem instanceof JSONObject) {
+                        JSONObject listItemJson = (JSONObject) listItem;
+                        if (listItemJson.has("ref")) {
+                            String refId = listItemJson.getString("ref");
+                            logger.debug("Resolving 'ref' list element: {}", refId);
+                            listValues.add(getComponent(refId));
+                        } else if (listItemJson.has("value")) {
+                            Object value = listItemJson.get("value");
+                            String itemType = listItemJson.optString("type", listType); // Use element's type if specified, else listType
+                            logger.debug("Resolving 'value' list element: type '{}', value '{}'", itemType, value);
+                            listValues.add(convertLiteralValue(value, itemType));
+                        } else {
+                            // Pass JSONObject as is, if it's neither a ref nor a value type.
+                            // This might be for complex objects not managed by DI but configured in-place.
+                            // Or, it could be an error if such structures are not expected.
+                            // For now, let's assume it could be a valid, non-DI-managed map-like structure.
+                            logger.warn("List element at index {} for component '{}' is a JSONObject but not a 'ref' or 'value'. Passing as raw JSONObject. Element: {}", j, componentId, listItemJson.toString(2));
+                            listValues.add(listItemJson); // Or convert to Map<String, Object> if preferred
+                        }
+                    } else {
+                        // Literal value directly in the list
+                        logger.debug("Resolving literal list element: type '{}', value '{}'", listType, listItem);
+                        try {
+                            listValues.add(convertLiteralValue(listItem, listType));
+                        } catch (NumberFormatException e) {
+                            throw new InvalidComponentDefinitionException(componentId, "Failed to parse list value '" + listItem + "' to type '" + listType + "' for argument " + i + ", list element " + j + " during " + creationType + " creation.");
+                        }
                     }
                 }
                 if (listValues.isEmpty()) {
