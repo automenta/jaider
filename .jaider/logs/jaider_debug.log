@@ -1048,3 +1048,2103 @@ java.lang.ClassNotFoundException: com.example.NonExistentParser
 2025-06-15 15:46:32.144 [main] INFO  dumb.jaider.app.DependencyInjector - Successfully created and cached component: factoryWithArgs_id
 2025-06-15 15:46:32.149 [main] INFO  dumb.jaider.app.DependencyInjector - Successfully created and cached component: compVal_id
 2025-06-15 15:46:32.150 [main] INFO  dumb.jaider.app.DependencyInjector - Successfully created and cached component: compA_id
+2025-06-15 17:47:51.694 [ForkJoinPool.commonPool-worker-1] ERROR dumb.jaider.commands.IndexCommand - Error during indexing for path 'null': Embedding failed!
+java.lang.RuntimeException: Embedding failed!
+	at dumb.jaider.commands.IndexCommand.lambda$execute$1(IndexCommand.java:72)
+	at java.base/java.util.concurrent.CompletableFuture$AsyncRun.run(CompletableFuture.java:1804)
+	at java.base/java.util.concurrent.CompletableFuture$AsyncRun.exec(CompletableFuture.java:1796)
+	at java.base/java.util.concurrent.ForkJoinTask.doExec(ForkJoinTask.java:387)
+	at java.base/java.util.concurrent.ForkJoinPool$WorkQueue.topLevelExec(ForkJoinPool.java:1312)
+	at java.base/java.util.concurrent.ForkJoinPool.scan(ForkJoinPool.java:1843)
+	at java.base/java.util.concurrent.ForkJoinPool.runWorker(ForkJoinPool.java:1808)
+	at java.base/java.util.concurrent.ForkJoinWorkerThread.run(ForkJoinWorkerThread.java:188)
+2025-06-15 17:47:52.018 [main] INFO  dumb.jaider.config.Config - Config file /app/.jaider.json not found.
+2025-06-15 17:47:52.019 [main] WARN  dumb.jaider.config.Config - Applying and writing default configuration to /app/.jaider.json.
+2025-06-15 17:47:52.030 [main] INFO  dumb.jaider.config.Config - Successfully loaded default configuration from /default-config.json
+2025-06-15 17:47:52.032 [main] INFO  dumb.jaider.config.Config - Attempting to load 26 component definitions from provided JSON.
+2025-06-15 17:47:52.033 [main] INFO  dumb.jaider.config.Config - Successfully populated 26 component definitions from JSON source.
+2025-06-15 17:47:52.036 [main] INFO  dumb.jaider.config.Config - Written default configuration to: /app/.jaider.json
+2025-06-15 17:47:52.037 [main] INFO  dumb.jaider.config.Config - Initializing DependencyInjector with 26 component definitions.
+2025-06-15 17:47:52.041 [main] INFO  dumb.jaider.app.DependencyInjector - Successfully created and cached component: chatMemory
+2025-06-15 17:47:52.047 [main] INFO  dumb.jaider.app.DependencyInjector - Successfully created and cached component: llmProviderFactory
+2025-06-15 17:47:52.525 [main] INFO  dumb.jaider.toolmanager.ToolManager - Found tool descriptor file: src/main/resources/tool-descriptors/dependency-updater-descriptor.json
+2025-06-15 17:47:52.625 [main] INFO  dumb.jaider.toolmanager.ToolManager - Successfully loaded and registered tool descriptor: DependencyUpdater
+2025-06-15 17:47:52.625 [main] INFO  dumb.jaider.toolmanager.ToolManager - Found tool descriptor file: src/main/resources/tool-descriptors/semgrep-descriptor.json
+2025-06-15 17:47:52.626 [main] INFO  dumb.jaider.toolmanager.ToolManager - Successfully loaded and registered tool descriptor: Semgrep
+2025-06-15 17:47:52.626 [main] INFO  dumb.jaider.app.DependencyInjector - Successfully created and cached component: toolManager
+2025-06-15 17:47:52.935 [main] ERROR dumb.jaider.app.App - CRITICAL: Core LLM/DI components could not be initialized. Application cannot function. Error: Failed to initialize tokenizer. Chat model might be null or not a Tokenizer instance.
+dumb.jaider.app.exceptions.TokenizerInitializationException: Failed to initialize tokenizer. Chat model might be null or not a Tokenizer instance.
+	at dumb.jaider.llm.LlmProviderFactory.createTokenizer(LlmProviderFactory.java:66)
+	at dumb.jaider.app.App.update(App.java:142)
+	at dumb.jaider.app.App.<init>(App.java:93)
+	at dumb.jaider.commands.IndexCommandIntegrationTest.setUp(IndexCommandIntegrationTest.java:102)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at org.junit.platform.commons.util.ReflectionUtils.invokeMethod(ReflectionUtils.java:787)
+	at org.junit.platform.commons.support.ReflectionSupport.invokeMethod(ReflectionSupport.java:479)
+	at org.junit.jupiter.engine.execution.MethodInvocation.proceed(MethodInvocation.java:60)
+	at org.junit.jupiter.engine.execution.InvocationInterceptorChain$ValidatingInvocation.proceed(InvocationInterceptorChain.java:131)
+	at org.junit.jupiter.engine.extension.TimeoutExtension.intercept(TimeoutExtension.java:161)
+	at org.junit.jupiter.engine.extension.TimeoutExtension.interceptLifecycleMethod(TimeoutExtension.java:133)
+	at org.junit.jupiter.engine.extension.TimeoutExtension.interceptBeforeEachMethod(TimeoutExtension.java:83)
+	at org.junit.jupiter.engine.execution.InterceptingExecutableInvoker$ReflectiveInterceptorCall.lambda$ofVoidMethod$0(InterceptingExecutableInvoker.java:112)
+	at org.junit.jupiter.engine.execution.InterceptingExecutableInvoker.lambda$invoke$0(InterceptingExecutableInvoker.java:94)
+	at org.junit.jupiter.engine.execution.InvocationInterceptorChain$InterceptedInvocation.proceed(InvocationInterceptorChain.java:106)
+	at org.junit.jupiter.engine.execution.InvocationInterceptorChain.proceed(InvocationInterceptorChain.java:64)
+	at org.junit.jupiter.engine.execution.InvocationInterceptorChain.chainAndInvoke(InvocationInterceptorChain.java:45)
+	at org.junit.jupiter.engine.execution.InvocationInterceptorChain.invoke(InvocationInterceptorChain.java:37)
+	at org.junit.jupiter.engine.execution.InterceptingExecutableInvoker.invoke(InterceptingExecutableInvoker.java:93)
+	at org.junit.jupiter.engine.execution.InterceptingExecutableInvoker.invoke(InterceptingExecutableInvoker.java:87)
+	at org.junit.jupiter.engine.descriptor.ClassBasedTestDescriptor.invokeMethodInExtensionContext(ClassBasedTestDescriptor.java:547)
+	at org.junit.jupiter.engine.descriptor.ClassBasedTestDescriptor.lambda$synthesizeBeforeEachMethodAdapter$20(ClassBasedTestDescriptor.java:532)
+	at org.junit.jupiter.engine.descriptor.TestMethodTestDescriptor.lambda$invokeBeforeEachMethods$2(TestMethodTestDescriptor.java:193)
+	at org.junit.jupiter.engine.descriptor.CallbackSupport.lambda$invokeBeforeCallbacks$0(CallbackSupport.java:34)
+	at org.junit.platform.engine.support.hierarchical.ThrowableCollector.execute(ThrowableCollector.java:73)
+	at org.junit.jupiter.engine.descriptor.CallbackSupport.invokeBeforeCallbacks(CallbackSupport.java:34)
+	at org.junit.jupiter.engine.descriptor.TestMethodTestDescriptor.invokeBeforeEachMethods(TestMethodTestDescriptor.java:191)
+	at org.junit.jupiter.engine.descriptor.TestMethodTestDescriptor.execute(TestMethodTestDescriptor.java:155)
+	at org.junit.jupiter.engine.descriptor.TestMethodTestDescriptor.execute(TestMethodTestDescriptor.java:70)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$6(NodeTestTask.java:157)
+	at org.junit.platform.engine.support.hierarchical.ThrowableCollector.execute(ThrowableCollector.java:73)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$8(NodeTestTask.java:147)
+	at org.junit.platform.engine.support.hierarchical.Node.around(Node.java:137)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$9(NodeTestTask.java:145)
+	at org.junit.platform.engine.support.hierarchical.ThrowableCollector.execute(ThrowableCollector.java:73)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.executeRecursively(NodeTestTask.java:144)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.execute(NodeTestTask.java:101)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+	at org.junit.platform.engine.support.hierarchical.SameThreadHierarchicalTestExecutorService.invokeAll(SameThreadHierarchicalTestExecutorService.java:41)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$6(NodeTestTask.java:161)
+	at org.junit.platform.engine.support.hierarchical.ThrowableCollector.execute(ThrowableCollector.java:73)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$8(NodeTestTask.java:147)
+	at org.junit.platform.engine.support.hierarchical.Node.around(Node.java:137)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$9(NodeTestTask.java:145)
+	at org.junit.platform.engine.support.hierarchical.ThrowableCollector.execute(ThrowableCollector.java:73)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.executeRecursively(NodeTestTask.java:144)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.execute(NodeTestTask.java:101)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+	at org.junit.platform.engine.support.hierarchical.SameThreadHierarchicalTestExecutorService.invokeAll(SameThreadHierarchicalTestExecutorService.java:41)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$6(NodeTestTask.java:161)
+	at org.junit.platform.engine.support.hierarchical.ThrowableCollector.execute(ThrowableCollector.java:73)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$8(NodeTestTask.java:147)
+	at org.junit.platform.engine.support.hierarchical.Node.around(Node.java:137)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$9(NodeTestTask.java:145)
+	at org.junit.platform.engine.support.hierarchical.ThrowableCollector.execute(ThrowableCollector.java:73)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.executeRecursively(NodeTestTask.java:144)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.execute(NodeTestTask.java:101)
+	at org.junit.platform.engine.support.hierarchical.SameThreadHierarchicalTestExecutorService.submit(SameThreadHierarchicalTestExecutorService.java:35)
+	at org.junit.platform.engine.support.hierarchical.HierarchicalTestExecutor.execute(HierarchicalTestExecutor.java:57)
+	at org.junit.platform.engine.support.hierarchical.HierarchicalTestEngine.execute(HierarchicalTestEngine.java:54)
+	at org.junit.platform.launcher.core.EngineExecutionOrchestrator.executeEngine(EngineExecutionOrchestrator.java:230)
+	at org.junit.platform.launcher.core.EngineExecutionOrchestrator.failOrExecuteEngine(EngineExecutionOrchestrator.java:204)
+	at org.junit.platform.launcher.core.EngineExecutionOrchestrator.execute(EngineExecutionOrchestrator.java:172)
+	at org.junit.platform.launcher.core.EngineExecutionOrchestrator.execute(EngineExecutionOrchestrator.java:101)
+	at org.junit.platform.launcher.core.EngineExecutionOrchestrator.lambda$execute$0(EngineExecutionOrchestrator.java:64)
+	at org.junit.platform.launcher.core.EngineExecutionOrchestrator.withInterceptedStreams(EngineExecutionOrchestrator.java:150)
+	at org.junit.platform.launcher.core.EngineExecutionOrchestrator.execute(EngineExecutionOrchestrator.java:63)
+	at org.junit.platform.launcher.core.DefaultLauncher.execute(DefaultLauncher.java:109)
+	at org.junit.platform.launcher.core.DefaultLauncher.execute(DefaultLauncher.java:91)
+	at org.junit.platform.launcher.core.DelegatingLauncher.execute(DelegatingLauncher.java:47)
+	at org.junit.platform.launcher.core.InterceptingLauncher.lambda$execute$1(InterceptingLauncher.java:39)
+	at org.junit.platform.launcher.core.ClasspathAlignmentCheckingLauncherInterceptor.intercept(ClasspathAlignmentCheckingLauncherInterceptor.java:25)
+	at org.junit.platform.launcher.core.InterceptingLauncher.execute(InterceptingLauncher.java:38)
+	at org.junit.platform.launcher.core.DelegatingLauncher.execute(DelegatingLauncher.java:47)
+	at org.apache.maven.surefire.junitplatform.LazyLauncher.execute(LazyLauncher.java:56)
+	at org.apache.maven.surefire.junitplatform.JUnitPlatformProvider.execute(JUnitPlatformProvider.java:194)
+	at org.apache.maven.surefire.junitplatform.JUnitPlatformProvider.invokeAllTests(JUnitPlatformProvider.java:150)
+	at org.apache.maven.surefire.junitplatform.JUnitPlatformProvider.invoke(JUnitPlatformProvider.java:124)
+	at org.apache.maven.surefire.booter.ForkedBooter.runSuitesInProcess(ForkedBooter.java:385)
+	at org.apache.maven.surefire.booter.ForkedBooter.execute(ForkedBooter.java:162)
+	at org.apache.maven.surefire.booter.ForkedBooter.run(ForkedBooter.java:507)
+	at org.apache.maven.surefire.booter.ForkedBooter.main(ForkedBooter.java:495)
+2025-06-15 17:47:52.937 [main] ERROR dumb.jaider.app.App - CRITICAL FAILURE DURING APP INITIALIZATION (from update call in constructor): CRITICAL: Core LLM/DI components could not be initialized. Application cannot function. Error: Failed to initialize tokenizer. Chat model might be null or not a Tokenizer instance.
+dumb.jaider.app.exceptions.TokenizerInitializationException: Failed to initialize tokenizer. Chat model might be null or not a Tokenizer instance.
+	at dumb.jaider.llm.LlmProviderFactory.createTokenizer(LlmProviderFactory.java:66)
+	at dumb.jaider.app.App.update(App.java:142)
+	... 81 common frames omitted
+Wrapped by: java.lang.RuntimeException: CRITICAL: Core LLM/DI components could not be initialized. Application cannot function. Error: Failed to initialize tokenizer. Chat model might be null or not a Tokenizer instance.
+	at dumb.jaider.app.App.update(App.java:166)
+	at dumb.jaider.app.App.<init>(App.java:93)
+	at dumb.jaider.commands.IndexCommandIntegrationTest.setUp(IndexCommandIntegrationTest.java:102)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at org.junit.platform.commons.util.ReflectionUtils.invokeMethod(ReflectionUtils.java:787)
+	at org.junit.platform.commons.support.ReflectionSupport.invokeMethod(ReflectionSupport.java:479)
+	at org.junit.jupiter.engine.execution.MethodInvocation.proceed(MethodInvocation.java:60)
+	at org.junit.jupiter.engine.execution.InvocationInterceptorChain$ValidatingInvocation.proceed(InvocationInterceptorChain.java:131)
+	at org.junit.jupiter.engine.extension.TimeoutExtension.intercept(TimeoutExtension.java:161)
+	at org.junit.jupiter.engine.extension.TimeoutExtension.interceptLifecycleMethod(TimeoutExtension.java:133)
+	at org.junit.jupiter.engine.extension.TimeoutExtension.interceptBeforeEachMethod(TimeoutExtension.java:83)
+	at org.junit.jupiter.engine.execution.InterceptingExecutableInvoker$ReflectiveInterceptorCall.lambda$ofVoidMethod$0(InterceptingExecutableInvoker.java:112)
+	at org.junit.jupiter.engine.execution.InterceptingExecutableInvoker.lambda$invoke$0(InterceptingExecutableInvoker.java:94)
+	at org.junit.jupiter.engine.execution.InvocationInterceptorChain$InterceptedInvocation.proceed(InvocationInterceptorChain.java:106)
+	at org.junit.jupiter.engine.execution.InvocationInterceptorChain.proceed(InvocationInterceptorChain.java:64)
+	at org.junit.jupiter.engine.execution.InvocationInterceptorChain.chainAndInvoke(InvocationInterceptorChain.java:45)
+	at org.junit.jupiter.engine.execution.InvocationInterceptorChain.invoke(InvocationInterceptorChain.java:37)
+	at org.junit.jupiter.engine.execution.InterceptingExecutableInvoker.invoke(InterceptingExecutableInvoker.java:93)
+	at org.junit.jupiter.engine.execution.InterceptingExecutableInvoker.invoke(InterceptingExecutableInvoker.java:87)
+	at org.junit.jupiter.engine.descriptor.ClassBasedTestDescriptor.invokeMethodInExtensionContext(ClassBasedTestDescriptor.java:547)
+	at org.junit.jupiter.engine.descriptor.ClassBasedTestDescriptor.lambda$synthesizeBeforeEachMethodAdapter$20(ClassBasedTestDescriptor.java:532)
+	at org.junit.jupiter.engine.descriptor.TestMethodTestDescriptor.lambda$invokeBeforeEachMethods$2(TestMethodTestDescriptor.java:193)
+	at org.junit.jupiter.engine.descriptor.CallbackSupport.lambda$invokeBeforeCallbacks$0(CallbackSupport.java:34)
+	at org.junit.platform.engine.support.hierarchical.ThrowableCollector.execute(ThrowableCollector.java:73)
+	at org.junit.jupiter.engine.descriptor.CallbackSupport.invokeBeforeCallbacks(CallbackSupport.java:34)
+	at org.junit.jupiter.engine.descriptor.TestMethodTestDescriptor.invokeBeforeEachMethods(TestMethodTestDescriptor.java:191)
+	at org.junit.jupiter.engine.descriptor.TestMethodTestDescriptor.execute(TestMethodTestDescriptor.java:155)
+	at org.junit.jupiter.engine.descriptor.TestMethodTestDescriptor.execute(TestMethodTestDescriptor.java:70)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$6(NodeTestTask.java:157)
+	at org.junit.platform.engine.support.hierarchical.ThrowableCollector.execute(ThrowableCollector.java:73)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$8(NodeTestTask.java:147)
+	at org.junit.platform.engine.support.hierarchical.Node.around(Node.java:137)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$9(NodeTestTask.java:145)
+	at org.junit.platform.engine.support.hierarchical.ThrowableCollector.execute(ThrowableCollector.java:73)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.executeRecursively(NodeTestTask.java:144)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.execute(NodeTestTask.java:101)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+	at org.junit.platform.engine.support.hierarchical.SameThreadHierarchicalTestExecutorService.invokeAll(SameThreadHierarchicalTestExecutorService.java:41)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$6(NodeTestTask.java:161)
+	at org.junit.platform.engine.support.hierarchical.ThrowableCollector.execute(ThrowableCollector.java:73)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$8(NodeTestTask.java:147)
+	at org.junit.platform.engine.support.hierarchical.Node.around(Node.java:137)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$9(NodeTestTask.java:145)
+	at org.junit.platform.engine.support.hierarchical.ThrowableCollector.execute(ThrowableCollector.java:73)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.executeRecursively(NodeTestTask.java:144)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.execute(NodeTestTask.java:101)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+	at org.junit.platform.engine.support.hierarchical.SameThreadHierarchicalTestExecutorService.invokeAll(SameThreadHierarchicalTestExecutorService.java:41)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$6(NodeTestTask.java:161)
+	at org.junit.platform.engine.support.hierarchical.ThrowableCollector.execute(ThrowableCollector.java:73)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$8(NodeTestTask.java:147)
+	at org.junit.platform.engine.support.hierarchical.Node.around(Node.java:137)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$9(NodeTestTask.java:145)
+	at org.junit.platform.engine.support.hierarchical.ThrowableCollector.execute(ThrowableCollector.java:73)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.executeRecursively(NodeTestTask.java:144)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.execute(NodeTestTask.java:101)
+	at org.junit.platform.engine.support.hierarchical.SameThreadHierarchicalTestExecutorService.submit(SameThreadHierarchicalTestExecutorService.java:35)
+	at org.junit.platform.engine.support.hierarchical.HierarchicalTestExecutor.execute(HierarchicalTestExecutor.java:57)
+	at org.junit.platform.engine.support.hierarchical.HierarchicalTestEngine.execute(HierarchicalTestEngine.java:54)
+	at org.junit.platform.launcher.core.EngineExecutionOrchestrator.executeEngine(EngineExecutionOrchestrator.java:230)
+	at org.junit.platform.launcher.core.EngineExecutionOrchestrator.failOrExecuteEngine(EngineExecutionOrchestrator.java:204)
+	at org.junit.platform.launcher.core.EngineExecutionOrchestrator.execute(EngineExecutionOrchestrator.java:172)
+	at org.junit.platform.launcher.core.EngineExecutionOrchestrator.execute(EngineExecutionOrchestrator.java:101)
+	at org.junit.platform.launcher.core.EngineExecutionOrchestrator.lambda$execute$0(EngineExecutionOrchestrator.java:64)
+	at org.junit.platform.launcher.core.EngineExecutionOrchestrator.withInterceptedStreams(EngineExecutionOrchestrator.java:150)
+	at org.junit.platform.launcher.core.EngineExecutionOrchestrator.execute(EngineExecutionOrchestrator.java:63)
+	at org.junit.platform.launcher.core.DefaultLauncher.execute(DefaultLauncher.java:109)
+	at org.junit.platform.launcher.core.DefaultLauncher.execute(DefaultLauncher.java:91)
+	at org.junit.platform.launcher.core.DelegatingLauncher.execute(DelegatingLauncher.java:47)
+	at org.junit.platform.launcher.core.InterceptingLauncher.lambda$execute$1(InterceptingLauncher.java:39)
+	at org.junit.platform.launcher.core.ClasspathAlignmentCheckingLauncherInterceptor.intercept(ClasspathAlignmentCheckingLauncherInterceptor.java:25)
+	at org.junit.platform.launcher.core.InterceptingLauncher.execute(InterceptingLauncher.java:38)
+	at org.junit.platform.launcher.core.DelegatingLauncher.execute(DelegatingLauncher.java:47)
+	at org.apache.maven.surefire.junitplatform.LazyLauncher.execute(LazyLauncher.java:56)
+	at org.apache.maven.surefire.junitplatform.JUnitPlatformProvider.execute(JUnitPlatformProvider.java:194)
+	at org.apache.maven.surefire.junitplatform.JUnitPlatformProvider.invokeAllTests(JUnitPlatformProvider.java:150)
+	at org.apache.maven.surefire.junitplatform.JUnitPlatformProvider.invoke(JUnitPlatformProvider.java:124)
+	at org.apache.maven.surefire.booter.ForkedBooter.runSuitesInProcess(ForkedBooter.java:385)
+	at org.apache.maven.surefire.booter.ForkedBooter.execute(ForkedBooter.java:162)
+	at org.apache.maven.surefire.booter.ForkedBooter.run(ForkedBooter.java:507)
+	at org.apache.maven.surefire.booter.ForkedBooter.main(ForkedBooter.java:495)
+2025-06-15 17:47:52.952 [main] INFO  dumb.jaider.app.DependencyInjector - Successfully created and cached component: compA_ref_id
+2025-06-15 17:47:52.953 [main] INFO  dumb.jaider.app.DependencyInjector - Successfully created and cached component: compMixed_id
+2025-06-15 17:47:52.955 [main] INFO  dumb.jaider.app.DependencyInjector - Successfully created and cached component: compA_cache_test_id
+2025-06-15 17:47:52.955 [main] INFO  dumb.jaider.app.DependencyInjector - Successfully created and cached component: compA_cache_test_id
+2025-06-15 17:47:52.967 [main] INFO  dumb.jaider.app.DependencyInjector - Successfully created and cached component: listRefComp_id
+2025-06-15 17:47:52.968 [main] INFO  dumb.jaider.app.DependencyInjector - Successfully created and cached component: compA_for_list1
+2025-06-15 17:47:52.968 [main] INFO  dumb.jaider.app.DependencyInjector - Successfully created and cached component: compA_for_list2
+2025-06-15 17:47:52.981 [main] INFO  dumb.jaider.app.DependencyInjector - Successfully created and cached component: listMixedComp_id
+2025-06-15 17:47:52.987 [main] INFO  dumb.jaider.app.DependencyInjector - Successfully created and cached component: factoryListArgs_id
+2025-06-15 17:47:52.989 [main] INFO  dumb.jaider.app.DependencyInjector - Successfully created and cached component: compA_dep_id
+2025-06-15 17:47:52.990 [main] INFO  dumb.jaider.app.DependencyInjector - Successfully created and cached component: compB_with_dep_id
+2025-06-15 17:47:52.991 [main] INFO  dumb.jaider.app.DependencyInjector - Successfully created and cached component: manualCompA_id
+2025-06-15 17:47:53.001 [main] INFO  dumb.jaider.app.DependencyInjector - Successfully created and cached component: compA_type_mismatch
+2025-06-15 17:47:53.003 [main] INFO  dumb.jaider.app.DependencyInjector - Successfully created and cached component: factoryNoArgs_id
+2025-06-15 17:47:53.006 [main] INFO  dumb.jaider.app.DependencyInjector - Successfully created and cached component: listValComp_id
+2025-06-15 17:47:53.008 [main] INFO  dumb.jaider.app.DependencyInjector - Successfully created and cached component: compA_for_factory_id
+2025-06-15 17:47:53.009 [main] INFO  dumb.jaider.app.DependencyInjector - Successfully created and cached component: factoryWithArgs_id
+2025-06-15 17:47:53.015 [main] INFO  dumb.jaider.app.DependencyInjector - Successfully created and cached component: compVal_id
+2025-06-15 17:47:53.016 [main] INFO  dumb.jaider.app.DependencyInjector - Successfully created and cached component: compA_id
+2025-06-15 17:47:53.652 [main] INFO  dumb.jaider.config.ConfigTest - Temp project dir for test: /tmp/junit-5644594137829533095
+2025-06-15 17:47:53.652 [main] INFO  dumb.jaider.config.ConfigTest - Wrote to /tmp/junit-5644594137829533095/.jaider.json:
+{
+  "apiKeys": {"openai": "KEY_FROM_APIKEYS_MAP"},
+  "openaiApiKey": "KEY_FROM_SPECIFIC_FIELD"
+}
+2025-06-15 17:47:53.652 [main] INFO  dumb.jaider.config.Config - Loading configuration from file: /tmp/junit-5644594137829533095/.jaider.json
+2025-06-15 17:47:53.653 [main] WARN  dumb.jaider.config.Config - No 'components' key found in JSON source. No component definitions loaded from this source.
+2025-06-15 17:47:53.653 [main] INFO  dumb.jaider.config.Config - Successfully loaded and parsed configuration from /tmp/junit-5644594137829533095/.jaider.json.
+2025-06-15 17:47:53.653 [main] ERROR dumb.jaider.config.Config - CRITICAL: No component definitions found after attempting to load from file and apply defaults. getDefaultConfigAsJsonObject() might be incomplete or malformed.
+2025-06-15 17:47:53.684 [main] INFO  dumb.jaider.config.ConfigTest - Temp project dir for test: /tmp/junit-10345720036504517674
+2025-06-15 17:47:53.685 [main] INFO  dumb.jaider.config.Config - Config file /tmp/junit-10345720036504517674/.jaider.json not found.
+2025-06-15 17:47:53.685 [main] WARN  dumb.jaider.config.Config - Applying and writing default configuration to /tmp/junit-10345720036504517674/.jaider.json.
+2025-06-15 17:47:53.686 [main] INFO  dumb.jaider.config.Config - Successfully loaded default configuration from /default-config.json
+2025-06-15 17:47:53.687 [main] INFO  dumb.jaider.config.Config - Attempting to load 26 component definitions from provided JSON.
+2025-06-15 17:47:53.687 [main] INFO  dumb.jaider.config.Config - Successfully populated 26 component definitions from JSON source.
+2025-06-15 17:47:53.693 [main] INFO  dumb.jaider.config.Config - Written default configuration to: /tmp/junit-10345720036504517674/.jaider.json
+2025-06-15 17:47:53.694 [main] INFO  dumb.jaider.config.Config - Initializing DependencyInjector with 26 component definitions.
+2025-06-15 17:47:53.698 [main] INFO  dumb.jaider.config.Config - Successfully loaded default configuration from /default-config.json
+2025-06-15 17:47:53.721 [main] INFO  dumb.jaider.config.ConfigTest - Temp project dir for test: /tmp/junit-9088391280039148096
+2025-06-15 17:47:53.722 [main] INFO  dumb.jaider.config.Config - Config file /tmp/junit-9088391280039148096/.jaider.json not found.
+2025-06-15 17:47:53.722 [main] WARN  dumb.jaider.config.Config - Applying and writing default configuration to /tmp/junit-9088391280039148096/.jaider.json.
+2025-06-15 17:47:53.725 [main] INFO  dumb.jaider.config.Config - Successfully loaded default configuration from /default-config.json
+2025-06-15 17:47:53.725 [main] INFO  dumb.jaider.config.Config - Attempting to load 26 component definitions from provided JSON.
+2025-06-15 17:47:53.725 [main] INFO  dumb.jaider.config.Config - Successfully populated 26 component definitions from JSON source.
+2025-06-15 17:47:53.726 [main] INFO  dumb.jaider.config.Config - Written default configuration to: /tmp/junit-9088391280039148096/.jaider.json
+2025-06-15 17:47:53.726 [main] INFO  dumb.jaider.config.Config - Initializing DependencyInjector with 26 component definitions.
+2025-06-15 17:47:53.727 [main] INFO  dumb.jaider.config.ConfigTest - Read from /tmp/junit-9088391280039148096/.jaider.json:
+{
+  "components": [
+    {
+      "staticFactoryArgs": [{
+        "type": "int",
+        "value": 20
+      }],
+      "staticFactoryMethod": "withMaxMessages",
+      "id": "chatMemory",
+      "class": "dev.langchain4j.memory.chat.MessageWindowChatMemory"
+    },
+    {
+      "constructorArgs": [
+        {"ref": "appConfig"},
+        {"ref": "jaiderModel"}
+      ],
+      "id": "llmProviderFactory",
+      "class": "dumb.jaider.llm.LlmProviderFactory"
+    },
+    {
+      "constructorArgs": [{
+        "type": "java.lang.String",
+        "value": "src/main/resources/tool-descriptors"
+      }],
+      "id": "toolManager",
+      "class": "dumb.jaider.toolmanager.ToolManager"
+    },
+    {
+      "constructorArgs": [
+        {"ref": "jaiderModel"},
+        {"ref": "appConfig"},
+        {"ref": "appEmbeddingModel"}
+      ],
+      "id": "standardTools",
+      "class": "dumb.jaider.tools.StandardTools"
+    },
+    {
+      "id": "parserRegistry",
+      "class": "dumb.jaider.refactoring.ParserRegistry"
+    },
+    {
+      "constructorArgs": [{"ref": "parserRegistry"}],
+      "id": "refactoringService",
+      "class": "dumb.jaider.refactoring.RefactoringService"
+    },
+    {
+      "constructorArgs": [{"ref": "refactoringService"}],
+      "id": "smartRenameTool",
+      "class": "dumb.jaider.tools.SmartRenameTool"
+    },
+    {
+      "constructorArgs": [{"ref": "jaiderModel"}],
+      "id": "listContextFilesTool",
+      "class": "dumb.jaider.tools.ListContextFilesTool"
+    },
+    {
+      "constructorArgs": [{"ref": "toolManager"}],
+      "id": "staticAnalysisService",
+      "class": "dumb.jaider.staticanalysis.StaticAnalysisService"
+    },
+    {
+      "constructorArgs": [
+        {"ref": "staticAnalysisService"},
+        {"ref": "jaiderModel"}
+      ],
+      "id": "analysisTools",
+      "class": "dumb.jaider.tools.AnalysisTools"
+    },
+    {
+      "id": "userInterfaceService",
+      "class": "dumb.jaider.ui.CommandLineUserInterfaceService"
+    },
+    {
+      "id": "gitService",
+      "class": "dumb.jaider.service.LocalGitService"
+    },
+    {
+      "id": "buildManagerService",
+      "class": "dumb.jaider.service.BuildManagerService"
+    },
+    {
+      "id": "restartService",
+      "class": "dumb.jaider.service.BasicRestartService"
+    },
+    {
+      "constructorArgs": [
+        {"ref": "jaiderModel"},
+        {"ref": "userInterfaceService"},
+        {"ref": "buildManagerService"},
+        {"ref": "gitService"},
+        {"ref": "restartService"},
+        {"ref": "appConfig"}
+      ],
+      "id": "selfUpdateOrchestratorService",
+      "class": "dumb.jaider.service.SelfUpdateOrchestratorService"
+    },
+    {
+      "constructorArgs": [
+        {"ref": "jaiderModel"},
+        {"ref": "selfUpdateOrchestratorService"}
+      ],
+      "id": "jaiderTools",
+      "class": "dumb.jaider.tools.JaiderTools"
+    },
+    {
+      "constructorArgs": [
+        {"ref": "appChatLanguageModel"},
+        {"ref": "chatMemory"},
+        {"list": [
+          {"ref": "standardTools"},
+          {"ref": "jaiderTools"},
+          {"ref": "smartRenameTool"},
+          {"ref": "analysisTools"},
+          {"ref": "listContextFilesTool"}
+        ]},
+        {
+          "type": "java.lang.String",
+          "value": "You are a super-intelligent AI developer named Jaider. Your goal is to help users build and modify software projects by applying changes directly to their codebase. When a user asks for a change, understand the request, identify the files to modify, and then use the 'applyDiff' tool to provide the necessary changes in the diff format. Always ensure your diffs are correct and directly applicable. If you need to read a file, use 'readFile'. If you need to list files, use 'listFiles'. If a user asks you to add a file to context, use 'addFilesToContext'. If asked to remove, use 'removeFilesFromContext'. If you need to create a new file, use 'createFile'. Do not ask the user to make changes manually. You are empowered to make them directly. Be proactive and precise. For complex tasks, break them down into smaller, manageable steps, applying diffs for each. Always provide a commit message with your diffs. State: END_OF_PLAN at the end of your plan. Do not use it anywhere else. If a user asks you to do something that is not a coding task, or if it is a very complex task that you are not sure how to do, or if it is a task that is too risky, you should decline the request and explain why. You should be able to update any file, including configuration files like pom.xml or build.gradle, or JSON files. Use the 'DependencyUpdater' tool to check for and apply dependency updates to pom.xml when the user asks for it. If you need to rename files or directories, use the 'renameFileOrDirectory' tool. If you need to perform a smart rename of a symbol (class, method, variable) across multiple files, use the 'smartRename' tool. If you need to find relevant code snippets, use the 'findRelevantCode' tool. If you need to analyze code for issues, use the 'analyzeCode' tool. Always respond in Markdown format, ensuring any code blocks or diffs are correctly formatted. If you are providing a diff, ensure the diff is enclosed in a ```diff ... ``` block."
+        }
+      ],
+      "id": "coderAgent",
+      "class": "dumb.jaider.agents.CoderAgent"
+    },
+    {
+      "constructorArgs": [
+        {"ref": "appChatLanguageModel"},
+        {"ref": "chatMemory"},
+        {"ref": "standardTools"}
+      ],
+      "id": "architectAgent",
+      "class": "dumb.jaider.agents.ArchitectAgent"
+    },
+    {
+      "constructorArgs": [
+        {"ref": "appChatLanguageModel"},
+        {"ref": "chatMemory"}
+      ],
+      "id": "askAgent",
+      "class": "dumb.jaider.agents.AskAgent"
+    },
+    {
+      "constructorArgs": [{"ref": "toolManager"}],
+      "id": "proactiveSuggestionService",
+      "class": "dumb.jaider.suggestion.ProactiveSuggestionService"
+    },
+    {
+      "constructorArgs": [
+        {"ref": "appConfig"},
+        {"ref": "jaiderModel"},
+        {"ref": "chatMemory"},
+        {"ref": "llmProviderFactory"}
+      ],
+      "id": "agentService",
+      "class": "dumb.jaider.app.AgentService"
+    },
+    {
+      "constructorArgs": [
+        {"ref": "jaiderModel"},
+        {"ref": "chatMemory"},
+        {"ref": "ui"}
+      ],
+      "id": "sessionManager",
+      "class": "dumb.jaider.app.SessionManager"
+    },
+    {
+      "constructorArgs": [
+        {"ref": "app"},
+        {"ref": "agentService"}
+      ],
+      "id": "toolLifecycleManager",
+      "class": "dumb.jaider.app.ToolLifecycleManager"
+    },
+    {
+      "constructorArgs": [
+        {"ref": "appConfig"},
+        {"ref": "jaiderModel"},
+        {"ref": "app"}
+      ],
+      "id": "selfUpdateService",
+      "class": "dumb.jaider.app.SelfUpdateService"
+    },
+    {
+      "constructorArgs": [
+        {"ref": "app"},
+        {"ref": "jaiderModel"},
+        {"ref": "chatMemory"},
+        {"ref": "ui"},
+        {"ref": "agentService"},
+        {"ref": "toolLifecycleManager"},
+        {"ref": "sessionManager"},
+        {"ref": "selfUpdateService"}
+      ],
+      "id": "agentInteractionService",
+      "class": "dumb.jaider.app.AgentInteractionService"
+    },
+    {
+      "constructorArgs": [
+        {"ref": "app"},
+        {"ref": "jaiderModel"},
+        {"ref": "appConfig"},
+        {"ref": "ui"},
+        {"ref": "agentService"},
+        {"ref": "proactiveSuggestionService"},
+        {"ref": "commandsMap"}
+      ],
+      "id": "userInputHandler",
+      "class": "dumb.jaider.app.UserInputHandler"
+    }
+  ],
+  "toolManifestsDir": "src/main/resources/tool-descriptors",
+  "llmProvider": "ollama",
+  "genericOpenaiEmbeddingModelName": "text-embedding-ada-002",
+  "genericOpenaiApiKey": "",
+  "apiKeys": {
+    "openai": "YOUR_OPENAI_API_KEY",
+    "anthropic": "YOUR_ANTHROPIC_API_KEY",
+    "google": "YOUR_GOOGLE_API_KEY",
+    "genericOpenai": "",
+    "tavily": ""
+  },
+  "openaiApiKey": "",
+  "openaiModelName": "gpt-4o-mini",
+  "ollamaBaseUrl": "http://localhost:11434",
+  "genericOpenaiModelName": "local-model",
+  "genericOpenaiBaseUrl": "http://localhost:8080/v1",
+  "geminiModelName": "gemini-1.5-flash-latest",
+  "geminiApiKey": "",
+  "runCommand": "",
+  "ollamaModelName": "llamablit",
+  "tavilyApiKey": "",
+  "geminiEmbeddingModelName": "textembedding-gecko"
+}
+2025-06-15 17:47:53.735 [main] INFO  dumb.jaider.config.ConfigTest - Temp project dir for test: /tmp/junit-17627911356414549768
+2025-06-15 17:47:53.737 [main] INFO  dumb.jaider.config.ConfigTest - Wrote to /tmp/junit-17627911356414549768/.jaider.json:
+{
+  "components": [{
+    "id": "userOnlyComponent",
+    "class": "com.example.UserOnly"
+  }],
+  "toolManifestsDir": "src/main/resources/tool-descriptors",
+  "llmProvider": "full-user-llm",
+  "genericOpenaiEmbeddingModelName": "text-embedding-ada-002",
+  "genericOpenaiApiKey": "",
+  "apiKeys": {
+    "openai": "FULL_USER_OPENAI",
+    "google": "FULL_USER_GOOGLE"
+  },
+  "openaiApiKey": "",
+  "openaiModelName": "gpt-4o-mini",
+  "ollamaBaseUrl": "http://fulluser:1111",
+  "genericOpenaiModelName": "local-model",
+  "genericOpenaiBaseUrl": "http://localhost:8080/v1",
+  "geminiModelName": "gemini-1.5-flash-latest",
+  "geminiApiKey": "",
+  "runCommand": "user-run-command",
+  "ollamaModelName": "full-user-model",
+  "tavilyApiKey": "",
+  "geminiEmbeddingModelName": "textembedding-gecko"
+}
+2025-06-15 17:47:53.737 [main] INFO  dumb.jaider.config.Config - Loading configuration from file: /tmp/junit-17627911356414549768/.jaider.json
+2025-06-15 17:47:53.738 [main] INFO  dumb.jaider.config.Config - Attempting to load 1 component definitions from provided JSON.
+2025-06-15 17:47:53.738 [main] INFO  dumb.jaider.config.Config - Successfully populated 1 component definitions from JSON source.
+2025-06-15 17:47:53.738 [main] INFO  dumb.jaider.config.Config - Successfully loaded and parsed configuration from /tmp/junit-17627911356414549768/.jaider.json.
+2025-06-15 17:47:53.738 [main] INFO  dumb.jaider.config.Config - Initializing DependencyInjector with 1 component definitions.
+2025-06-15 17:47:53.746 [main] INFO  dumb.jaider.config.ConfigTest - Temp project dir for test: /tmp/junit-1449684722352020780
+2025-06-15 17:47:53.747 [main] INFO  dumb.jaider.config.Config - Config file /tmp/junit-1449684722352020780/.jaider.json not found.
+2025-06-15 17:47:53.747 [main] WARN  dumb.jaider.config.Config - Applying and writing default configuration to /tmp/junit-1449684722352020780/.jaider.json.
+2025-06-15 17:47:53.748 [main] INFO  dumb.jaider.config.Config - Successfully loaded default configuration from /default-config.json
+2025-06-15 17:47:53.749 [main] INFO  dumb.jaider.config.Config - Attempting to load 26 component definitions from provided JSON.
+2025-06-15 17:47:53.749 [main] INFO  dumb.jaider.config.Config - Successfully populated 26 component definitions from JSON source.
+2025-06-15 17:47:53.750 [main] INFO  dumb.jaider.config.Config - Written default configuration to: /tmp/junit-1449684722352020780/.jaider.json
+2025-06-15 17:47:53.750 [main] INFO  dumb.jaider.config.Config - Initializing DependencyInjector with 26 component definitions.
+2025-06-15 17:47:53.750 [main] INFO  dumb.jaider.config.Config - Configuration saved to /tmp/junit-1449684722352020780/.jaider.json
+2025-06-15 17:47:53.751 [main] INFO  dumb.jaider.config.Config - Loading configuration from file: /tmp/junit-1449684722352020780/.jaider.json
+2025-06-15 17:47:53.751 [main] INFO  dumb.jaider.config.Config - Attempting to load 1 component definitions from provided JSON.
+2025-06-15 17:47:53.751 [main] INFO  dumb.jaider.config.Config - Successfully populated 1 component definitions from JSON source.
+2025-06-15 17:47:53.751 [main] INFO  dumb.jaider.config.Config - Successfully loaded and parsed configuration from /tmp/junit-1449684722352020780/.jaider.json.
+2025-06-15 17:47:53.751 [main] INFO  dumb.jaider.config.Config - Re-initializing DependencyInjector with new configuration after save.
+2025-06-15 17:47:53.751 [main] INFO  dumb.jaider.config.Config - DependencyInjector re-initialized.
+2025-06-15 17:47:53.751 [main] INFO  dumb.jaider.config.ConfigTest - Read from /tmp/junit-1449684722352020780/.jaider.json:
+{
+  "components": [{
+    "id": "savedComponent",
+    "class": "com.example.Saved"
+  }],
+  "ollamaBaseUrl": "http://savedhost:54321",
+  "llmProvider": "saved-llm",
+  "apiKeys": {"openai": "SAVED_OPENAI_KEY"},
+  "runCommand": "saved-run-cmd"
+}
+2025-06-15 17:47:53.757 [main] INFO  dumb.jaider.config.ConfigTest - Temp project dir for test: /tmp/junit-15480350870291195686
+2025-06-15 17:47:53.757 [main] INFO  dumb.jaider.config.ConfigTest - Wrote to /tmp/junit-15480350870291195686/.jaider.json:
+{"apiKeys": {"openai": "KEY_FROM_APIKEYS_MAP_ONLY"}}
+2025-06-15 17:47:53.758 [main] INFO  dumb.jaider.config.Config - Loading configuration from file: /tmp/junit-15480350870291195686/.jaider.json
+2025-06-15 17:47:53.758 [main] WARN  dumb.jaider.config.Config - No 'components' key found in JSON source. No component definitions loaded from this source.
+2025-06-15 17:47:53.758 [main] INFO  dumb.jaider.config.Config - Successfully loaded and parsed configuration from /tmp/junit-15480350870291195686/.jaider.json.
+2025-06-15 17:47:53.758 [main] ERROR dumb.jaider.config.Config - CRITICAL: No component definitions found after attempting to load from file and apply defaults. getDefaultConfigAsJsonObject() might be incomplete or malformed.
+2025-06-15 17:47:53.764 [main] INFO  dumb.jaider.config.ConfigTest - Temp project dir for test: /tmp/junit-15050199308899757930
+2025-06-15 17:47:53.764 [main] INFO  dumb.jaider.config.ConfigTest - Wrote to /tmp/junit-15050199308899757930/.jaider.json:
+{}
+2025-06-15 17:47:53.765 [main] INFO  dumb.jaider.config.Config - Loading configuration from file: /tmp/junit-15050199308899757930/.jaider.json
+2025-06-15 17:47:53.765 [main] WARN  dumb.jaider.config.Config - No 'components' key found in JSON source. No component definitions loaded from this source.
+2025-06-15 17:47:53.765 [main] INFO  dumb.jaider.config.Config - Successfully loaded and parsed configuration from /tmp/junit-15050199308899757930/.jaider.json.
+2025-06-15 17:47:53.765 [main] ERROR dumb.jaider.config.Config - CRITICAL: No component definitions found after attempting to load from file and apply defaults. getDefaultConfigAsJsonObject() might be incomplete or malformed.
+2025-06-15 17:47:53.770 [main] INFO  dumb.jaider.config.ConfigTest - Temp project dir for test: /tmp/junit-8195677419760489787
+2025-06-15 17:47:53.771 [main] INFO  dumb.jaider.config.ConfigTest - Wrote to /tmp/junit-8195677419760489787/.jaider.json:
+{"apiKeys": {"somekey": "somevalue"}}
+2025-06-15 17:47:53.771 [main] INFO  dumb.jaider.config.Config - Loading configuration from file: /tmp/junit-8195677419760489787/.jaider.json
+2025-06-15 17:47:53.771 [main] WARN  dumb.jaider.config.Config - No 'components' key found in JSON source. No component definitions loaded from this source.
+2025-06-15 17:47:53.771 [main] INFO  dumb.jaider.config.Config - Successfully loaded and parsed configuration from /tmp/junit-8195677419760489787/.jaider.json.
+2025-06-15 17:47:53.771 [main] ERROR dumb.jaider.config.Config - CRITICAL: No component definitions found after attempting to load from file and apply defaults. getDefaultConfigAsJsonObject() might be incomplete or malformed.
+2025-06-15 17:47:53.778 [main] INFO  dumb.jaider.config.ConfigTest - Temp project dir for test: /tmp/junit-13962818350989556282
+2025-06-15 17:47:53.778 [main] INFO  dumb.jaider.config.Config - Config file /tmp/junit-13962818350989556282/.jaider.json not found.
+2025-06-15 17:47:53.778 [main] WARN  dumb.jaider.config.Config - Applying and writing default configuration to /tmp/junit-13962818350989556282/.jaider.json.
+2025-06-15 17:47:53.797 [main] INFO  dumb.jaider.config.Config - Successfully loaded default configuration from /default-config.json
+2025-06-15 17:47:53.797 [main] INFO  dumb.jaider.config.Config - Attempting to load 26 component definitions from provided JSON.
+2025-06-15 17:47:53.797 [main] INFO  dumb.jaider.config.Config - Successfully populated 26 component definitions from JSON source.
+2025-06-15 17:47:53.798 [main] INFO  dumb.jaider.config.Config - Written default configuration to: /tmp/junit-13962818350989556282/.jaider.json
+2025-06-15 17:47:53.799 [main] INFO  dumb.jaider.config.Config - Initializing DependencyInjector with 26 component definitions.
+2025-06-15 17:47:53.805 [main] INFO  dumb.jaider.config.ConfigTest - Temp project dir for test: /tmp/junit-1908595492123286859
+2025-06-15 17:47:53.806 [main] INFO  dumb.jaider.config.ConfigTest - Wrote to /tmp/junit-1908595492123286859/.jaider.json:
+this is not valid json
+2025-06-15 17:47:53.806 [main] INFO  dumb.jaider.config.Config - Loading configuration from file: /tmp/junit-1908595492123286859/.jaider.json
+2025-06-15 17:47:53.806 [main] ERROR dumb.jaider.config.Config - Error reading or parsing config file (/tmp/junit-1908595492123286859/.jaider.json): A JSONObject text must begin with '{' at 1 [character 2 line 1]. Applying defaults.
+org.json.JSONException: A JSONObject text must begin with '{' at 1 [character 2 line 1]
+	at org.json.JSONTokener.syntaxError(JSONTokener.java:503)
+	at org.json.JSONObject.<init>(JSONObject.java:213)
+	at org.json.JSONObject.<init>(JSONObject.java:430)
+	at dumb.jaider.config.Config.load(Config.java:118)
+	at dumb.jaider.config.Config.<init>(Config.java:98)
+	at dumb.jaider.config.ConfigTest.createConfig(ConfigTest.java:90)
+	at dumb.jaider.config.ConfigTest.testLoad_malformedUserConfig_defaultsUsedAndWritten(ConfigTest.java:202)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at org.junit.platform.commons.util.ReflectionUtils.invokeMethod(ReflectionUtils.java:787)
+	at org.junit.platform.commons.support.ReflectionSupport.invokeMethod(ReflectionSupport.java:479)
+	at org.junit.jupiter.engine.execution.MethodInvocation.proceed(MethodInvocation.java:60)
+	at org.junit.jupiter.engine.execution.InvocationInterceptorChain$ValidatingInvocation.proceed(InvocationInterceptorChain.java:131)
+	at org.junit.jupiter.engine.extension.TimeoutExtension.intercept(TimeoutExtension.java:161)
+	at org.junit.jupiter.engine.extension.TimeoutExtension.interceptTestableMethod(TimeoutExtension.java:152)
+	at org.junit.jupiter.engine.extension.TimeoutExtension.interceptTestMethod(TimeoutExtension.java:91)
+	at org.junit.jupiter.engine.execution.InterceptingExecutableInvoker$ReflectiveInterceptorCall.lambda$ofVoidMethod$0(InterceptingExecutableInvoker.java:112)
+	at org.junit.jupiter.engine.execution.InterceptingExecutableInvoker.lambda$invoke$0(InterceptingExecutableInvoker.java:94)
+	at org.junit.jupiter.engine.execution.InvocationInterceptorChain$InterceptedInvocation.proceed(InvocationInterceptorChain.java:106)
+	at org.junit.jupiter.engine.execution.InvocationInterceptorChain.proceed(InvocationInterceptorChain.java:64)
+	at org.junit.jupiter.engine.execution.InvocationInterceptorChain.chainAndInvoke(InvocationInterceptorChain.java:45)
+	at org.junit.jupiter.engine.execution.InvocationInterceptorChain.invoke(InvocationInterceptorChain.java:37)
+	at org.junit.jupiter.engine.execution.InterceptingExecutableInvoker.invoke(InterceptingExecutableInvoker.java:93)
+	at org.junit.jupiter.engine.execution.InterceptingExecutableInvoker.invoke(InterceptingExecutableInvoker.java:87)
+	at org.junit.jupiter.engine.descriptor.TestMethodTestDescriptor.lambda$invokeTestMethod$4(TestMethodTestDescriptor.java:221)
+	at org.junit.platform.engine.support.hierarchical.ThrowableCollector.execute(ThrowableCollector.java:73)
+	at org.junit.jupiter.engine.descriptor.TestMethodTestDescriptor.invokeTestMethod(TestMethodTestDescriptor.java:217)
+	at org.junit.jupiter.engine.descriptor.TestMethodTestDescriptor.execute(TestMethodTestDescriptor.java:159)
+	at org.junit.jupiter.engine.descriptor.TestMethodTestDescriptor.execute(TestMethodTestDescriptor.java:70)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$6(NodeTestTask.java:157)
+	at org.junit.platform.engine.support.hierarchical.ThrowableCollector.execute(ThrowableCollector.java:73)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$8(NodeTestTask.java:147)
+	at org.junit.platform.engine.support.hierarchical.Node.around(Node.java:137)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$9(NodeTestTask.java:145)
+	at org.junit.platform.engine.support.hierarchical.ThrowableCollector.execute(ThrowableCollector.java:73)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.executeRecursively(NodeTestTask.java:144)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.execute(NodeTestTask.java:101)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+	at org.junit.platform.engine.support.hierarchical.SameThreadHierarchicalTestExecutorService.invokeAll(SameThreadHierarchicalTestExecutorService.java:41)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$6(NodeTestTask.java:161)
+	at org.junit.platform.engine.support.hierarchical.ThrowableCollector.execute(ThrowableCollector.java:73)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$8(NodeTestTask.java:147)
+	at org.junit.platform.engine.support.hierarchical.Node.around(Node.java:137)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$9(NodeTestTask.java:145)
+	at org.junit.platform.engine.support.hierarchical.ThrowableCollector.execute(ThrowableCollector.java:73)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.executeRecursively(NodeTestTask.java:144)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.execute(NodeTestTask.java:101)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+	at org.junit.platform.engine.support.hierarchical.SameThreadHierarchicalTestExecutorService.invokeAll(SameThreadHierarchicalTestExecutorService.java:41)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$6(NodeTestTask.java:161)
+	at org.junit.platform.engine.support.hierarchical.ThrowableCollector.execute(ThrowableCollector.java:73)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$8(NodeTestTask.java:147)
+	at org.junit.platform.engine.support.hierarchical.Node.around(Node.java:137)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$9(NodeTestTask.java:145)
+	at org.junit.platform.engine.support.hierarchical.ThrowableCollector.execute(ThrowableCollector.java:73)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.executeRecursively(NodeTestTask.java:144)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.execute(NodeTestTask.java:101)
+	at org.junit.platform.engine.support.hierarchical.SameThreadHierarchicalTestExecutorService.submit(SameThreadHierarchicalTestExecutorService.java:35)
+	at org.junit.platform.engine.support.hierarchical.HierarchicalTestExecutor.execute(HierarchicalTestExecutor.java:57)
+	at org.junit.platform.engine.support.hierarchical.HierarchicalTestEngine.execute(HierarchicalTestEngine.java:54)
+	at org.junit.platform.launcher.core.EngineExecutionOrchestrator.executeEngine(EngineExecutionOrchestrator.java:230)
+	at org.junit.platform.launcher.core.EngineExecutionOrchestrator.failOrExecuteEngine(EngineExecutionOrchestrator.java:204)
+	at org.junit.platform.launcher.core.EngineExecutionOrchestrator.execute(EngineExecutionOrchestrator.java:172)
+	at org.junit.platform.launcher.core.EngineExecutionOrchestrator.execute(EngineExecutionOrchestrator.java:101)
+	at org.junit.platform.launcher.core.EngineExecutionOrchestrator.lambda$execute$0(EngineExecutionOrchestrator.java:64)
+	at org.junit.platform.launcher.core.EngineExecutionOrchestrator.withInterceptedStreams(EngineExecutionOrchestrator.java:150)
+	at org.junit.platform.launcher.core.EngineExecutionOrchestrator.execute(EngineExecutionOrchestrator.java:63)
+	at org.junit.platform.launcher.core.DefaultLauncher.execute(DefaultLauncher.java:109)
+	at org.junit.platform.launcher.core.DefaultLauncher.execute(DefaultLauncher.java:91)
+	at org.junit.platform.launcher.core.DelegatingLauncher.execute(DelegatingLauncher.java:47)
+	at org.junit.platform.launcher.core.InterceptingLauncher.lambda$execute$1(InterceptingLauncher.java:39)
+	at org.junit.platform.launcher.core.ClasspathAlignmentCheckingLauncherInterceptor.intercept(ClasspathAlignmentCheckingLauncherInterceptor.java:25)
+	at org.junit.platform.launcher.core.InterceptingLauncher.execute(InterceptingLauncher.java:38)
+	at org.junit.platform.launcher.core.DelegatingLauncher.execute(DelegatingLauncher.java:47)
+	at org.apache.maven.surefire.junitplatform.LazyLauncher.execute(LazyLauncher.java:56)
+	at org.apache.maven.surefire.junitplatform.JUnitPlatformProvider.execute(JUnitPlatformProvider.java:194)
+	at org.apache.maven.surefire.junitplatform.JUnitPlatformProvider.invokeAllTests(JUnitPlatformProvider.java:150)
+	at org.apache.maven.surefire.junitplatform.JUnitPlatformProvider.invoke(JUnitPlatformProvider.java:124)
+	at org.apache.maven.surefire.booter.ForkedBooter.runSuitesInProcess(ForkedBooter.java:385)
+	at org.apache.maven.surefire.booter.ForkedBooter.execute(ForkedBooter.java:162)
+	at org.apache.maven.surefire.booter.ForkedBooter.run(ForkedBooter.java:507)
+	at org.apache.maven.surefire.booter.ForkedBooter.main(ForkedBooter.java:495)
+2025-06-15 17:47:53.808 [main] WARN  dumb.jaider.config.Config - Applying and writing default configuration to /tmp/junit-1908595492123286859/.jaider.json.
+2025-06-15 17:47:53.809 [main] INFO  dumb.jaider.config.Config - Successfully loaded default configuration from /default-config.json
+2025-06-15 17:47:53.809 [main] INFO  dumb.jaider.config.Config - Attempting to load 26 component definitions from provided JSON.
+2025-06-15 17:47:53.810 [main] INFO  dumb.jaider.config.Config - Successfully populated 26 component definitions from JSON source.
+2025-06-15 17:47:53.811 [main] INFO  dumb.jaider.config.Config - Written default configuration to: /tmp/junit-1908595492123286859/.jaider.json
+2025-06-15 17:47:53.811 [main] INFO  dumb.jaider.config.Config - Initializing DependencyInjector with 26 component definitions.
+2025-06-15 17:47:53.811 [main] INFO  dumb.jaider.config.ConfigTest - Read from /tmp/junit-1908595492123286859/.jaider.json:
+{
+  "components": [
+    {
+      "staticFactoryArgs": [{
+        "type": "int",
+        "value": 20
+      }],
+      "staticFactoryMethod": "withMaxMessages",
+      "id": "chatMemory",
+      "class": "dev.langchain4j.memory.chat.MessageWindowChatMemory"
+    },
+    {
+      "constructorArgs": [
+        {"ref": "appConfig"},
+        {"ref": "jaiderModel"}
+      ],
+      "id": "llmProviderFactory",
+      "class": "dumb.jaider.llm.LlmProviderFactory"
+    },
+    {
+      "constructorArgs": [{
+        "type": "java.lang.String",
+        "value": "src/main/resources/tool-descriptors"
+      }],
+      "id": "toolManager",
+      "class": "dumb.jaider.toolmanager.ToolManager"
+    },
+    {
+      "constructorArgs": [
+        {"ref": "jaiderModel"},
+        {"ref": "appConfig"},
+        {"ref": "appEmbeddingModel"}
+      ],
+      "id": "standardTools",
+      "class": "dumb.jaider.tools.StandardTools"
+    },
+    {
+      "id": "parserRegistry",
+      "class": "dumb.jaider.refactoring.ParserRegistry"
+    },
+    {
+      "constructorArgs": [{"ref": "parserRegistry"}],
+      "id": "refactoringService",
+      "class": "dumb.jaider.refactoring.RefactoringService"
+    },
+    {
+      "constructorArgs": [{"ref": "refactoringService"}],
+      "id": "smartRenameTool",
+      "class": "dumb.jaider.tools.SmartRenameTool"
+    },
+    {
+      "constructorArgs": [{"ref": "jaiderModel"}],
+      "id": "listContextFilesTool",
+      "class": "dumb.jaider.tools.ListContextFilesTool"
+    },
+    {
+      "constructorArgs": [{"ref": "toolManager"}],
+      "id": "staticAnalysisService",
+      "class": "dumb.jaider.staticanalysis.StaticAnalysisService"
+    },
+    {
+      "constructorArgs": [
+        {"ref": "staticAnalysisService"},
+        {"ref": "jaiderModel"}
+      ],
+      "id": "analysisTools",
+      "class": "dumb.jaider.tools.AnalysisTools"
+    },
+    {
+      "id": "userInterfaceService",
+      "class": "dumb.jaider.ui.CommandLineUserInterfaceService"
+    },
+    {
+      "id": "gitService",
+      "class": "dumb.jaider.service.LocalGitService"
+    },
+    {
+      "id": "buildManagerService",
+      "class": "dumb.jaider.service.BuildManagerService"
+    },
+    {
+      "id": "restartService",
+      "class": "dumb.jaider.service.BasicRestartService"
+    },
+    {
+      "constructorArgs": [
+        {"ref": "jaiderModel"},
+        {"ref": "userInterfaceService"},
+        {"ref": "buildManagerService"},
+        {"ref": "gitService"},
+        {"ref": "restartService"},
+        {"ref": "appConfig"}
+      ],
+      "id": "selfUpdateOrchestratorService",
+      "class": "dumb.jaider.service.SelfUpdateOrchestratorService"
+    },
+    {
+      "constructorArgs": [
+        {"ref": "jaiderModel"},
+        {"ref": "selfUpdateOrchestratorService"}
+      ],
+      "id": "jaiderTools",
+      "class": "dumb.jaider.tools.JaiderTools"
+    },
+    {
+      "constructorArgs": [
+        {"ref": "appChatLanguageModel"},
+        {"ref": "chatMemory"},
+        {"list": [
+          {"ref": "standardTools"},
+          {"ref": "jaiderTools"},
+          {"ref": "smartRenameTool"},
+          {"ref": "analysisTools"},
+          {"ref": "listContextFilesTool"}
+        ]},
+        {
+          "type": "java.lang.String",
+          "value": "You are a super-intelligent AI developer named Jaider. Your goal is to help users build and modify software projects by applying changes directly to their codebase. When a user asks for a change, understand the request, identify the files to modify, and then use the 'applyDiff' tool to provide the necessary changes in the diff format. Always ensure your diffs are correct and directly applicable. If you need to read a file, use 'readFile'. If you need to list files, use 'listFiles'. If a user asks you to add a file to context, use 'addFilesToContext'. If asked to remove, use 'removeFilesFromContext'. If you need to create a new file, use 'createFile'. Do not ask the user to make changes manually. You are empowered to make them directly. Be proactive and precise. For complex tasks, break them down into smaller, manageable steps, applying diffs for each. Always provide a commit message with your diffs. State: END_OF_PLAN at the end of your plan. Do not use it anywhere else. If a user asks you to do something that is not a coding task, or if it is a very complex task that you are not sure how to do, or if it is a task that is too risky, you should decline the request and explain why. You should be able to update any file, including configuration files like pom.xml or build.gradle, or JSON files. Use the 'DependencyUpdater' tool to check for and apply dependency updates to pom.xml when the user asks for it. If you need to rename files or directories, use the 'renameFileOrDirectory' tool. If you need to perform a smart rename of a symbol (class, method, variable) across multiple files, use the 'smartRename' tool. If you need to find relevant code snippets, use the 'findRelevantCode' tool. If you need to analyze code for issues, use the 'analyzeCode' tool. Always respond in Markdown format, ensuring any code blocks or diffs are correctly formatted. If you are providing a diff, ensure the diff is enclosed in a ```diff ... ``` block."
+        }
+      ],
+      "id": "coderAgent",
+      "class": "dumb.jaider.agents.CoderAgent"
+    },
+    {
+      "constructorArgs": [
+        {"ref": "appChatLanguageModel"},
+        {"ref": "chatMemory"},
+        {"ref": "standardTools"}
+      ],
+      "id": "architectAgent",
+      "class": "dumb.jaider.agents.ArchitectAgent"
+    },
+    {
+      "constructorArgs": [
+        {"ref": "appChatLanguageModel"},
+        {"ref": "chatMemory"}
+      ],
+      "id": "askAgent",
+      "class": "dumb.jaider.agents.AskAgent"
+    },
+    {
+      "constructorArgs": [{"ref": "toolManager"}],
+      "id": "proactiveSuggestionService",
+      "class": "dumb.jaider.suggestion.ProactiveSuggestionService"
+    },
+    {
+      "constructorArgs": [
+        {"ref": "appConfig"},
+        {"ref": "jaiderModel"},
+        {"ref": "chatMemory"},
+        {"ref": "llmProviderFactory"}
+      ],
+      "id": "agentService",
+      "class": "dumb.jaider.app.AgentService"
+    },
+    {
+      "constructorArgs": [
+        {"ref": "jaiderModel"},
+        {"ref": "chatMemory"},
+        {"ref": "ui"}
+      ],
+      "id": "sessionManager",
+      "class": "dumb.jaider.app.SessionManager"
+    },
+    {
+      "constructorArgs": [
+        {"ref": "app"},
+        {"ref": "agentService"}
+      ],
+      "id": "toolLifecycleManager",
+      "class": "dumb.jaider.app.ToolLifecycleManager"
+    },
+    {
+      "constructorArgs": [
+        {"ref": "appConfig"},
+        {"ref": "jaiderModel"},
+        {"ref": "app"}
+      ],
+      "id": "selfUpdateService",
+      "class": "dumb.jaider.app.SelfUpdateService"
+    },
+    {
+      "constructorArgs": [
+        {"ref": "app"},
+        {"ref": "jaiderModel"},
+        {"ref": "chatMemory"},
+        {"ref": "ui"},
+        {"ref": "agentService"},
+        {"ref": "toolLifecycleManager"},
+        {"ref": "sessionManager"},
+        {"ref": "selfUpdateService"}
+      ],
+      "id": "agentInteractionService",
+      "class": "dumb.jaider.app.AgentInteractionService"
+    },
+    {
+      "constructorArgs": [
+        {"ref": "app"},
+        {"ref": "jaiderModel"},
+        {"ref": "appConfig"},
+        {"ref": "ui"},
+        {"ref": "agentService"},
+        {"ref": "proactiveSuggestionService"},
+        {"ref": "commandsMap"}
+      ],
+      "id": "userInputHandler",
+      "class": "dumb.jaider.app.UserInputHandler"
+    }
+  ],
+  "toolManifestsDir": "src/main/resources/tool-descriptors",
+  "llmProvider": "ollama",
+  "genericOpenaiEmbeddingModelName": "text-embedding-ada-002",
+  "genericOpenaiApiKey": "",
+  "apiKeys": {
+    "openai": "YOUR_OPENAI_API_KEY",
+    "anthropic": "YOUR_ANTHROPIC_API_KEY",
+    "google": "YOUR_GOOGLE_API_KEY",
+    "genericOpenai": "",
+    "tavily": ""
+  },
+  "openaiApiKey": "",
+  "openaiModelName": "gpt-4o-mini",
+  "ollamaBaseUrl": "http://localhost:11434",
+  "genericOpenaiModelName": "local-model",
+  "genericOpenaiBaseUrl": "http://localhost:8080/v1",
+  "geminiModelName": "gemini-1.5-flash-latest",
+  "geminiApiKey": "",
+  "runCommand": "",
+  "ollamaModelName": "llamablit",
+  "tavilyApiKey": "",
+  "geminiEmbeddingModelName": "textembedding-gecko"
+}
+2025-06-15 17:47:53.820 [main] INFO  dumb.jaider.config.ConfigTest - Temp project dir for test: /tmp/junit-13909697967177599626
+2025-06-15 17:47:53.821 [main] INFO  dumb.jaider.config.ConfigTest - Wrote to /tmp/junit-13909697967177599626/.jaider.json:
+{"testCommand": "legacy-test-cmd"}
+2025-06-15 17:47:53.821 [main] INFO  dumb.jaider.config.Config - Loading configuration from file: /tmp/junit-13909697967177599626/.jaider.json
+2025-06-15 17:47:53.821 [main] INFO  dumb.jaider.config.Config - Using legacy 'testCommand' value ('legacy-test-cmd') for 'runCommand'.
+2025-06-15 17:47:53.821 [main] WARN  dumb.jaider.config.Config - No 'components' key found in JSON source. No component definitions loaded from this source.
+2025-06-15 17:47:53.821 [main] INFO  dumb.jaider.config.Config - Successfully loaded and parsed configuration from /tmp/junit-13909697967177599626/.jaider.json.
+2025-06-15 17:47:53.821 [main] ERROR dumb.jaider.config.Config - CRITICAL: No component definitions found after attempting to load from file and apply defaults. getDefaultConfigAsJsonObject() might be incomplete or malformed.
+2025-06-15 17:47:53.827 [main] INFO  dumb.jaider.config.ConfigTest - Temp project dir for test: /tmp/junit-9806712313690469302
+2025-06-15 17:47:53.828 [main] INFO  dumb.jaider.config.ConfigTest - Wrote to /tmp/junit-9806712313690469302/.jaider.json:
+{"apiKeys": { "someOtherKey": "someValue" }}
+2025-06-15 17:47:53.828 [main] INFO  dumb.jaider.config.Config - Loading configuration from file: /tmp/junit-9806712313690469302/.jaider.json
+2025-06-15 17:47:53.828 [main] WARN  dumb.jaider.config.Config - No 'components' key found in JSON source. No component definitions loaded from this source.
+2025-06-15 17:47:53.828 [main] INFO  dumb.jaider.config.Config - Successfully loaded and parsed configuration from /tmp/junit-9806712313690469302/.jaider.json.
+2025-06-15 17:47:53.828 [main] ERROR dumb.jaider.config.Config - CRITICAL: No component definitions found after attempting to load from file and apply defaults. getDefaultConfigAsJsonObject() might be incomplete or malformed.
+2025-06-15 17:47:53.834 [main] INFO  dumb.jaider.config.ConfigTest - Temp project dir for test: /tmp/junit-12137907973936829451
+2025-06-15 17:47:53.835 [main] INFO  dumb.jaider.config.ConfigTest - Wrote to /tmp/junit-12137907973936829451/.jaider.json:
+{}
+2025-06-15 17:47:53.835 [main] INFO  dumb.jaider.config.Config - Loading configuration from file: /tmp/junit-12137907973936829451/.jaider.json
+2025-06-15 17:47:53.836 [main] WARN  dumb.jaider.config.Config - No 'components' key found in JSON source. No component definitions loaded from this source.
+2025-06-15 17:47:53.836 [main] INFO  dumb.jaider.config.Config - Successfully loaded and parsed configuration from /tmp/junit-12137907973936829451/.jaider.json.
+2025-06-15 17:47:53.836 [main] ERROR dumb.jaider.config.Config - CRITICAL: No component definitions found after attempting to load from file and apply defaults. getDefaultConfigAsJsonObject() might be incomplete or malformed.
+2025-06-15 17:47:53.844 [main] INFO  dumb.jaider.config.ConfigTest - Temp project dir for test: /tmp/junit-5661262731644790889
+2025-06-15 17:47:53.845 [main] INFO  dumb.jaider.config.ConfigTest - Wrote to /tmp/junit-5661262731644790889/.jaider.json:
+{
+  "components": [{
+    "id": "userEditComponent",
+    "class": "com.example.UserEdit"
+  }],
+  "ollamaBaseUrl": "http://userhost:8888",
+  "llmProvider": "user-llm-for-editing",
+  "testCommand": "user-test-cmd-ignored",
+  "apiKeys": {
+    "customKey": "USER_CUSTOM",
+    "openai": "USER_EDIT_KEY"
+  },
+  "runCommand": "user-run-cmd-for-editing"
+}
+2025-06-15 17:47:53.845 [main] INFO  dumb.jaider.config.Config - Loading configuration from file: /tmp/junit-5661262731644790889/.jaider.json
+2025-06-15 17:47:53.845 [main] INFO  dumb.jaider.config.Config - Attempting to load 1 component definitions from provided JSON.
+2025-06-15 17:47:53.845 [main] INFO  dumb.jaider.config.Config - Successfully populated 1 component definitions from JSON source.
+2025-06-15 17:47:53.846 [main] INFO  dumb.jaider.config.Config - Successfully loaded and parsed configuration from /tmp/junit-5661262731644790889/.jaider.json.
+2025-06-15 17:47:53.846 [main] INFO  dumb.jaider.config.Config - Initializing DependencyInjector with 1 component definitions.
+2025-06-15 17:47:53.848 [main] INFO  dumb.jaider.config.Config - Successfully loaded default configuration from /default-config.json
+2025-06-15 17:47:53.853 [main] INFO  dumb.jaider.config.ConfigTest - Temp project dir for test: /tmp/junit-1528662409031520431
+2025-06-15 17:47:53.853 [main] INFO  dumb.jaider.config.ConfigTest - Wrote to /tmp/junit-1528662409031520431/.jaider.json:
+{
+  "components": [{
+    "id": "customComponent",
+    "class": "com.example.Custom"
+  }],
+  "ollamaBaseUrl": "http://customhost:12345",
+  "llmProvider": "test-custom-llm",
+  "apiKeys": {"openai": "USER_OPENAI_KEY_PARTIAL"}
+}
+2025-06-15 17:47:53.853 [main] INFO  dumb.jaider.config.Config - Loading configuration from file: /tmp/junit-1528662409031520431/.jaider.json
+2025-06-15 17:47:53.854 [main] INFO  dumb.jaider.config.Config - Attempting to load 1 component definitions from provided JSON.
+2025-06-15 17:47:53.854 [main] INFO  dumb.jaider.config.Config - Successfully populated 1 component definitions from JSON source.
+2025-06-15 17:47:53.854 [main] INFO  dumb.jaider.config.Config - Successfully loaded and parsed configuration from /tmp/junit-1528662409031520431/.jaider.json.
+2025-06-15 17:47:53.854 [main] INFO  dumb.jaider.config.Config - Initializing DependencyInjector with 1 component definitions.
+2025-06-15 17:47:54.189 [main] INFO  d.j.s.StaticAnalysisService - Executing static analysis command: semgrep scan --config auto --json /path/to/target
+2025-06-15 17:47:54.203 [main] INFO  d.j.s.StaticAnalysisService - Semgrep execution finished with exit code: 0. Output length: 16
+2025-06-15 17:47:54.226 [main] INFO  d.j.s.StaticAnalysisService - Executing static analysis command: semgrep scan /path/to/target
+2025-06-15 17:47:54.239 [main] INFO  d.j.s.StaticAnalysisService - Executing static analysis command: semgrep scan /path/to/target
+2025-06-15 17:47:54.242 [main] INFO  d.j.s.StaticAnalysisService - Semgrep execution finished with exit code: 0. Output length: 7
+2025-06-15 17:47:54.243 [main] ERROR d.j.s.StaticAnalysisService - Failed to instantiate or use results parser com.example.NonExistentParser for tool Semgrep
+java.lang.ClassNotFoundException: com.example.NonExistentParser
+	at java.base/jdk.internal.loader.BuiltinClassLoader.loadClass(BuiltinClassLoader.java:641)
+	at java.base/jdk.internal.loader.ClassLoaders$AppClassLoader.loadClass(ClassLoaders.java:188)
+	at java.base/java.lang.ClassLoader.loadClass(ClassLoader.java:526)
+	at java.base/java.lang.Class.forName0(Native Method)
+	at java.base/java.lang.Class.forName(Class.java:421)
+	at java.base/java.lang.Class.forName(Class.java:412)
+	at dumb.jaider.staticanalysis.StaticAnalysisService.runAnalysis(StaticAnalysisService.java:118)
+	at dumb.jaider.staticanalysis.StaticAnalysisServiceTest.lambda$runAnalysis_parserClassNotFound$10(StaticAnalysisServiceTest.java:228)
+	at org.junit.jupiter.api.AssertThrows.assertThrows(AssertThrows.java:53)
+	at org.junit.jupiter.api.AssertThrows.assertThrows(AssertThrows.java:35)
+	at org.junit.jupiter.api.Assertions.assertThrows(Assertions.java:3128)
+	at dumb.jaider.staticanalysis.StaticAnalysisServiceTest.runAnalysis_parserClassNotFound(StaticAnalysisServiceTest.java:228)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at org.junit.platform.commons.util.ReflectionUtils.invokeMethod(ReflectionUtils.java:787)
+	at org.junit.platform.commons.support.ReflectionSupport.invokeMethod(ReflectionSupport.java:479)
+	at org.junit.jupiter.engine.execution.MethodInvocation.proceed(MethodInvocation.java:60)
+	at org.junit.jupiter.engine.execution.InvocationInterceptorChain$ValidatingInvocation.proceed(InvocationInterceptorChain.java:131)
+	at org.junit.jupiter.engine.extension.TimeoutExtension.intercept(TimeoutExtension.java:161)
+	at org.junit.jupiter.engine.extension.TimeoutExtension.interceptTestableMethod(TimeoutExtension.java:152)
+	at org.junit.jupiter.engine.extension.TimeoutExtension.interceptTestMethod(TimeoutExtension.java:91)
+	at org.junit.jupiter.engine.execution.InterceptingExecutableInvoker$ReflectiveInterceptorCall.lambda$ofVoidMethod$0(InterceptingExecutableInvoker.java:112)
+	at org.junit.jupiter.engine.execution.InterceptingExecutableInvoker.lambda$invoke$0(InterceptingExecutableInvoker.java:94)
+	at org.junit.jupiter.engine.execution.InvocationInterceptorChain$InterceptedInvocation.proceed(InvocationInterceptorChain.java:106)
+	at org.junit.jupiter.engine.execution.InvocationInterceptorChain.proceed(InvocationInterceptorChain.java:64)
+	at org.junit.jupiter.engine.execution.InvocationInterceptorChain.chainAndInvoke(InvocationInterceptorChain.java:45)
+	at org.junit.jupiter.engine.execution.InvocationInterceptorChain.invoke(InvocationInterceptorChain.java:37)
+	at org.junit.jupiter.engine.execution.InterceptingExecutableInvoker.invoke(InterceptingExecutableInvoker.java:93)
+	at org.junit.jupiter.engine.execution.InterceptingExecutableInvoker.invoke(InterceptingExecutableInvoker.java:87)
+	at org.junit.jupiter.engine.descriptor.TestMethodTestDescriptor.lambda$invokeTestMethod$4(TestMethodTestDescriptor.java:221)
+	at org.junit.platform.engine.support.hierarchical.ThrowableCollector.execute(ThrowableCollector.java:73)
+	at org.junit.jupiter.engine.descriptor.TestMethodTestDescriptor.invokeTestMethod(TestMethodTestDescriptor.java:217)
+	at org.junit.jupiter.engine.descriptor.TestMethodTestDescriptor.execute(TestMethodTestDescriptor.java:159)
+	at org.junit.jupiter.engine.descriptor.TestMethodTestDescriptor.execute(TestMethodTestDescriptor.java:70)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$6(NodeTestTask.java:157)
+	at org.junit.platform.engine.support.hierarchical.ThrowableCollector.execute(ThrowableCollector.java:73)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$8(NodeTestTask.java:147)
+	at org.junit.platform.engine.support.hierarchical.Node.around(Node.java:137)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$9(NodeTestTask.java:145)
+	at org.junit.platform.engine.support.hierarchical.ThrowableCollector.execute(ThrowableCollector.java:73)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.executeRecursively(NodeTestTask.java:144)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.execute(NodeTestTask.java:101)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+	at org.junit.platform.engine.support.hierarchical.SameThreadHierarchicalTestExecutorService.invokeAll(SameThreadHierarchicalTestExecutorService.java:41)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$6(NodeTestTask.java:161)
+	at org.junit.platform.engine.support.hierarchical.ThrowableCollector.execute(ThrowableCollector.java:73)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$8(NodeTestTask.java:147)
+	at org.junit.platform.engine.support.hierarchical.Node.around(Node.java:137)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$9(NodeTestTask.java:145)
+	at org.junit.platform.engine.support.hierarchical.ThrowableCollector.execute(ThrowableCollector.java:73)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.executeRecursively(NodeTestTask.java:144)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.execute(NodeTestTask.java:101)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+	at org.junit.platform.engine.support.hierarchical.SameThreadHierarchicalTestExecutorService.invokeAll(SameThreadHierarchicalTestExecutorService.java:41)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$6(NodeTestTask.java:161)
+	at org.junit.platform.engine.support.hierarchical.ThrowableCollector.execute(ThrowableCollector.java:73)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$8(NodeTestTask.java:147)
+	at org.junit.platform.engine.support.hierarchical.Node.around(Node.java:137)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$9(NodeTestTask.java:145)
+	at org.junit.platform.engine.support.hierarchical.ThrowableCollector.execute(ThrowableCollector.java:73)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.executeRecursively(NodeTestTask.java:144)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.execute(NodeTestTask.java:101)
+	at org.junit.platform.engine.support.hierarchical.SameThreadHierarchicalTestExecutorService.submit(SameThreadHierarchicalTestExecutorService.java:35)
+	at org.junit.platform.engine.support.hierarchical.HierarchicalTestExecutor.execute(HierarchicalTestExecutor.java:57)
+	at org.junit.platform.engine.support.hierarchical.HierarchicalTestEngine.execute(HierarchicalTestEngine.java:54)
+	at org.junit.platform.launcher.core.EngineExecutionOrchestrator.executeEngine(EngineExecutionOrchestrator.java:230)
+	at org.junit.platform.launcher.core.EngineExecutionOrchestrator.failOrExecuteEngine(EngineExecutionOrchestrator.java:204)
+	at org.junit.platform.launcher.core.EngineExecutionOrchestrator.execute(EngineExecutionOrchestrator.java:172)
+	at org.junit.platform.launcher.core.EngineExecutionOrchestrator.execute(EngineExecutionOrchestrator.java:101)
+	at org.junit.platform.launcher.core.EngineExecutionOrchestrator.lambda$execute$0(EngineExecutionOrchestrator.java:64)
+	at org.junit.platform.launcher.core.EngineExecutionOrchestrator.withInterceptedStreams(EngineExecutionOrchestrator.java:150)
+	at org.junit.platform.launcher.core.EngineExecutionOrchestrator.execute(EngineExecutionOrchestrator.java:63)
+	at org.junit.platform.launcher.core.DefaultLauncher.execute(DefaultLauncher.java:109)
+	at org.junit.platform.launcher.core.DefaultLauncher.execute(DefaultLauncher.java:91)
+	at org.junit.platform.launcher.core.DelegatingLauncher.execute(DelegatingLauncher.java:47)
+	at org.junit.platform.launcher.core.InterceptingLauncher.lambda$execute$1(InterceptingLauncher.java:39)
+	at org.junit.platform.launcher.core.ClasspathAlignmentCheckingLauncherInterceptor.intercept(ClasspathAlignmentCheckingLauncherInterceptor.java:25)
+	at org.junit.platform.launcher.core.InterceptingLauncher.execute(InterceptingLauncher.java:38)
+	at org.junit.platform.launcher.core.DelegatingLauncher.execute(DelegatingLauncher.java:47)
+	at org.apache.maven.surefire.junitplatform.LazyLauncher.execute(LazyLauncher.java:56)
+	at org.apache.maven.surefire.junitplatform.JUnitPlatformProvider.execute(JUnitPlatformProvider.java:194)
+	at org.apache.maven.surefire.junitplatform.JUnitPlatformProvider.invokeAllTests(JUnitPlatformProvider.java:150)
+	at org.apache.maven.surefire.junitplatform.JUnitPlatformProvider.invoke(JUnitPlatformProvider.java:124)
+	at org.apache.maven.surefire.booter.ForkedBooter.runSuitesInProcess(ForkedBooter.java:385)
+	at org.apache.maven.surefire.booter.ForkedBooter.execute(ForkedBooter.java:162)
+	at org.apache.maven.surefire.booter.ForkedBooter.run(ForkedBooter.java:507)
+	at org.apache.maven.surefire.booter.ForkedBooter.main(ForkedBooter.java:495)
+2025-06-15 17:47:54.258 [main] INFO  d.j.s.StaticAnalysisService - Executing static analysis command: rawtool /path/to/target
+2025-06-15 17:47:54.261 [main] INFO  d.j.s.StaticAnalysisService - RawTool execution finished with exit code: 0. Output length: 39
+2025-06-15 17:47:54.262 [main] WARN  d.j.s.StaticAnalysisService - No results parser class defined for tool: RawTool. Returning raw output if any.
+2025-06-15 17:47:54.272 [main] INFO  d.j.s.StaticAnalysisService - Executing static analysis command: semgrep scan --config custom_rules --json /path/to/target
+2025-06-15 17:47:54.275 [main] INFO  d.j.s.StaticAnalysisService - Semgrep execution finished with exit code: 0. Output length: 16
+2025-06-15 17:47:58.266 [main] WARN  dumb.jaider.vcs.GitService - Not a git repository or git error during isClean check for directory '/tmp/junit-703823207813409859/non-git-repo': repository not found: /tmp/junit-703823207813409859/non-git-repo/.git
+2025-06-15 17:48:52.892 [ForkJoinPool.commonPool-worker-1] ERROR dumb.jaider.commands.IndexCommand - Error during indexing for path 'null': Embedding failed!
+java.lang.RuntimeException: Embedding failed!
+	at dumb.jaider.commands.IndexCommand.lambda$execute$1(IndexCommand.java:72)
+	at java.base/java.util.concurrent.CompletableFuture$AsyncRun.run(CompletableFuture.java:1804)
+	at java.base/java.util.concurrent.CompletableFuture$AsyncRun.exec(CompletableFuture.java:1796)
+	at java.base/java.util.concurrent.ForkJoinTask.doExec(ForkJoinTask.java:387)
+	at java.base/java.util.concurrent.ForkJoinPool$WorkQueue.topLevelExec(ForkJoinPool.java:1312)
+	at java.base/java.util.concurrent.ForkJoinPool.scan(ForkJoinPool.java:1843)
+	at java.base/java.util.concurrent.ForkJoinPool.runWorker(ForkJoinPool.java:1808)
+	at java.base/java.util.concurrent.ForkJoinWorkerThread.run(ForkJoinWorkerThread.java:188)
+2025-06-15 17:48:53.313 [main] INFO  dumb.jaider.config.Config - Loading configuration from file: /app/.jaider.json
+2025-06-15 17:48:53.341 [main] INFO  dumb.jaider.config.Config - Attempting to load 26 component definitions from provided JSON.
+2025-06-15 17:48:53.342 [main] INFO  dumb.jaider.config.Config - Successfully populated 26 component definitions from JSON source.
+2025-06-15 17:48:53.343 [main] INFO  dumb.jaider.config.Config - Successfully loaded and parsed configuration from /app/.jaider.json.
+2025-06-15 17:48:53.345 [main] INFO  dumb.jaider.config.Config - Initializing DependencyInjector with 26 component definitions.
+2025-06-15 17:48:53.349 [main] INFO  dumb.jaider.app.DependencyInjector - Successfully created and cached component: chatMemory
+2025-06-15 17:48:53.352 [main] INFO  dumb.jaider.app.DependencyInjector - Successfully created and cached component: llmProviderFactory
+2025-06-15 17:48:53.918 [main] INFO  dumb.jaider.toolmanager.ToolManager - Found tool descriptor file: src/main/resources/tool-descriptors/dependency-updater-descriptor.json
+2025-06-15 17:48:54.035 [main] INFO  dumb.jaider.toolmanager.ToolManager - Successfully loaded and registered tool descriptor: DependencyUpdater
+2025-06-15 17:48:54.036 [main] INFO  dumb.jaider.toolmanager.ToolManager - Found tool descriptor file: src/main/resources/tool-descriptors/semgrep-descriptor.json
+2025-06-15 17:48:54.037 [main] INFO  dumb.jaider.toolmanager.ToolManager - Successfully loaded and registered tool descriptor: Semgrep
+2025-06-15 17:48:54.037 [main] INFO  dumb.jaider.app.DependencyInjector - Successfully created and cached component: toolManager
+2025-06-15 17:48:54.463 [main] ERROR dumb.jaider.app.App - CRITICAL: Core LLM/DI components could not be initialized. Application cannot function. Error: Failed to initialize tokenizer. Chat model might be null or not a Tokenizer instance.
+dumb.jaider.app.exceptions.TokenizerInitializationException: Failed to initialize tokenizer. Chat model might be null or not a Tokenizer instance.
+	at dumb.jaider.llm.LlmProviderFactory.createTokenizer(LlmProviderFactory.java:66)
+	at dumb.jaider.app.App.update(App.java:142)
+	at dumb.jaider.app.App.<init>(App.java:93)
+	at dumb.jaider.commands.IndexCommandIntegrationTest.setUp(IndexCommandIntegrationTest.java:102)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at org.junit.platform.commons.util.ReflectionUtils.invokeMethod(ReflectionUtils.java:787)
+	at org.junit.platform.commons.support.ReflectionSupport.invokeMethod(ReflectionSupport.java:479)
+	at org.junit.jupiter.engine.execution.MethodInvocation.proceed(MethodInvocation.java:60)
+	at org.junit.jupiter.engine.execution.InvocationInterceptorChain$ValidatingInvocation.proceed(InvocationInterceptorChain.java:131)
+	at org.junit.jupiter.engine.extension.TimeoutExtension.intercept(TimeoutExtension.java:161)
+	at org.junit.jupiter.engine.extension.TimeoutExtension.interceptLifecycleMethod(TimeoutExtension.java:133)
+	at org.junit.jupiter.engine.extension.TimeoutExtension.interceptBeforeEachMethod(TimeoutExtension.java:83)
+	at org.junit.jupiter.engine.execution.InterceptingExecutableInvoker$ReflectiveInterceptorCall.lambda$ofVoidMethod$0(InterceptingExecutableInvoker.java:112)
+	at org.junit.jupiter.engine.execution.InterceptingExecutableInvoker.lambda$invoke$0(InterceptingExecutableInvoker.java:94)
+	at org.junit.jupiter.engine.execution.InvocationInterceptorChain$InterceptedInvocation.proceed(InvocationInterceptorChain.java:106)
+	at org.junit.jupiter.engine.execution.InvocationInterceptorChain.proceed(InvocationInterceptorChain.java:64)
+	at org.junit.jupiter.engine.execution.InvocationInterceptorChain.chainAndInvoke(InvocationInterceptorChain.java:45)
+	at org.junit.jupiter.engine.execution.InvocationInterceptorChain.invoke(InvocationInterceptorChain.java:37)
+	at org.junit.jupiter.engine.execution.InterceptingExecutableInvoker.invoke(InterceptingExecutableInvoker.java:93)
+	at org.junit.jupiter.engine.execution.InterceptingExecutableInvoker.invoke(InterceptingExecutableInvoker.java:87)
+	at org.junit.jupiter.engine.descriptor.ClassBasedTestDescriptor.invokeMethodInExtensionContext(ClassBasedTestDescriptor.java:547)
+	at org.junit.jupiter.engine.descriptor.ClassBasedTestDescriptor.lambda$synthesizeBeforeEachMethodAdapter$20(ClassBasedTestDescriptor.java:532)
+	at org.junit.jupiter.engine.descriptor.TestMethodTestDescriptor.lambda$invokeBeforeEachMethods$2(TestMethodTestDescriptor.java:193)
+	at org.junit.jupiter.engine.descriptor.CallbackSupport.lambda$invokeBeforeCallbacks$0(CallbackSupport.java:34)
+	at org.junit.platform.engine.support.hierarchical.ThrowableCollector.execute(ThrowableCollector.java:73)
+	at org.junit.jupiter.engine.descriptor.CallbackSupport.invokeBeforeCallbacks(CallbackSupport.java:34)
+	at org.junit.jupiter.engine.descriptor.TestMethodTestDescriptor.invokeBeforeEachMethods(TestMethodTestDescriptor.java:191)
+	at org.junit.jupiter.engine.descriptor.TestMethodTestDescriptor.execute(TestMethodTestDescriptor.java:155)
+	at org.junit.jupiter.engine.descriptor.TestMethodTestDescriptor.execute(TestMethodTestDescriptor.java:70)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$6(NodeTestTask.java:157)
+	at org.junit.platform.engine.support.hierarchical.ThrowableCollector.execute(ThrowableCollector.java:73)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$8(NodeTestTask.java:147)
+	at org.junit.platform.engine.support.hierarchical.Node.around(Node.java:137)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$9(NodeTestTask.java:145)
+	at org.junit.platform.engine.support.hierarchical.ThrowableCollector.execute(ThrowableCollector.java:73)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.executeRecursively(NodeTestTask.java:144)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.execute(NodeTestTask.java:101)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+	at org.junit.platform.engine.support.hierarchical.SameThreadHierarchicalTestExecutorService.invokeAll(SameThreadHierarchicalTestExecutorService.java:41)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$6(NodeTestTask.java:161)
+	at org.junit.platform.engine.support.hierarchical.ThrowableCollector.execute(ThrowableCollector.java:73)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$8(NodeTestTask.java:147)
+	at org.junit.platform.engine.support.hierarchical.Node.around(Node.java:137)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$9(NodeTestTask.java:145)
+	at org.junit.platform.engine.support.hierarchical.ThrowableCollector.execute(ThrowableCollector.java:73)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.executeRecursively(NodeTestTask.java:144)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.execute(NodeTestTask.java:101)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+	at org.junit.platform.engine.support.hierarchical.SameThreadHierarchicalTestExecutorService.invokeAll(SameThreadHierarchicalTestExecutorService.java:41)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$6(NodeTestTask.java:161)
+	at org.junit.platform.engine.support.hierarchical.ThrowableCollector.execute(ThrowableCollector.java:73)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$8(NodeTestTask.java:147)
+	at org.junit.platform.engine.support.hierarchical.Node.around(Node.java:137)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$9(NodeTestTask.java:145)
+	at org.junit.platform.engine.support.hierarchical.ThrowableCollector.execute(ThrowableCollector.java:73)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.executeRecursively(NodeTestTask.java:144)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.execute(NodeTestTask.java:101)
+	at org.junit.platform.engine.support.hierarchical.SameThreadHierarchicalTestExecutorService.submit(SameThreadHierarchicalTestExecutorService.java:35)
+	at org.junit.platform.engine.support.hierarchical.HierarchicalTestExecutor.execute(HierarchicalTestExecutor.java:57)
+	at org.junit.platform.engine.support.hierarchical.HierarchicalTestEngine.execute(HierarchicalTestEngine.java:54)
+	at org.junit.platform.launcher.core.EngineExecutionOrchestrator.executeEngine(EngineExecutionOrchestrator.java:230)
+	at org.junit.platform.launcher.core.EngineExecutionOrchestrator.failOrExecuteEngine(EngineExecutionOrchestrator.java:204)
+	at org.junit.platform.launcher.core.EngineExecutionOrchestrator.execute(EngineExecutionOrchestrator.java:172)
+	at org.junit.platform.launcher.core.EngineExecutionOrchestrator.execute(EngineExecutionOrchestrator.java:101)
+	at org.junit.platform.launcher.core.EngineExecutionOrchestrator.lambda$execute$0(EngineExecutionOrchestrator.java:64)
+	at org.junit.platform.launcher.core.EngineExecutionOrchestrator.withInterceptedStreams(EngineExecutionOrchestrator.java:150)
+	at org.junit.platform.launcher.core.EngineExecutionOrchestrator.execute(EngineExecutionOrchestrator.java:63)
+	at org.junit.platform.launcher.core.DefaultLauncher.execute(DefaultLauncher.java:109)
+	at org.junit.platform.launcher.core.DefaultLauncher.execute(DefaultLauncher.java:91)
+	at org.junit.platform.launcher.core.DelegatingLauncher.execute(DelegatingLauncher.java:47)
+	at org.junit.platform.launcher.core.InterceptingLauncher.lambda$execute$1(InterceptingLauncher.java:39)
+	at org.junit.platform.launcher.core.ClasspathAlignmentCheckingLauncherInterceptor.intercept(ClasspathAlignmentCheckingLauncherInterceptor.java:25)
+	at org.junit.platform.launcher.core.InterceptingLauncher.execute(InterceptingLauncher.java:38)
+	at org.junit.platform.launcher.core.DelegatingLauncher.execute(DelegatingLauncher.java:47)
+	at org.apache.maven.surefire.junitplatform.LazyLauncher.execute(LazyLauncher.java:56)
+	at org.apache.maven.surefire.junitplatform.JUnitPlatformProvider.execute(JUnitPlatformProvider.java:194)
+	at org.apache.maven.surefire.junitplatform.JUnitPlatformProvider.invokeAllTests(JUnitPlatformProvider.java:150)
+	at org.apache.maven.surefire.junitplatform.JUnitPlatformProvider.invoke(JUnitPlatformProvider.java:124)
+	at org.apache.maven.surefire.booter.ForkedBooter.runSuitesInProcess(ForkedBooter.java:385)
+	at org.apache.maven.surefire.booter.ForkedBooter.execute(ForkedBooter.java:162)
+	at org.apache.maven.surefire.booter.ForkedBooter.run(ForkedBooter.java:507)
+	at org.apache.maven.surefire.booter.ForkedBooter.main(ForkedBooter.java:495)
+2025-06-15 17:48:54.467 [main] ERROR dumb.jaider.app.App - CRITICAL FAILURE DURING APP INITIALIZATION (from update call in constructor): CRITICAL: Core LLM/DI components could not be initialized. Application cannot function. Error: Failed to initialize tokenizer. Chat model might be null or not a Tokenizer instance.
+dumb.jaider.app.exceptions.TokenizerInitializationException: Failed to initialize tokenizer. Chat model might be null or not a Tokenizer instance.
+	at dumb.jaider.llm.LlmProviderFactory.createTokenizer(LlmProviderFactory.java:66)
+	at dumb.jaider.app.App.update(App.java:142)
+	... 81 common frames omitted
+Wrapped by: java.lang.RuntimeException: CRITICAL: Core LLM/DI components could not be initialized. Application cannot function. Error: Failed to initialize tokenizer. Chat model might be null or not a Tokenizer instance.
+	at dumb.jaider.app.App.update(App.java:166)
+	at dumb.jaider.app.App.<init>(App.java:93)
+	at dumb.jaider.commands.IndexCommandIntegrationTest.setUp(IndexCommandIntegrationTest.java:102)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at org.junit.platform.commons.util.ReflectionUtils.invokeMethod(ReflectionUtils.java:787)
+	at org.junit.platform.commons.support.ReflectionSupport.invokeMethod(ReflectionSupport.java:479)
+	at org.junit.jupiter.engine.execution.MethodInvocation.proceed(MethodInvocation.java:60)
+	at org.junit.jupiter.engine.execution.InvocationInterceptorChain$ValidatingInvocation.proceed(InvocationInterceptorChain.java:131)
+	at org.junit.jupiter.engine.extension.TimeoutExtension.intercept(TimeoutExtension.java:161)
+	at org.junit.jupiter.engine.extension.TimeoutExtension.interceptLifecycleMethod(TimeoutExtension.java:133)
+	at org.junit.jupiter.engine.extension.TimeoutExtension.interceptBeforeEachMethod(TimeoutExtension.java:83)
+	at org.junit.jupiter.engine.execution.InterceptingExecutableInvoker$ReflectiveInterceptorCall.lambda$ofVoidMethod$0(InterceptingExecutableInvoker.java:112)
+	at org.junit.jupiter.engine.execution.InterceptingExecutableInvoker.lambda$invoke$0(InterceptingExecutableInvoker.java:94)
+	at org.junit.jupiter.engine.execution.InvocationInterceptorChain$InterceptedInvocation.proceed(InvocationInterceptorChain.java:106)
+	at org.junit.jupiter.engine.execution.InvocationInterceptorChain.proceed(InvocationInterceptorChain.java:64)
+	at org.junit.jupiter.engine.execution.InvocationInterceptorChain.chainAndInvoke(InvocationInterceptorChain.java:45)
+	at org.junit.jupiter.engine.execution.InvocationInterceptorChain.invoke(InvocationInterceptorChain.java:37)
+	at org.junit.jupiter.engine.execution.InterceptingExecutableInvoker.invoke(InterceptingExecutableInvoker.java:93)
+	at org.junit.jupiter.engine.execution.InterceptingExecutableInvoker.invoke(InterceptingExecutableInvoker.java:87)
+	at org.junit.jupiter.engine.descriptor.ClassBasedTestDescriptor.invokeMethodInExtensionContext(ClassBasedTestDescriptor.java:547)
+	at org.junit.jupiter.engine.descriptor.ClassBasedTestDescriptor.lambda$synthesizeBeforeEachMethodAdapter$20(ClassBasedTestDescriptor.java:532)
+	at org.junit.jupiter.engine.descriptor.TestMethodTestDescriptor.lambda$invokeBeforeEachMethods$2(TestMethodTestDescriptor.java:193)
+	at org.junit.jupiter.engine.descriptor.CallbackSupport.lambda$invokeBeforeCallbacks$0(CallbackSupport.java:34)
+	at org.junit.platform.engine.support.hierarchical.ThrowableCollector.execute(ThrowableCollector.java:73)
+	at org.junit.jupiter.engine.descriptor.CallbackSupport.invokeBeforeCallbacks(CallbackSupport.java:34)
+	at org.junit.jupiter.engine.descriptor.TestMethodTestDescriptor.invokeBeforeEachMethods(TestMethodTestDescriptor.java:191)
+	at org.junit.jupiter.engine.descriptor.TestMethodTestDescriptor.execute(TestMethodTestDescriptor.java:155)
+	at org.junit.jupiter.engine.descriptor.TestMethodTestDescriptor.execute(TestMethodTestDescriptor.java:70)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$6(NodeTestTask.java:157)
+	at org.junit.platform.engine.support.hierarchical.ThrowableCollector.execute(ThrowableCollector.java:73)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$8(NodeTestTask.java:147)
+	at org.junit.platform.engine.support.hierarchical.Node.around(Node.java:137)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$9(NodeTestTask.java:145)
+	at org.junit.platform.engine.support.hierarchical.ThrowableCollector.execute(ThrowableCollector.java:73)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.executeRecursively(NodeTestTask.java:144)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.execute(NodeTestTask.java:101)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+	at org.junit.platform.engine.support.hierarchical.SameThreadHierarchicalTestExecutorService.invokeAll(SameThreadHierarchicalTestExecutorService.java:41)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$6(NodeTestTask.java:161)
+	at org.junit.platform.engine.support.hierarchical.ThrowableCollector.execute(ThrowableCollector.java:73)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$8(NodeTestTask.java:147)
+	at org.junit.platform.engine.support.hierarchical.Node.around(Node.java:137)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$9(NodeTestTask.java:145)
+	at org.junit.platform.engine.support.hierarchical.ThrowableCollector.execute(ThrowableCollector.java:73)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.executeRecursively(NodeTestTask.java:144)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.execute(NodeTestTask.java:101)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+	at org.junit.platform.engine.support.hierarchical.SameThreadHierarchicalTestExecutorService.invokeAll(SameThreadHierarchicalTestExecutorService.java:41)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$6(NodeTestTask.java:161)
+	at org.junit.platform.engine.support.hierarchical.ThrowableCollector.execute(ThrowableCollector.java:73)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$8(NodeTestTask.java:147)
+	at org.junit.platform.engine.support.hierarchical.Node.around(Node.java:137)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$9(NodeTestTask.java:145)
+	at org.junit.platform.engine.support.hierarchical.ThrowableCollector.execute(ThrowableCollector.java:73)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.executeRecursively(NodeTestTask.java:144)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.execute(NodeTestTask.java:101)
+	at org.junit.platform.engine.support.hierarchical.SameThreadHierarchicalTestExecutorService.submit(SameThreadHierarchicalTestExecutorService.java:35)
+	at org.junit.platform.engine.support.hierarchical.HierarchicalTestExecutor.execute(HierarchicalTestExecutor.java:57)
+	at org.junit.platform.engine.support.hierarchical.HierarchicalTestEngine.execute(HierarchicalTestEngine.java:54)
+	at org.junit.platform.launcher.core.EngineExecutionOrchestrator.executeEngine(EngineExecutionOrchestrator.java:230)
+	at org.junit.platform.launcher.core.EngineExecutionOrchestrator.failOrExecuteEngine(EngineExecutionOrchestrator.java:204)
+	at org.junit.platform.launcher.core.EngineExecutionOrchestrator.execute(EngineExecutionOrchestrator.java:172)
+	at org.junit.platform.launcher.core.EngineExecutionOrchestrator.execute(EngineExecutionOrchestrator.java:101)
+	at org.junit.platform.launcher.core.EngineExecutionOrchestrator.lambda$execute$0(EngineExecutionOrchestrator.java:64)
+	at org.junit.platform.launcher.core.EngineExecutionOrchestrator.withInterceptedStreams(EngineExecutionOrchestrator.java:150)
+	at org.junit.platform.launcher.core.EngineExecutionOrchestrator.execute(EngineExecutionOrchestrator.java:63)
+	at org.junit.platform.launcher.core.DefaultLauncher.execute(DefaultLauncher.java:109)
+	at org.junit.platform.launcher.core.DefaultLauncher.execute(DefaultLauncher.java:91)
+	at org.junit.platform.launcher.core.DelegatingLauncher.execute(DelegatingLauncher.java:47)
+	at org.junit.platform.launcher.core.InterceptingLauncher.lambda$execute$1(InterceptingLauncher.java:39)
+	at org.junit.platform.launcher.core.ClasspathAlignmentCheckingLauncherInterceptor.intercept(ClasspathAlignmentCheckingLauncherInterceptor.java:25)
+	at org.junit.platform.launcher.core.InterceptingLauncher.execute(InterceptingLauncher.java:38)
+	at org.junit.platform.launcher.core.DelegatingLauncher.execute(DelegatingLauncher.java:47)
+	at org.apache.maven.surefire.junitplatform.LazyLauncher.execute(LazyLauncher.java:56)
+	at org.apache.maven.surefire.junitplatform.JUnitPlatformProvider.execute(JUnitPlatformProvider.java:194)
+	at org.apache.maven.surefire.junitplatform.JUnitPlatformProvider.invokeAllTests(JUnitPlatformProvider.java:150)
+	at org.apache.maven.surefire.junitplatform.JUnitPlatformProvider.invoke(JUnitPlatformProvider.java:124)
+	at org.apache.maven.surefire.booter.ForkedBooter.runSuitesInProcess(ForkedBooter.java:385)
+	at org.apache.maven.surefire.booter.ForkedBooter.execute(ForkedBooter.java:162)
+	at org.apache.maven.surefire.booter.ForkedBooter.run(ForkedBooter.java:507)
+	at org.apache.maven.surefire.booter.ForkedBooter.main(ForkedBooter.java:495)
+2025-06-15 17:48:54.490 [main] INFO  dumb.jaider.app.DependencyInjector - Successfully created and cached component: compA_ref_id
+2025-06-15 17:48:54.496 [main] INFO  dumb.jaider.app.DependencyInjector - Successfully created and cached component: compMixed_id
+2025-06-15 17:48:54.502 [main] INFO  dumb.jaider.app.DependencyInjector - Successfully created and cached component: compA_cache_test_id
+2025-06-15 17:48:54.502 [main] INFO  dumb.jaider.app.DependencyInjector - Successfully created and cached component: compA_cache_test_id
+2025-06-15 17:48:54.538 [main] INFO  dumb.jaider.app.DependencyInjector - Successfully created and cached component: listRefComp_id
+2025-06-15 17:48:54.539 [main] INFO  dumb.jaider.app.DependencyInjector - Successfully created and cached component: compA_for_list1
+2025-06-15 17:48:54.541 [main] INFO  dumb.jaider.app.DependencyInjector - Successfully created and cached component: compA_for_list2
+2025-06-15 17:48:54.553 [main] INFO  dumb.jaider.app.DependencyInjector - Successfully created and cached component: listMixedComp_id
+2025-06-15 17:48:54.557 [main] INFO  dumb.jaider.app.DependencyInjector - Successfully created and cached component: factoryListArgs_id
+2025-06-15 17:48:54.561 [main] INFO  dumb.jaider.app.DependencyInjector - Successfully created and cached component: compA_dep_id
+2025-06-15 17:48:54.562 [main] INFO  dumb.jaider.app.DependencyInjector - Successfully created and cached component: compB_with_dep_id
+2025-06-15 17:48:54.565 [main] INFO  dumb.jaider.app.DependencyInjector - Successfully created and cached component: manualCompA_id
+2025-06-15 17:48:54.573 [main] INFO  dumb.jaider.app.DependencyInjector - Successfully created and cached component: compA_type_mismatch
+2025-06-15 17:48:54.576 [main] INFO  dumb.jaider.app.DependencyInjector - Successfully created and cached component: factoryNoArgs_id
+2025-06-15 17:48:54.585 [main] INFO  dumb.jaider.app.DependencyInjector - Successfully created and cached component: listValComp_id
+2025-06-15 17:48:54.589 [main] INFO  dumb.jaider.app.DependencyInjector - Successfully created and cached component: compA_for_factory_id
+2025-06-15 17:48:54.590 [main] INFO  dumb.jaider.app.DependencyInjector - Successfully created and cached component: factoryWithArgs_id
+2025-06-15 17:48:54.602 [main] INFO  dumb.jaider.app.DependencyInjector - Successfully created and cached component: compVal_id
+2025-06-15 17:48:54.604 [main] INFO  dumb.jaider.app.DependencyInjector - Successfully created and cached component: compA_id
+2025-06-15 17:48:55.496 [main] INFO  dumb.jaider.config.ConfigTest - Temp project dir for test: /tmp/junit-9238188034181667208
+2025-06-15 17:48:55.497 [main] INFO  dumb.jaider.config.ConfigTest - Wrote to /tmp/junit-9238188034181667208/.jaider.json:
+{
+  "apiKeys": {"openai": "KEY_FROM_APIKEYS_MAP"},
+  "openaiApiKey": "KEY_FROM_SPECIFIC_FIELD"
+}
+2025-06-15 17:48:55.498 [main] INFO  dumb.jaider.config.Config - Loading configuration from file: /tmp/junit-9238188034181667208/.jaider.json
+2025-06-15 17:48:55.498 [main] WARN  dumb.jaider.config.Config - No 'components' key found in JSON source. No component definitions loaded from this source.
+2025-06-15 17:48:55.498 [main] INFO  dumb.jaider.config.Config - Successfully loaded and parsed configuration from /tmp/junit-9238188034181667208/.jaider.json.
+2025-06-15 17:48:55.498 [main] ERROR dumb.jaider.config.Config - CRITICAL: No component definitions found after attempting to load from file and apply defaults. getDefaultConfigAsJsonObject() might be incomplete or malformed.
+2025-06-15 17:48:55.564 [main] INFO  dumb.jaider.config.ConfigTest - Temp project dir for test: /tmp/junit-11940955128965148948
+2025-06-15 17:48:55.565 [main] INFO  dumb.jaider.config.Config - Config file /tmp/junit-11940955128965148948/.jaider.json not found.
+2025-06-15 17:48:55.567 [main] WARN  dumb.jaider.config.Config - Applying and writing default configuration to /tmp/junit-11940955128965148948/.jaider.json.
+2025-06-15 17:48:55.568 [main] INFO  dumb.jaider.config.Config - Successfully loaded default configuration from /default-config.json
+2025-06-15 17:48:55.569 [main] INFO  dumb.jaider.config.Config - Attempting to load 26 component definitions from provided JSON.
+2025-06-15 17:48:55.569 [main] INFO  dumb.jaider.config.Config - Successfully populated 26 component definitions from JSON source.
+2025-06-15 17:48:55.570 [main] INFO  dumb.jaider.config.Config - Written default configuration to: /tmp/junit-11940955128965148948/.jaider.json
+2025-06-15 17:48:55.570 [main] INFO  dumb.jaider.config.Config - Initializing DependencyInjector with 26 component definitions.
+2025-06-15 17:48:55.576 [main] INFO  dumb.jaider.config.Config - Successfully loaded default configuration from /default-config.json
+2025-06-15 17:48:55.588 [main] INFO  dumb.jaider.config.ConfigTest - Temp project dir for test: /tmp/junit-5435481338274010356
+2025-06-15 17:48:55.589 [main] INFO  dumb.jaider.config.Config - Config file /tmp/junit-5435481338274010356/.jaider.json not found.
+2025-06-15 17:48:55.589 [main] WARN  dumb.jaider.config.Config - Applying and writing default configuration to /tmp/junit-5435481338274010356/.jaider.json.
+2025-06-15 17:48:55.591 [main] INFO  dumb.jaider.config.Config - Successfully loaded default configuration from /default-config.json
+2025-06-15 17:48:55.591 [main] INFO  dumb.jaider.config.Config - Attempting to load 26 component definitions from provided JSON.
+2025-06-15 17:48:55.592 [main] INFO  dumb.jaider.config.Config - Successfully populated 26 component definitions from JSON source.
+2025-06-15 17:48:55.593 [main] INFO  dumb.jaider.config.Config - Written default configuration to: /tmp/junit-5435481338274010356/.jaider.json
+2025-06-15 17:48:55.594 [main] INFO  dumb.jaider.config.Config - Initializing DependencyInjector with 26 component definitions.
+2025-06-15 17:48:55.594 [main] INFO  dumb.jaider.config.ConfigTest - Read from /tmp/junit-5435481338274010356/.jaider.json:
+{
+  "components": [
+    {
+      "staticFactoryArgs": [{
+        "type": "int",
+        "value": 20
+      }],
+      "staticFactoryMethod": "withMaxMessages",
+      "id": "chatMemory",
+      "class": "dev.langchain4j.memory.chat.MessageWindowChatMemory"
+    },
+    {
+      "constructorArgs": [
+        {"ref": "appConfig"},
+        {"ref": "jaiderModel"}
+      ],
+      "id": "llmProviderFactory",
+      "class": "dumb.jaider.llm.LlmProviderFactory"
+    },
+    {
+      "constructorArgs": [{
+        "type": "java.lang.String",
+        "value": "src/main/resources/tool-descriptors"
+      }],
+      "id": "toolManager",
+      "class": "dumb.jaider.toolmanager.ToolManager"
+    },
+    {
+      "constructorArgs": [
+        {"ref": "jaiderModel"},
+        {"ref": "appConfig"},
+        {"ref": "appEmbeddingModel"}
+      ],
+      "id": "standardTools",
+      "class": "dumb.jaider.tools.StandardTools"
+    },
+    {
+      "id": "parserRegistry",
+      "class": "dumb.jaider.refactoring.ParserRegistry"
+    },
+    {
+      "constructorArgs": [{"ref": "parserRegistry"}],
+      "id": "refactoringService",
+      "class": "dumb.jaider.refactoring.RefactoringService"
+    },
+    {
+      "constructorArgs": [{"ref": "refactoringService"}],
+      "id": "smartRenameTool",
+      "class": "dumb.jaider.tools.SmartRenameTool"
+    },
+    {
+      "constructorArgs": [{"ref": "jaiderModel"}],
+      "id": "listContextFilesTool",
+      "class": "dumb.jaider.tools.ListContextFilesTool"
+    },
+    {
+      "constructorArgs": [{"ref": "toolManager"}],
+      "id": "staticAnalysisService",
+      "class": "dumb.jaider.staticanalysis.StaticAnalysisService"
+    },
+    {
+      "constructorArgs": [
+        {"ref": "staticAnalysisService"},
+        {"ref": "jaiderModel"}
+      ],
+      "id": "analysisTools",
+      "class": "dumb.jaider.tools.AnalysisTools"
+    },
+    {
+      "id": "userInterfaceService",
+      "class": "dumb.jaider.ui.CommandLineUserInterfaceService"
+    },
+    {
+      "id": "gitService",
+      "class": "dumb.jaider.service.LocalGitService"
+    },
+    {
+      "id": "buildManagerService",
+      "class": "dumb.jaider.service.BuildManagerService"
+    },
+    {
+      "id": "restartService",
+      "class": "dumb.jaider.service.BasicRestartService"
+    },
+    {
+      "constructorArgs": [
+        {"ref": "jaiderModel"},
+        {"ref": "userInterfaceService"},
+        {"ref": "buildManagerService"},
+        {"ref": "gitService"},
+        {"ref": "restartService"},
+        {"ref": "appConfig"}
+      ],
+      "id": "selfUpdateOrchestratorService",
+      "class": "dumb.jaider.service.SelfUpdateOrchestratorService"
+    },
+    {
+      "constructorArgs": [
+        {"ref": "jaiderModel"},
+        {"ref": "selfUpdateOrchestratorService"}
+      ],
+      "id": "jaiderTools",
+      "class": "dumb.jaider.tools.JaiderTools"
+    },
+    {
+      "constructorArgs": [
+        {"ref": "appChatLanguageModel"},
+        {"ref": "chatMemory"},
+        {"list": [
+          {"ref": "standardTools"},
+          {"ref": "jaiderTools"},
+          {"ref": "smartRenameTool"},
+          {"ref": "analysisTools"},
+          {"ref": "listContextFilesTool"}
+        ]},
+        {
+          "type": "java.lang.String",
+          "value": "You are a super-intelligent AI developer named Jaider. Your goal is to help users build and modify software projects by applying changes directly to their codebase. When a user asks for a change, understand the request, identify the files to modify, and then use the 'applyDiff' tool to provide the necessary changes in the diff format. Always ensure your diffs are correct and directly applicable. If you need to read a file, use 'readFile'. If you need to list files, use 'listFiles'. If a user asks you to add a file to context, use 'addFilesToContext'. If asked to remove, use 'removeFilesFromContext'. If you need to create a new file, use 'createFile'. Do not ask the user to make changes manually. You are empowered to make them directly. Be proactive and precise. For complex tasks, break them down into smaller, manageable steps, applying diffs for each. Always provide a commit message with your diffs. State: END_OF_PLAN at the end of your plan. Do not use it anywhere else. If a user asks you to do something that is not a coding task, or if it is a very complex task that you are not sure how to do, or if it is a task that is too risky, you should decline the request and explain why. You should be able to update any file, including configuration files like pom.xml or build.gradle, or JSON files. Use the 'DependencyUpdater' tool to check for and apply dependency updates to pom.xml when the user asks for it. If you need to rename files or directories, use the 'renameFileOrDirectory' tool. If you need to perform a smart rename of a symbol (class, method, variable) across multiple files, use the 'smartRename' tool. If you need to find relevant code snippets, use the 'findRelevantCode' tool. If you need to analyze code for issues, use the 'analyzeCode' tool. Always respond in Markdown format, ensuring any code blocks or diffs are correctly formatted. If you are providing a diff, ensure the diff is enclosed in a ```diff ... ``` block."
+        }
+      ],
+      "id": "coderAgent",
+      "class": "dumb.jaider.agents.CoderAgent"
+    },
+    {
+      "constructorArgs": [
+        {"ref": "appChatLanguageModel"},
+        {"ref": "chatMemory"},
+        {"ref": "standardTools"}
+      ],
+      "id": "architectAgent",
+      "class": "dumb.jaider.agents.ArchitectAgent"
+    },
+    {
+      "constructorArgs": [
+        {"ref": "appChatLanguageModel"},
+        {"ref": "chatMemory"}
+      ],
+      "id": "askAgent",
+      "class": "dumb.jaider.agents.AskAgent"
+    },
+    {
+      "constructorArgs": [{"ref": "toolManager"}],
+      "id": "proactiveSuggestionService",
+      "class": "dumb.jaider.suggestion.ProactiveSuggestionService"
+    },
+    {
+      "constructorArgs": [
+        {"ref": "appConfig"},
+        {"ref": "jaiderModel"},
+        {"ref": "chatMemory"},
+        {"ref": "llmProviderFactory"}
+      ],
+      "id": "agentService",
+      "class": "dumb.jaider.app.AgentService"
+    },
+    {
+      "constructorArgs": [
+        {"ref": "jaiderModel"},
+        {"ref": "chatMemory"},
+        {"ref": "ui"}
+      ],
+      "id": "sessionManager",
+      "class": "dumb.jaider.app.SessionManager"
+    },
+    {
+      "constructorArgs": [
+        {"ref": "app"},
+        {"ref": "agentService"}
+      ],
+      "id": "toolLifecycleManager",
+      "class": "dumb.jaider.app.ToolLifecycleManager"
+    },
+    {
+      "constructorArgs": [
+        {"ref": "appConfig"},
+        {"ref": "jaiderModel"},
+        {"ref": "app"}
+      ],
+      "id": "selfUpdateService",
+      "class": "dumb.jaider.app.SelfUpdateService"
+    },
+    {
+      "constructorArgs": [
+        {"ref": "app"},
+        {"ref": "jaiderModel"},
+        {"ref": "chatMemory"},
+        {"ref": "ui"},
+        {"ref": "agentService"},
+        {"ref": "toolLifecycleManager"},
+        {"ref": "sessionManager"},
+        {"ref": "selfUpdateService"}
+      ],
+      "id": "agentInteractionService",
+      "class": "dumb.jaider.app.AgentInteractionService"
+    },
+    {
+      "constructorArgs": [
+        {"ref": "app"},
+        {"ref": "jaiderModel"},
+        {"ref": "appConfig"},
+        {"ref": "ui"},
+        {"ref": "agentService"},
+        {"ref": "proactiveSuggestionService"},
+        {"ref": "commandsMap"}
+      ],
+      "id": "userInputHandler",
+      "class": "dumb.jaider.app.UserInputHandler"
+    }
+  ],
+  "toolManifestsDir": "src/main/resources/tool-descriptors",
+  "llmProvider": "ollama",
+  "genericOpenaiEmbeddingModelName": "text-embedding-ada-002",
+  "genericOpenaiApiKey": "",
+  "apiKeys": {
+    "openai": "YOUR_OPENAI_API_KEY",
+    "anthropic": "YOUR_ANTHROPIC_API_KEY",
+    "google": "YOUR_GOOGLE_API_KEY",
+    "genericOpenai": "",
+    "tavily": ""
+  },
+  "openaiApiKey": "",
+  "openaiModelName": "gpt-4o-mini",
+  "ollamaBaseUrl": "http://localhost:11434",
+  "genericOpenaiModelName": "local-model",
+  "genericOpenaiBaseUrl": "http://localhost:8080/v1",
+  "geminiModelName": "gemini-1.5-flash-latest",
+  "geminiApiKey": "",
+  "runCommand": "",
+  "ollamaModelName": "llamablit",
+  "tavilyApiKey": "",
+  "geminiEmbeddingModelName": "textembedding-gecko"
+}
+2025-06-15 17:48:55.604 [main] INFO  dumb.jaider.config.ConfigTest - Temp project dir for test: /tmp/junit-301641521906103490
+2025-06-15 17:48:55.606 [main] INFO  dumb.jaider.config.ConfigTest - Wrote to /tmp/junit-301641521906103490/.jaider.json:
+{
+  "components": [{
+    "id": "userOnlyComponent",
+    "class": "com.example.UserOnly"
+  }],
+  "toolManifestsDir": "src/main/resources/tool-descriptors",
+  "llmProvider": "full-user-llm",
+  "genericOpenaiEmbeddingModelName": "text-embedding-ada-002",
+  "genericOpenaiApiKey": "",
+  "apiKeys": {
+    "openai": "FULL_USER_OPENAI",
+    "google": "FULL_USER_GOOGLE"
+  },
+  "openaiApiKey": "",
+  "openaiModelName": "gpt-4o-mini",
+  "ollamaBaseUrl": "http://fulluser:1111",
+  "genericOpenaiModelName": "local-model",
+  "genericOpenaiBaseUrl": "http://localhost:8080/v1",
+  "geminiModelName": "gemini-1.5-flash-latest",
+  "geminiApiKey": "",
+  "runCommand": "user-run-command",
+  "ollamaModelName": "full-user-model",
+  "tavilyApiKey": "",
+  "geminiEmbeddingModelName": "textembedding-gecko"
+}
+2025-06-15 17:48:55.607 [main] INFO  dumb.jaider.config.Config - Loading configuration from file: /tmp/junit-301641521906103490/.jaider.json
+2025-06-15 17:48:55.607 [main] INFO  dumb.jaider.config.Config - Attempting to load 1 component definitions from provided JSON.
+2025-06-15 17:48:55.607 [main] INFO  dumb.jaider.config.Config - Successfully populated 1 component definitions from JSON source.
+2025-06-15 17:48:55.607 [main] INFO  dumb.jaider.config.Config - Successfully loaded and parsed configuration from /tmp/junit-301641521906103490/.jaider.json.
+2025-06-15 17:48:55.607 [main] INFO  dumb.jaider.config.Config - Initializing DependencyInjector with 1 component definitions.
+2025-06-15 17:48:55.614 [main] INFO  dumb.jaider.config.ConfigTest - Temp project dir for test: /tmp/junit-1905966018725706625
+2025-06-15 17:48:55.614 [main] INFO  dumb.jaider.config.Config - Config file /tmp/junit-1905966018725706625/.jaider.json not found.
+2025-06-15 17:48:55.614 [main] WARN  dumb.jaider.config.Config - Applying and writing default configuration to /tmp/junit-1905966018725706625/.jaider.json.
+2025-06-15 17:48:55.616 [main] INFO  dumb.jaider.config.Config - Successfully loaded default configuration from /default-config.json
+2025-06-15 17:48:55.616 [main] INFO  dumb.jaider.config.Config - Attempting to load 26 component definitions from provided JSON.
+2025-06-15 17:48:55.616 [main] INFO  dumb.jaider.config.Config - Successfully populated 26 component definitions from JSON source.
+2025-06-15 17:48:55.617 [main] INFO  dumb.jaider.config.Config - Written default configuration to: /tmp/junit-1905966018725706625/.jaider.json
+2025-06-15 17:48:55.617 [main] INFO  dumb.jaider.config.Config - Initializing DependencyInjector with 26 component definitions.
+2025-06-15 17:48:55.620 [main] INFO  dumb.jaider.config.Config - Configuration saved to /tmp/junit-1905966018725706625/.jaider.json
+2025-06-15 17:48:55.621 [main] INFO  dumb.jaider.config.Config - Loading configuration from file: /tmp/junit-1905966018725706625/.jaider.json
+2025-06-15 17:48:55.621 [main] INFO  dumb.jaider.config.Config - Attempting to load 1 component definitions from provided JSON.
+2025-06-15 17:48:55.621 [main] INFO  dumb.jaider.config.Config - Successfully populated 1 component definitions from JSON source.
+2025-06-15 17:48:55.621 [main] INFO  dumb.jaider.config.Config - Successfully loaded and parsed configuration from /tmp/junit-1905966018725706625/.jaider.json.
+2025-06-15 17:48:55.621 [main] INFO  dumb.jaider.config.Config - Re-initializing DependencyInjector with new configuration after save.
+2025-06-15 17:48:55.622 [main] INFO  dumb.jaider.config.Config - DependencyInjector re-initialized.
+2025-06-15 17:48:55.622 [main] INFO  dumb.jaider.config.ConfigTest - Read from /tmp/junit-1905966018725706625/.jaider.json:
+{
+  "components": [{
+    "id": "savedComponent",
+    "class": "com.example.Saved"
+  }],
+  "ollamaBaseUrl": "http://savedhost:54321",
+  "llmProvider": "saved-llm",
+  "apiKeys": {"openai": "SAVED_OPENAI_KEY"},
+  "runCommand": "saved-run-cmd"
+}
+2025-06-15 17:48:55.631 [main] INFO  dumb.jaider.config.ConfigTest - Temp project dir for test: /tmp/junit-11336149303698423038
+2025-06-15 17:48:55.632 [main] INFO  dumb.jaider.config.ConfigTest - Wrote to /tmp/junit-11336149303698423038/.jaider.json:
+{"apiKeys": {"openai": "KEY_FROM_APIKEYS_MAP_ONLY"}}
+2025-06-15 17:48:55.632 [main] INFO  dumb.jaider.config.Config - Loading configuration from file: /tmp/junit-11336149303698423038/.jaider.json
+2025-06-15 17:48:55.633 [main] WARN  dumb.jaider.config.Config - No 'components' key found in JSON source. No component definitions loaded from this source.
+2025-06-15 17:48:55.633 [main] INFO  dumb.jaider.config.Config - Successfully loaded and parsed configuration from /tmp/junit-11336149303698423038/.jaider.json.
+2025-06-15 17:48:55.633 [main] ERROR dumb.jaider.config.Config - CRITICAL: No component definitions found after attempting to load from file and apply defaults. getDefaultConfigAsJsonObject() might be incomplete or malformed.
+2025-06-15 17:48:55.642 [main] INFO  dumb.jaider.config.ConfigTest - Temp project dir for test: /tmp/junit-4975089460208017926
+2025-06-15 17:48:55.642 [main] INFO  dumb.jaider.config.ConfigTest - Wrote to /tmp/junit-4975089460208017926/.jaider.json:
+{}
+2025-06-15 17:48:55.643 [main] INFO  dumb.jaider.config.Config - Loading configuration from file: /tmp/junit-4975089460208017926/.jaider.json
+2025-06-15 17:48:55.643 [main] WARN  dumb.jaider.config.Config - No 'components' key found in JSON source. No component definitions loaded from this source.
+2025-06-15 17:48:55.643 [main] INFO  dumb.jaider.config.Config - Successfully loaded and parsed configuration from /tmp/junit-4975089460208017926/.jaider.json.
+2025-06-15 17:48:55.643 [main] ERROR dumb.jaider.config.Config - CRITICAL: No component definitions found after attempting to load from file and apply defaults. getDefaultConfigAsJsonObject() might be incomplete or malformed.
+2025-06-15 17:48:55.655 [main] INFO  dumb.jaider.config.ConfigTest - Temp project dir for test: /tmp/junit-3056888360782430359
+2025-06-15 17:48:55.656 [main] INFO  dumb.jaider.config.ConfigTest - Wrote to /tmp/junit-3056888360782430359/.jaider.json:
+{"apiKeys": {"somekey": "somevalue"}}
+2025-06-15 17:48:55.656 [main] INFO  dumb.jaider.config.Config - Loading configuration from file: /tmp/junit-3056888360782430359/.jaider.json
+2025-06-15 17:48:55.656 [main] WARN  dumb.jaider.config.Config - No 'components' key found in JSON source. No component definitions loaded from this source.
+2025-06-15 17:48:55.656 [main] INFO  dumb.jaider.config.Config - Successfully loaded and parsed configuration from /tmp/junit-3056888360782430359/.jaider.json.
+2025-06-15 17:48:55.656 [main] ERROR dumb.jaider.config.Config - CRITICAL: No component definitions found after attempting to load from file and apply defaults. getDefaultConfigAsJsonObject() might be incomplete or malformed.
+2025-06-15 17:48:55.664 [main] INFO  dumb.jaider.config.ConfigTest - Temp project dir for test: /tmp/junit-11578909861599799782
+2025-06-15 17:48:55.664 [main] INFO  dumb.jaider.config.Config - Config file /tmp/junit-11578909861599799782/.jaider.json not found.
+2025-06-15 17:48:55.665 [main] WARN  dumb.jaider.config.Config - Applying and writing default configuration to /tmp/junit-11578909861599799782/.jaider.json.
+2025-06-15 17:48:55.666 [main] INFO  dumb.jaider.config.Config - Successfully loaded default configuration from /default-config.json
+2025-06-15 17:48:55.666 [main] INFO  dumb.jaider.config.Config - Attempting to load 26 component definitions from provided JSON.
+2025-06-15 17:48:55.666 [main] INFO  dumb.jaider.config.Config - Successfully populated 26 component definitions from JSON source.
+2025-06-15 17:48:55.667 [main] INFO  dumb.jaider.config.Config - Written default configuration to: /tmp/junit-11578909861599799782/.jaider.json
+2025-06-15 17:48:55.667 [main] INFO  dumb.jaider.config.Config - Initializing DependencyInjector with 26 component definitions.
+2025-06-15 17:48:55.674 [main] INFO  dumb.jaider.config.ConfigTest - Temp project dir for test: /tmp/junit-11489300443304310782
+2025-06-15 17:48:55.674 [main] INFO  dumb.jaider.config.ConfigTest - Wrote to /tmp/junit-11489300443304310782/.jaider.json:
+this is not valid json
+2025-06-15 17:48:55.675 [main] INFO  dumb.jaider.config.Config - Loading configuration from file: /tmp/junit-11489300443304310782/.jaider.json
+2025-06-15 17:48:55.675 [main] ERROR dumb.jaider.config.Config - Error reading or parsing config file (/tmp/junit-11489300443304310782/.jaider.json): A JSONObject text must begin with '{' at 1 [character 2 line 1]. Applying defaults.
+org.json.JSONException: A JSONObject text must begin with '{' at 1 [character 2 line 1]
+	at org.json.JSONTokener.syntaxError(JSONTokener.java:503)
+	at org.json.JSONObject.<init>(JSONObject.java:213)
+	at org.json.JSONObject.<init>(JSONObject.java:430)
+	at dumb.jaider.config.Config.load(Config.java:118)
+	at dumb.jaider.config.Config.<init>(Config.java:98)
+	at dumb.jaider.config.ConfigTest.createConfig(ConfigTest.java:90)
+	at dumb.jaider.config.ConfigTest.testLoad_malformedUserConfig_defaultsUsedAndWritten(ConfigTest.java:202)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at org.junit.platform.commons.util.ReflectionUtils.invokeMethod(ReflectionUtils.java:787)
+	at org.junit.platform.commons.support.ReflectionSupport.invokeMethod(ReflectionSupport.java:479)
+	at org.junit.jupiter.engine.execution.MethodInvocation.proceed(MethodInvocation.java:60)
+	at org.junit.jupiter.engine.execution.InvocationInterceptorChain$ValidatingInvocation.proceed(InvocationInterceptorChain.java:131)
+	at org.junit.jupiter.engine.extension.TimeoutExtension.intercept(TimeoutExtension.java:161)
+	at org.junit.jupiter.engine.extension.TimeoutExtension.interceptTestableMethod(TimeoutExtension.java:152)
+	at org.junit.jupiter.engine.extension.TimeoutExtension.interceptTestMethod(TimeoutExtension.java:91)
+	at org.junit.jupiter.engine.execution.InterceptingExecutableInvoker$ReflectiveInterceptorCall.lambda$ofVoidMethod$0(InterceptingExecutableInvoker.java:112)
+	at org.junit.jupiter.engine.execution.InterceptingExecutableInvoker.lambda$invoke$0(InterceptingExecutableInvoker.java:94)
+	at org.junit.jupiter.engine.execution.InvocationInterceptorChain$InterceptedInvocation.proceed(InvocationInterceptorChain.java:106)
+	at org.junit.jupiter.engine.execution.InvocationInterceptorChain.proceed(InvocationInterceptorChain.java:64)
+	at org.junit.jupiter.engine.execution.InvocationInterceptorChain.chainAndInvoke(InvocationInterceptorChain.java:45)
+	at org.junit.jupiter.engine.execution.InvocationInterceptorChain.invoke(InvocationInterceptorChain.java:37)
+	at org.junit.jupiter.engine.execution.InterceptingExecutableInvoker.invoke(InterceptingExecutableInvoker.java:93)
+	at org.junit.jupiter.engine.execution.InterceptingExecutableInvoker.invoke(InterceptingExecutableInvoker.java:87)
+	at org.junit.jupiter.engine.descriptor.TestMethodTestDescriptor.lambda$invokeTestMethod$4(TestMethodTestDescriptor.java:221)
+	at org.junit.platform.engine.support.hierarchical.ThrowableCollector.execute(ThrowableCollector.java:73)
+	at org.junit.jupiter.engine.descriptor.TestMethodTestDescriptor.invokeTestMethod(TestMethodTestDescriptor.java:217)
+	at org.junit.jupiter.engine.descriptor.TestMethodTestDescriptor.execute(TestMethodTestDescriptor.java:159)
+	at org.junit.jupiter.engine.descriptor.TestMethodTestDescriptor.execute(TestMethodTestDescriptor.java:70)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$6(NodeTestTask.java:157)
+	at org.junit.platform.engine.support.hierarchical.ThrowableCollector.execute(ThrowableCollector.java:73)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$8(NodeTestTask.java:147)
+	at org.junit.platform.engine.support.hierarchical.Node.around(Node.java:137)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$9(NodeTestTask.java:145)
+	at org.junit.platform.engine.support.hierarchical.ThrowableCollector.execute(ThrowableCollector.java:73)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.executeRecursively(NodeTestTask.java:144)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.execute(NodeTestTask.java:101)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+	at org.junit.platform.engine.support.hierarchical.SameThreadHierarchicalTestExecutorService.invokeAll(SameThreadHierarchicalTestExecutorService.java:41)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$6(NodeTestTask.java:161)
+	at org.junit.platform.engine.support.hierarchical.ThrowableCollector.execute(ThrowableCollector.java:73)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$8(NodeTestTask.java:147)
+	at org.junit.platform.engine.support.hierarchical.Node.around(Node.java:137)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$9(NodeTestTask.java:145)
+	at org.junit.platform.engine.support.hierarchical.ThrowableCollector.execute(ThrowableCollector.java:73)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.executeRecursively(NodeTestTask.java:144)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.execute(NodeTestTask.java:101)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+	at org.junit.platform.engine.support.hierarchical.SameThreadHierarchicalTestExecutorService.invokeAll(SameThreadHierarchicalTestExecutorService.java:41)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$6(NodeTestTask.java:161)
+	at org.junit.platform.engine.support.hierarchical.ThrowableCollector.execute(ThrowableCollector.java:73)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$8(NodeTestTask.java:147)
+	at org.junit.platform.engine.support.hierarchical.Node.around(Node.java:137)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$9(NodeTestTask.java:145)
+	at org.junit.platform.engine.support.hierarchical.ThrowableCollector.execute(ThrowableCollector.java:73)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.executeRecursively(NodeTestTask.java:144)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.execute(NodeTestTask.java:101)
+	at org.junit.platform.engine.support.hierarchical.SameThreadHierarchicalTestExecutorService.submit(SameThreadHierarchicalTestExecutorService.java:35)
+	at org.junit.platform.engine.support.hierarchical.HierarchicalTestExecutor.execute(HierarchicalTestExecutor.java:57)
+	at org.junit.platform.engine.support.hierarchical.HierarchicalTestEngine.execute(HierarchicalTestEngine.java:54)
+	at org.junit.platform.launcher.core.EngineExecutionOrchestrator.executeEngine(EngineExecutionOrchestrator.java:230)
+	at org.junit.platform.launcher.core.EngineExecutionOrchestrator.failOrExecuteEngine(EngineExecutionOrchestrator.java:204)
+	at org.junit.platform.launcher.core.EngineExecutionOrchestrator.execute(EngineExecutionOrchestrator.java:172)
+	at org.junit.platform.launcher.core.EngineExecutionOrchestrator.execute(EngineExecutionOrchestrator.java:101)
+	at org.junit.platform.launcher.core.EngineExecutionOrchestrator.lambda$execute$0(EngineExecutionOrchestrator.java:64)
+	at org.junit.platform.launcher.core.EngineExecutionOrchestrator.withInterceptedStreams(EngineExecutionOrchestrator.java:150)
+	at org.junit.platform.launcher.core.EngineExecutionOrchestrator.execute(EngineExecutionOrchestrator.java:63)
+	at org.junit.platform.launcher.core.DefaultLauncher.execute(DefaultLauncher.java:109)
+	at org.junit.platform.launcher.core.DefaultLauncher.execute(DefaultLauncher.java:91)
+	at org.junit.platform.launcher.core.DelegatingLauncher.execute(DelegatingLauncher.java:47)
+	at org.junit.platform.launcher.core.InterceptingLauncher.lambda$execute$1(InterceptingLauncher.java:39)
+	at org.junit.platform.launcher.core.ClasspathAlignmentCheckingLauncherInterceptor.intercept(ClasspathAlignmentCheckingLauncherInterceptor.java:25)
+	at org.junit.platform.launcher.core.InterceptingLauncher.execute(InterceptingLauncher.java:38)
+	at org.junit.platform.launcher.core.DelegatingLauncher.execute(DelegatingLauncher.java:47)
+	at org.apache.maven.surefire.junitplatform.LazyLauncher.execute(LazyLauncher.java:56)
+	at org.apache.maven.surefire.junitplatform.JUnitPlatformProvider.execute(JUnitPlatformProvider.java:194)
+	at org.apache.maven.surefire.junitplatform.JUnitPlatformProvider.invokeAllTests(JUnitPlatformProvider.java:150)
+	at org.apache.maven.surefire.junitplatform.JUnitPlatformProvider.invoke(JUnitPlatformProvider.java:124)
+	at org.apache.maven.surefire.booter.ForkedBooter.runSuitesInProcess(ForkedBooter.java:385)
+	at org.apache.maven.surefire.booter.ForkedBooter.execute(ForkedBooter.java:162)
+	at org.apache.maven.surefire.booter.ForkedBooter.run(ForkedBooter.java:507)
+	at org.apache.maven.surefire.booter.ForkedBooter.main(ForkedBooter.java:495)
+2025-06-15 17:48:55.676 [main] WARN  dumb.jaider.config.Config - Applying and writing default configuration to /tmp/junit-11489300443304310782/.jaider.json.
+2025-06-15 17:48:55.678 [main] INFO  dumb.jaider.config.Config - Successfully loaded default configuration from /default-config.json
+2025-06-15 17:48:55.678 [main] INFO  dumb.jaider.config.Config - Attempting to load 26 component definitions from provided JSON.
+2025-06-15 17:48:55.679 [main] INFO  dumb.jaider.config.Config - Successfully populated 26 component definitions from JSON source.
+2025-06-15 17:48:55.680 [main] INFO  dumb.jaider.config.Config - Written default configuration to: /tmp/junit-11489300443304310782/.jaider.json
+2025-06-15 17:48:55.680 [main] INFO  dumb.jaider.config.Config - Initializing DependencyInjector with 26 component definitions.
+2025-06-15 17:48:55.680 [main] INFO  dumb.jaider.config.ConfigTest - Read from /tmp/junit-11489300443304310782/.jaider.json:
+{
+  "components": [
+    {
+      "staticFactoryArgs": [{
+        "type": "int",
+        "value": 20
+      }],
+      "staticFactoryMethod": "withMaxMessages",
+      "id": "chatMemory",
+      "class": "dev.langchain4j.memory.chat.MessageWindowChatMemory"
+    },
+    {
+      "constructorArgs": [
+        {"ref": "appConfig"},
+        {"ref": "jaiderModel"}
+      ],
+      "id": "llmProviderFactory",
+      "class": "dumb.jaider.llm.LlmProviderFactory"
+    },
+    {
+      "constructorArgs": [{
+        "type": "java.lang.String",
+        "value": "src/main/resources/tool-descriptors"
+      }],
+      "id": "toolManager",
+      "class": "dumb.jaider.toolmanager.ToolManager"
+    },
+    {
+      "constructorArgs": [
+        {"ref": "jaiderModel"},
+        {"ref": "appConfig"},
+        {"ref": "appEmbeddingModel"}
+      ],
+      "id": "standardTools",
+      "class": "dumb.jaider.tools.StandardTools"
+    },
+    {
+      "id": "parserRegistry",
+      "class": "dumb.jaider.refactoring.ParserRegistry"
+    },
+    {
+      "constructorArgs": [{"ref": "parserRegistry"}],
+      "id": "refactoringService",
+      "class": "dumb.jaider.refactoring.RefactoringService"
+    },
+    {
+      "constructorArgs": [{"ref": "refactoringService"}],
+      "id": "smartRenameTool",
+      "class": "dumb.jaider.tools.SmartRenameTool"
+    },
+    {
+      "constructorArgs": [{"ref": "jaiderModel"}],
+      "id": "listContextFilesTool",
+      "class": "dumb.jaider.tools.ListContextFilesTool"
+    },
+    {
+      "constructorArgs": [{"ref": "toolManager"}],
+      "id": "staticAnalysisService",
+      "class": "dumb.jaider.staticanalysis.StaticAnalysisService"
+    },
+    {
+      "constructorArgs": [
+        {"ref": "staticAnalysisService"},
+        {"ref": "jaiderModel"}
+      ],
+      "id": "analysisTools",
+      "class": "dumb.jaider.tools.AnalysisTools"
+    },
+    {
+      "id": "userInterfaceService",
+      "class": "dumb.jaider.ui.CommandLineUserInterfaceService"
+    },
+    {
+      "id": "gitService",
+      "class": "dumb.jaider.service.LocalGitService"
+    },
+    {
+      "id": "buildManagerService",
+      "class": "dumb.jaider.service.BuildManagerService"
+    },
+    {
+      "id": "restartService",
+      "class": "dumb.jaider.service.BasicRestartService"
+    },
+    {
+      "constructorArgs": [
+        {"ref": "jaiderModel"},
+        {"ref": "userInterfaceService"},
+        {"ref": "buildManagerService"},
+        {"ref": "gitService"},
+        {"ref": "restartService"},
+        {"ref": "appConfig"}
+      ],
+      "id": "selfUpdateOrchestratorService",
+      "class": "dumb.jaider.service.SelfUpdateOrchestratorService"
+    },
+    {
+      "constructorArgs": [
+        {"ref": "jaiderModel"},
+        {"ref": "selfUpdateOrchestratorService"}
+      ],
+      "id": "jaiderTools",
+      "class": "dumb.jaider.tools.JaiderTools"
+    },
+    {
+      "constructorArgs": [
+        {"ref": "appChatLanguageModel"},
+        {"ref": "chatMemory"},
+        {"list": [
+          {"ref": "standardTools"},
+          {"ref": "jaiderTools"},
+          {"ref": "smartRenameTool"},
+          {"ref": "analysisTools"},
+          {"ref": "listContextFilesTool"}
+        ]},
+        {
+          "type": "java.lang.String",
+          "value": "You are a super-intelligent AI developer named Jaider. Your goal is to help users build and modify software projects by applying changes directly to their codebase. When a user asks for a change, understand the request, identify the files to modify, and then use the 'applyDiff' tool to provide the necessary changes in the diff format. Always ensure your diffs are correct and directly applicable. If you need to read a file, use 'readFile'. If you need to list files, use 'listFiles'. If a user asks you to add a file to context, use 'addFilesToContext'. If asked to remove, use 'removeFilesFromContext'. If you need to create a new file, use 'createFile'. Do not ask the user to make changes manually. You are empowered to make them directly. Be proactive and precise. For complex tasks, break them down into smaller, manageable steps, applying diffs for each. Always provide a commit message with your diffs. State: END_OF_PLAN at the end of your plan. Do not use it anywhere else. If a user asks you to do something that is not a coding task, or if it is a very complex task that you are not sure how to do, or if it is a task that is too risky, you should decline the request and explain why. You should be able to update any file, including configuration files like pom.xml or build.gradle, or JSON files. Use the 'DependencyUpdater' tool to check for and apply dependency updates to pom.xml when the user asks for it. If you need to rename files or directories, use the 'renameFileOrDirectory' tool. If you need to perform a smart rename of a symbol (class, method, variable) across multiple files, use the 'smartRename' tool. If you need to find relevant code snippets, use the 'findRelevantCode' tool. If you need to analyze code for issues, use the 'analyzeCode' tool. Always respond in Markdown format, ensuring any code blocks or diffs are correctly formatted. If you are providing a diff, ensure the diff is enclosed in a ```diff ... ``` block."
+        }
+      ],
+      "id": "coderAgent",
+      "class": "dumb.jaider.agents.CoderAgent"
+    },
+    {
+      "constructorArgs": [
+        {"ref": "appChatLanguageModel"},
+        {"ref": "chatMemory"},
+        {"ref": "standardTools"}
+      ],
+      "id": "architectAgent",
+      "class": "dumb.jaider.agents.ArchitectAgent"
+    },
+    {
+      "constructorArgs": [
+        {"ref": "appChatLanguageModel"},
+        {"ref": "chatMemory"}
+      ],
+      "id": "askAgent",
+      "class": "dumb.jaider.agents.AskAgent"
+    },
+    {
+      "constructorArgs": [{"ref": "toolManager"}],
+      "id": "proactiveSuggestionService",
+      "class": "dumb.jaider.suggestion.ProactiveSuggestionService"
+    },
+    {
+      "constructorArgs": [
+        {"ref": "appConfig"},
+        {"ref": "jaiderModel"},
+        {"ref": "chatMemory"},
+        {"ref": "llmProviderFactory"}
+      ],
+      "id": "agentService",
+      "class": "dumb.jaider.app.AgentService"
+    },
+    {
+      "constructorArgs": [
+        {"ref": "jaiderModel"},
+        {"ref": "chatMemory"},
+        {"ref": "ui"}
+      ],
+      "id": "sessionManager",
+      "class": "dumb.jaider.app.SessionManager"
+    },
+    {
+      "constructorArgs": [
+        {"ref": "app"},
+        {"ref": "agentService"}
+      ],
+      "id": "toolLifecycleManager",
+      "class": "dumb.jaider.app.ToolLifecycleManager"
+    },
+    {
+      "constructorArgs": [
+        {"ref": "appConfig"},
+        {"ref": "jaiderModel"},
+        {"ref": "app"}
+      ],
+      "id": "selfUpdateService",
+      "class": "dumb.jaider.app.SelfUpdateService"
+    },
+    {
+      "constructorArgs": [
+        {"ref": "app"},
+        {"ref": "jaiderModel"},
+        {"ref": "chatMemory"},
+        {"ref": "ui"},
+        {"ref": "agentService"},
+        {"ref": "toolLifecycleManager"},
+        {"ref": "sessionManager"},
+        {"ref": "selfUpdateService"}
+      ],
+      "id": "agentInteractionService",
+      "class": "dumb.jaider.app.AgentInteractionService"
+    },
+    {
+      "constructorArgs": [
+        {"ref": "app"},
+        {"ref": "jaiderModel"},
+        {"ref": "appConfig"},
+        {"ref": "ui"},
+        {"ref": "agentService"},
+        {"ref": "proactiveSuggestionService"},
+        {"ref": "commandsMap"}
+      ],
+      "id": "userInputHandler",
+      "class": "dumb.jaider.app.UserInputHandler"
+    }
+  ],
+  "toolManifestsDir": "src/main/resources/tool-descriptors",
+  "llmProvider": "ollama",
+  "genericOpenaiEmbeddingModelName": "text-embedding-ada-002",
+  "genericOpenaiApiKey": "",
+  "apiKeys": {
+    "openai": "YOUR_OPENAI_API_KEY",
+    "anthropic": "YOUR_ANTHROPIC_API_KEY",
+    "google": "YOUR_GOOGLE_API_KEY",
+    "genericOpenai": "",
+    "tavily": ""
+  },
+  "openaiApiKey": "",
+  "openaiModelName": "gpt-4o-mini",
+  "ollamaBaseUrl": "http://localhost:11434",
+  "genericOpenaiModelName": "local-model",
+  "genericOpenaiBaseUrl": "http://localhost:8080/v1",
+  "geminiModelName": "gemini-1.5-flash-latest",
+  "geminiApiKey": "",
+  "runCommand": "",
+  "ollamaModelName": "llamablit",
+  "tavilyApiKey": "",
+  "geminiEmbeddingModelName": "textembedding-gecko"
+}
+2025-06-15 17:48:55.687 [main] INFO  dumb.jaider.config.ConfigTest - Temp project dir for test: /tmp/junit-5895796486188361258
+2025-06-15 17:48:55.687 [main] INFO  dumb.jaider.config.ConfigTest - Wrote to /tmp/junit-5895796486188361258/.jaider.json:
+{"testCommand": "legacy-test-cmd"}
+2025-06-15 17:48:55.688 [main] INFO  dumb.jaider.config.Config - Loading configuration from file: /tmp/junit-5895796486188361258/.jaider.json
+2025-06-15 17:48:55.688 [main] INFO  dumb.jaider.config.Config - Using legacy 'testCommand' value ('legacy-test-cmd') for 'runCommand'.
+2025-06-15 17:48:55.688 [main] WARN  dumb.jaider.config.Config - No 'components' key found in JSON source. No component definitions loaded from this source.
+2025-06-15 17:48:55.688 [main] INFO  dumb.jaider.config.Config - Successfully loaded and parsed configuration from /tmp/junit-5895796486188361258/.jaider.json.
+2025-06-15 17:48:55.688 [main] ERROR dumb.jaider.config.Config - CRITICAL: No component definitions found after attempting to load from file and apply defaults. getDefaultConfigAsJsonObject() might be incomplete or malformed.
+2025-06-15 17:48:55.694 [main] INFO  dumb.jaider.config.ConfigTest - Temp project dir for test: /tmp/junit-468451649945201680
+2025-06-15 17:48:55.695 [main] INFO  dumb.jaider.config.ConfigTest - Wrote to /tmp/junit-468451649945201680/.jaider.json:
+{"apiKeys": { "someOtherKey": "someValue" }}
+2025-06-15 17:48:55.696 [main] INFO  dumb.jaider.config.Config - Loading configuration from file: /tmp/junit-468451649945201680/.jaider.json
+2025-06-15 17:48:55.696 [main] WARN  dumb.jaider.config.Config - No 'components' key found in JSON source. No component definitions loaded from this source.
+2025-06-15 17:48:55.697 [main] INFO  dumb.jaider.config.Config - Successfully loaded and parsed configuration from /tmp/junit-468451649945201680/.jaider.json.
+2025-06-15 17:48:55.697 [main] ERROR dumb.jaider.config.Config - CRITICAL: No component definitions found after attempting to load from file and apply defaults. getDefaultConfigAsJsonObject() might be incomplete or malformed.
+2025-06-15 17:48:55.708 [main] INFO  dumb.jaider.config.ConfigTest - Temp project dir for test: /tmp/junit-12171720847831937906
+2025-06-15 17:48:55.709 [main] INFO  dumb.jaider.config.ConfigTest - Wrote to /tmp/junit-12171720847831937906/.jaider.json:
+{}
+2025-06-15 17:48:55.709 [main] INFO  dumb.jaider.config.Config - Loading configuration from file: /tmp/junit-12171720847831937906/.jaider.json
+2025-06-15 17:48:55.709 [main] WARN  dumb.jaider.config.Config - No 'components' key found in JSON source. No component definitions loaded from this source.
+2025-06-15 17:48:55.709 [main] INFO  dumb.jaider.config.Config - Successfully loaded and parsed configuration from /tmp/junit-12171720847831937906/.jaider.json.
+2025-06-15 17:48:55.709 [main] ERROR dumb.jaider.config.Config - CRITICAL: No component definitions found after attempting to load from file and apply defaults. getDefaultConfigAsJsonObject() might be incomplete or malformed.
+2025-06-15 17:48:55.722 [main] INFO  dumb.jaider.config.ConfigTest - Temp project dir for test: /tmp/junit-8379531995996361498
+2025-06-15 17:48:55.722 [main] INFO  dumb.jaider.config.ConfigTest - Wrote to /tmp/junit-8379531995996361498/.jaider.json:
+{
+  "components": [{
+    "id": "userEditComponent",
+    "class": "com.example.UserEdit"
+  }],
+  "ollamaBaseUrl": "http://userhost:8888",
+  "llmProvider": "user-llm-for-editing",
+  "testCommand": "user-test-cmd-ignored",
+  "apiKeys": {
+    "customKey": "USER_CUSTOM",
+    "openai": "USER_EDIT_KEY"
+  },
+  "runCommand": "user-run-cmd-for-editing"
+}
+2025-06-15 17:48:55.722 [main] INFO  dumb.jaider.config.Config - Loading configuration from file: /tmp/junit-8379531995996361498/.jaider.json
+2025-06-15 17:48:55.723 [main] INFO  dumb.jaider.config.Config - Attempting to load 1 component definitions from provided JSON.
+2025-06-15 17:48:55.723 [main] INFO  dumb.jaider.config.Config - Successfully populated 1 component definitions from JSON source.
+2025-06-15 17:48:55.723 [main] INFO  dumb.jaider.config.Config - Successfully loaded and parsed configuration from /tmp/junit-8379531995996361498/.jaider.json.
+2025-06-15 17:48:55.723 [main] INFO  dumb.jaider.config.Config - Initializing DependencyInjector with 1 component definitions.
+2025-06-15 17:48:55.725 [main] INFO  dumb.jaider.config.Config - Successfully loaded default configuration from /default-config.json
+2025-06-15 17:48:55.732 [main] INFO  dumb.jaider.config.ConfigTest - Temp project dir for test: /tmp/junit-15634737707546758522
+2025-06-15 17:48:55.732 [main] INFO  dumb.jaider.config.ConfigTest - Wrote to /tmp/junit-15634737707546758522/.jaider.json:
+{
+  "components": [{
+    "id": "customComponent",
+    "class": "com.example.Custom"
+  }],
+  "ollamaBaseUrl": "http://customhost:12345",
+  "llmProvider": "test-custom-llm",
+  "apiKeys": {"openai": "USER_OPENAI_KEY_PARTIAL"}
+}
+2025-06-15 17:48:55.733 [main] INFO  dumb.jaider.config.Config - Loading configuration from file: /tmp/junit-15634737707546758522/.jaider.json
+2025-06-15 17:48:55.733 [main] INFO  dumb.jaider.config.Config - Attempting to load 1 component definitions from provided JSON.
+2025-06-15 17:48:55.733 [main] INFO  dumb.jaider.config.Config - Successfully populated 1 component definitions from JSON source.
+2025-06-15 17:48:55.733 [main] INFO  dumb.jaider.config.Config - Successfully loaded and parsed configuration from /tmp/junit-15634737707546758522/.jaider.json.
+2025-06-15 17:48:55.733 [main] INFO  dumb.jaider.config.Config - Initializing DependencyInjector with 1 component definitions.
+2025-06-15 17:48:56.059 [main] INFO  d.j.s.StaticAnalysisService - Executing static analysis command: semgrep scan --config auto --json /path/to/target
+2025-06-15 17:48:56.065 [main] INFO  d.j.s.StaticAnalysisService - Semgrep execution finished with exit code: 0. Output length: 16
+2025-06-15 17:48:56.080 [main] INFO  d.j.s.StaticAnalysisService - Executing static analysis command: semgrep scan /path/to/target
+2025-06-15 17:48:56.088 [main] INFO  d.j.s.StaticAnalysisService - Executing static analysis command: semgrep scan /path/to/target
+2025-06-15 17:48:56.089 [main] INFO  d.j.s.StaticAnalysisService - Semgrep execution finished with exit code: 0. Output length: 7
+2025-06-15 17:48:56.090 [main] ERROR d.j.s.StaticAnalysisService - Failed to instantiate or use results parser com.example.NonExistentParser for tool Semgrep
+java.lang.ClassNotFoundException: com.example.NonExistentParser
+	at java.base/jdk.internal.loader.BuiltinClassLoader.loadClass(BuiltinClassLoader.java:641)
+	at java.base/jdk.internal.loader.ClassLoaders$AppClassLoader.loadClass(ClassLoaders.java:188)
+	at java.base/java.lang.ClassLoader.loadClass(ClassLoader.java:526)
+	at java.base/java.lang.Class.forName0(Native Method)
+	at java.base/java.lang.Class.forName(Class.java:421)
+	at java.base/java.lang.Class.forName(Class.java:412)
+	at dumb.jaider.staticanalysis.StaticAnalysisService.runAnalysis(StaticAnalysisService.java:118)
+	at dumb.jaider.staticanalysis.StaticAnalysisServiceTest.lambda$runAnalysis_parserClassNotFound$10(StaticAnalysisServiceTest.java:228)
+	at org.junit.jupiter.api.AssertThrows.assertThrows(AssertThrows.java:53)
+	at org.junit.jupiter.api.AssertThrows.assertThrows(AssertThrows.java:35)
+	at org.junit.jupiter.api.Assertions.assertThrows(Assertions.java:3128)
+	at dumb.jaider.staticanalysis.StaticAnalysisServiceTest.runAnalysis_parserClassNotFound(StaticAnalysisServiceTest.java:228)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at org.junit.platform.commons.util.ReflectionUtils.invokeMethod(ReflectionUtils.java:787)
+	at org.junit.platform.commons.support.ReflectionSupport.invokeMethod(ReflectionSupport.java:479)
+	at org.junit.jupiter.engine.execution.MethodInvocation.proceed(MethodInvocation.java:60)
+	at org.junit.jupiter.engine.execution.InvocationInterceptorChain$ValidatingInvocation.proceed(InvocationInterceptorChain.java:131)
+	at org.junit.jupiter.engine.extension.TimeoutExtension.intercept(TimeoutExtension.java:161)
+	at org.junit.jupiter.engine.extension.TimeoutExtension.interceptTestableMethod(TimeoutExtension.java:152)
+	at org.junit.jupiter.engine.extension.TimeoutExtension.interceptTestMethod(TimeoutExtension.java:91)
+	at org.junit.jupiter.engine.execution.InterceptingExecutableInvoker$ReflectiveInterceptorCall.lambda$ofVoidMethod$0(InterceptingExecutableInvoker.java:112)
+	at org.junit.jupiter.engine.execution.InterceptingExecutableInvoker.lambda$invoke$0(InterceptingExecutableInvoker.java:94)
+	at org.junit.jupiter.engine.execution.InvocationInterceptorChain$InterceptedInvocation.proceed(InvocationInterceptorChain.java:106)
+	at org.junit.jupiter.engine.execution.InvocationInterceptorChain.proceed(InvocationInterceptorChain.java:64)
+	at org.junit.jupiter.engine.execution.InvocationInterceptorChain.chainAndInvoke(InvocationInterceptorChain.java:45)
+	at org.junit.jupiter.engine.execution.InvocationInterceptorChain.invoke(InvocationInterceptorChain.java:37)
+	at org.junit.jupiter.engine.execution.InterceptingExecutableInvoker.invoke(InterceptingExecutableInvoker.java:93)
+	at org.junit.jupiter.engine.execution.InterceptingExecutableInvoker.invoke(InterceptingExecutableInvoker.java:87)
+	at org.junit.jupiter.engine.descriptor.TestMethodTestDescriptor.lambda$invokeTestMethod$4(TestMethodTestDescriptor.java:221)
+	at org.junit.platform.engine.support.hierarchical.ThrowableCollector.execute(ThrowableCollector.java:73)
+	at org.junit.jupiter.engine.descriptor.TestMethodTestDescriptor.invokeTestMethod(TestMethodTestDescriptor.java:217)
+	at org.junit.jupiter.engine.descriptor.TestMethodTestDescriptor.execute(TestMethodTestDescriptor.java:159)
+	at org.junit.jupiter.engine.descriptor.TestMethodTestDescriptor.execute(TestMethodTestDescriptor.java:70)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$6(NodeTestTask.java:157)
+	at org.junit.platform.engine.support.hierarchical.ThrowableCollector.execute(ThrowableCollector.java:73)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$8(NodeTestTask.java:147)
+	at org.junit.platform.engine.support.hierarchical.Node.around(Node.java:137)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$9(NodeTestTask.java:145)
+	at org.junit.platform.engine.support.hierarchical.ThrowableCollector.execute(ThrowableCollector.java:73)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.executeRecursively(NodeTestTask.java:144)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.execute(NodeTestTask.java:101)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+	at org.junit.platform.engine.support.hierarchical.SameThreadHierarchicalTestExecutorService.invokeAll(SameThreadHierarchicalTestExecutorService.java:41)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$6(NodeTestTask.java:161)
+	at org.junit.platform.engine.support.hierarchical.ThrowableCollector.execute(ThrowableCollector.java:73)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$8(NodeTestTask.java:147)
+	at org.junit.platform.engine.support.hierarchical.Node.around(Node.java:137)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$9(NodeTestTask.java:145)
+	at org.junit.platform.engine.support.hierarchical.ThrowableCollector.execute(ThrowableCollector.java:73)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.executeRecursively(NodeTestTask.java:144)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.execute(NodeTestTask.java:101)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+	at org.junit.platform.engine.support.hierarchical.SameThreadHierarchicalTestExecutorService.invokeAll(SameThreadHierarchicalTestExecutorService.java:41)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$6(NodeTestTask.java:161)
+	at org.junit.platform.engine.support.hierarchical.ThrowableCollector.execute(ThrowableCollector.java:73)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$8(NodeTestTask.java:147)
+	at org.junit.platform.engine.support.hierarchical.Node.around(Node.java:137)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$9(NodeTestTask.java:145)
+	at org.junit.platform.engine.support.hierarchical.ThrowableCollector.execute(ThrowableCollector.java:73)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.executeRecursively(NodeTestTask.java:144)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.execute(NodeTestTask.java:101)
+	at org.junit.platform.engine.support.hierarchical.SameThreadHierarchicalTestExecutorService.submit(SameThreadHierarchicalTestExecutorService.java:35)
+	at org.junit.platform.engine.support.hierarchical.HierarchicalTestExecutor.execute(HierarchicalTestExecutor.java:57)
+	at org.junit.platform.engine.support.hierarchical.HierarchicalTestEngine.execute(HierarchicalTestEngine.java:54)
+	at org.junit.platform.launcher.core.EngineExecutionOrchestrator.executeEngine(EngineExecutionOrchestrator.java:230)
+	at org.junit.platform.launcher.core.EngineExecutionOrchestrator.failOrExecuteEngine(EngineExecutionOrchestrator.java:204)
+	at org.junit.platform.launcher.core.EngineExecutionOrchestrator.execute(EngineExecutionOrchestrator.java:172)
+	at org.junit.platform.launcher.core.EngineExecutionOrchestrator.execute(EngineExecutionOrchestrator.java:101)
+	at org.junit.platform.launcher.core.EngineExecutionOrchestrator.lambda$execute$0(EngineExecutionOrchestrator.java:64)
+	at org.junit.platform.launcher.core.EngineExecutionOrchestrator.withInterceptedStreams(EngineExecutionOrchestrator.java:150)
+	at org.junit.platform.launcher.core.EngineExecutionOrchestrator.execute(EngineExecutionOrchestrator.java:63)
+	at org.junit.platform.launcher.core.DefaultLauncher.execute(DefaultLauncher.java:109)
+	at org.junit.platform.launcher.core.DefaultLauncher.execute(DefaultLauncher.java:91)
+	at org.junit.platform.launcher.core.DelegatingLauncher.execute(DelegatingLauncher.java:47)
+	at org.junit.platform.launcher.core.InterceptingLauncher.lambda$execute$1(InterceptingLauncher.java:39)
+	at org.junit.platform.launcher.core.ClasspathAlignmentCheckingLauncherInterceptor.intercept(ClasspathAlignmentCheckingLauncherInterceptor.java:25)
+	at org.junit.platform.launcher.core.InterceptingLauncher.execute(InterceptingLauncher.java:38)
+	at org.junit.platform.launcher.core.DelegatingLauncher.execute(DelegatingLauncher.java:47)
+	at org.apache.maven.surefire.junitplatform.LazyLauncher.execute(LazyLauncher.java:56)
+	at org.apache.maven.surefire.junitplatform.JUnitPlatformProvider.execute(JUnitPlatformProvider.java:194)
+	at org.apache.maven.surefire.junitplatform.JUnitPlatformProvider.invokeAllTests(JUnitPlatformProvider.java:150)
+	at org.apache.maven.surefire.junitplatform.JUnitPlatformProvider.invoke(JUnitPlatformProvider.java:124)
+	at org.apache.maven.surefire.booter.ForkedBooter.runSuitesInProcess(ForkedBooter.java:385)
+	at org.apache.maven.surefire.booter.ForkedBooter.execute(ForkedBooter.java:162)
+	at org.apache.maven.surefire.booter.ForkedBooter.run(ForkedBooter.java:507)
+	at org.apache.maven.surefire.booter.ForkedBooter.main(ForkedBooter.java:495)
+2025-06-15 17:48:56.099 [main] INFO  d.j.s.StaticAnalysisService - Executing static analysis command: rawtool /path/to/target
+2025-06-15 17:48:56.100 [main] INFO  d.j.s.StaticAnalysisService - RawTool execution finished with exit code: 0. Output length: 39
+2025-06-15 17:48:56.101 [main] WARN  d.j.s.StaticAnalysisService - No results parser class defined for tool: RawTool. Returning raw output if any.
+2025-06-15 17:48:56.106 [main] INFO  d.j.s.StaticAnalysisService - Executing static analysis command: semgrep scan --config custom_rules --json /path/to/target
+2025-06-15 17:48:56.108 [main] INFO  d.j.s.StaticAnalysisService - Semgrep execution finished with exit code: 0. Output length: 16
+2025-06-15 17:48:57.618 [main] WARN  dumb.jaider.vcs.GitService - Not a git repository or git error during isClean check for directory '/tmp/junit-8258865053192997701/non-git-repo': repository not found: /tmp/junit-8258865053192997701/non-git-repo/.git
+2025-06-15 17:51:31.993 [main] WARN  dumb.jaider.vcs.GitService - No HEAD commit found in repository at /tmp/junit-13704560063801755730. Cannot list files.
+2025-06-15 17:51:32.306 [main] WARN  dumb.jaider.vcs.GitService - No HEAD commit found in repository at /tmp/junit-14712128670766977106. Cannot list files.

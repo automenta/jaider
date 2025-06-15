@@ -19,9 +19,6 @@ import static org.mockito.Mockito.when;
 public class StandardToolsTest {
 
     @Mock
-    private JaiderModel model;
-
-    @Mock
     private Config config;
 
     @Mock
@@ -35,7 +32,6 @@ public class StandardToolsTest {
     @BeforeEach
     void setUp() throws GitAPIException {
         MockitoAnnotations.openMocks(this);
-        when(model.dir).thenReturn(tempDir); // Make JaiderModel use the tempDir
         // It seems model.dir is public, if not, need a getter like getDir()
         // For StandardTools constructor model.dir is accessed directly. Let's assume it is accessible or change to use getter.
         // If model.dir is final and set in constructor, this mock might be tricky.
