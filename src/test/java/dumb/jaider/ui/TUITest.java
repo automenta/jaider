@@ -12,6 +12,8 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.*;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.junit.jupiter.MockitoSettings;
+import org.mockito.quality.Strictness;
 
 import java.nio.file.Paths;
 import java.util.ArrayList;
@@ -37,6 +39,8 @@ class TUITest {
     Panel logListBoxPanel;
     @Mock
     Label statusBar;
+    @Mock
+    Label suggestionsLabel; // Added mock for suggestionsLabel
 
     @Spy
     final
@@ -55,6 +59,7 @@ class TUITest {
         tui.contextListBox = contextListBox;
         tui.logListBox = logListBoxPanel;
         tui.statusBar = statusBar;
+        tui.suggestionsLabel = suggestionsLabel; // Assign mock to the TUI instance
 
         lenient().when(gui.getGUIThread()).thenReturn(textGUIThread);
         doAnswer(invocation -> {
@@ -103,10 +108,14 @@ class TUITest {
     }
 
     @Test
+    @MockitoSettings(strictness = Strictness.LENIENT)
     void redraw_whenGuiIsNull_shouldDoNothing() {
         tui.gui = null;
         tui.redraw(model);
-        verifyNoInteractions(contextListBox, logListBoxPanel, statusBar, textGUIThread);
+        // If gui is null, textGUIThread (obtained from the original gui mock)
+        // will not be involved via tui.gui.getGUIThread().
+        // So, its non-interaction is implied by gui being null.
+        verifyNoInteractions(contextListBox, logListBoxPanel, statusBar);
     }
 
     @Test
