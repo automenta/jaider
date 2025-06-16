@@ -32,8 +32,7 @@ Jaider uses a `.jaider.json` file in the root of your project directory for conf
 
 **API Key Configuration Precedence:** For services like Tavily, Gemini, and OpenAI (including Generic OpenAI), API keys are resolved in the following order:
 1. Environment Variable (e.g., `TAVILY_API_KEY`, `GEMINI_API_KEY`, `GENERIC_OPENAI_API_KEY`, `OPENAI_API_KEY`)
-2. Specific top-level key in `.jaider.json` (e.g., `tavilyApiKey`, `geminiApiKey`, `genericOpenaiApiKey`, `openaiApiKey`)
-3. Key within the `apiKeys` map in `.jaider.json` (e.g., `"tavily": "your_key"`, `"google": "your_key"` for Gemini, `"genericOpenai": "your_key"`, `"openai": "your_key"`)
+2. Key within the `apiKeys` map in `.jaider.json` (e.g., `"tavily": "your_key"`, `"google": "your_key"` for Gemini, `"genericOpenai": "your_key"`, `"openai": "your_key"`)
 
 Key configurable fields include:
 
@@ -45,13 +44,9 @@ Key configurable fields include:
 *   `genericOpenaiBaseUrl`: (for `genericOpenai` provider) The base URL of the OpenAI-compatible API (e.g., `"http://localhost:8080/v1"`).
 *   `genericOpenaiModelName`: (for `genericOpenai` provider) The chat model name for the generic API.
 *   `genericOpenaiEmbeddingModelName`: (for `genericOpenai` provider) The embedding model name to use with your generic OpenAI-compatible endpoint (e.g., `"text-embedding-ada-002"`). Default: `"text-embedding-ada-002"`
-*   `genericOpenaiApiKey`: (Legacy, in `.jaider.json`) (for `genericOpenai` provider) The API key, if required. Preferred: `GENERIC_OPENAI_API_KEY` env var.
-*   `openaiApiKey`: (Legacy, in `.jaider.json`) API key for OpenAI. Preferred: `OPENAI_API_KEY` env var.
 *   `openaiModelName`: (for `openai` provider) The OpenAI model name to use (e.g., `"gpt-4o-mini"`, `"gpt-4-turbo"`, `"gpt-3.5-turbo"`). Default: `"gpt-4o-mini"`
 *   `geminiModelName`: (for `gemini` provider) The Gemini chat model name (e.g., `"gemini-1.5-flash-latest"`).
 *   `geminiEmbeddingModelName`: (for `gemini` provider) The specific Vertex AI Gemini embedding model name to use (e.g., `"textembedding-gecko"`, `"textembedding-gecko-multilingual"`). Default: `"textembedding-gecko"`
-*   `geminiApiKey`: (Legacy, in `.jaider.json`) (for `gemini` provider, if using direct Gemini API - Vertex AI typically uses ADC). Preferred: `GEMINI_API_KEY` env var.
-*   `tavilyApiKey`: (Legacy, in `.jaider.json`) API key for Tavily web search. Preferred: `TAVILY_API_KEY` env var.
 *   `runCommand`: The command to execute for validation (e.g., tests, linter, build). Example: `"mvn test"`, `"npm run lint"`.
 *   `apiKeys`: A JSON object to store API keys for specific services. This is a fallback if specific keys or environment variables are not set.
     *   `"openai": "YOUR_OPENAI_API_KEY"`
@@ -69,21 +64,17 @@ Key configurable fields include:
   "ollamaModelName": "llama3",
   "genericOpenaiBaseUrl": "http://localhost:8080/v1",
   "genericOpenaiModelName": "local-gpt",
-  "genericOpenaiEmbeddingModelName": "text-embedding-ada-002", // Specific embedding model for Generic OpenAI
-  "genericOpenaiApiKey": "", // Can be set here, but GENERIC_OPENAI_API_KEY env var is preferred
-  "openaiApiKey": "", // Can be set here, but OPENAI_API_KEY env var is preferred
-  "openaiModelName": "gpt-4o-mini", // Specific model for OpenAI
-  "geminiApiKey": "", // Can be set here, but GEMINI_API_KEY env var is preferred
+  "genericOpenaiEmbeddingModelName": "text-embedding-ada-002",
+  "openaiModelName": "gpt-4o-mini",
   "geminiModelName": "gemini-1.5-flash-latest",
-  "geminiEmbeddingModelName": "textembedding-gecko", // Specific embedding model for Gemini
-  "tavilyApiKey": "", // Can be set here, but TAVILY_API_KEY env var is preferred
+  "geminiEmbeddingModelName": "textembedding-gecko",
   "runCommand": "mvn clean test",
-  "apiKeys": { // Fallback map
-    "openai": "YOUR_OPENAI_API_KEY_VIA_MAP",
-    "anthropic": "YOUR_ANTHROPIC_API_KEY_VIA_MAP",
-    "google": "YOUR_GOOGLE_API_KEY_FOR_GEMINI_VIA_MAP",
-    "tavily": "YOUR_TAVILY_KEY_VIA_MAP",
-    "genericOpenai": "YOUR_GENERIC_OPENAI_KEY_VIA_MAP"
+  "apiKeys": {
+    "openai": "YOUR_OPENAI_API_KEY",
+    "anthropic": "YOUR_ANTHROPIC_API_KEY",
+    "google": "YOUR_GEMINI_API_KEY", // For Gemini
+    "tavily": "YOUR_TAVILY_API_KEY",
+    "genericOpenai": "YOUR_GENERIC_OPENAI_API_KEY"
   }
 }
 ```
@@ -98,7 +89,7 @@ Key configurable fields include:
     *   Configure `genericOpenaiBaseUrl` for the API endpoint.
     *   Set `genericOpenaiModelName` for the chat model.
     *   Optionally, set `genericOpenaiEmbeddingModelName` if your endpoint supports a specific embedding model (defaults to `"text-embedding-ada-002"`).
-    *   If your endpoint requires an API key (Bearer token), set it via `genericOpenaiApiKey` in the JSON or preferably the `GENERIC_OPENAI_API_KEY` environment variable. Jaider uses Langchain4j's `OpenAiChatModel` and `OpenAiEmbeddingModel` clients, which are designed to handle standard OpenAI API authentication.
+    *   If your endpoint requires an API key (Bearer token), set it via the `apiKeys` map (e.g., `"genericOpenai": "YOUR_KEY"`) in the JSON or preferably the `GENERIC_OPENAI_API_KEY` environment variable.
 *   **OpenAI:**
     *   Set `llmProvider: "openai"`.
     *   Configure `openaiModelName` (e.g., `"gpt-4o-mini"`, `"gpt-4-turbo"`).
@@ -111,7 +102,7 @@ Key configurable fields include:
     *   You also need to set the following environment variables:
         *   `GOOGLE_CLOUD_PROJECT`: Your Google Cloud Project ID.
         *   `GOOGLE_CLOUD_LOCATION`: The region for your Vertex AI resources (e.g., "us-central1").
-    *   The `geminiApiKey` field in `.jaider.json` is provided but might be more relevant for future direct Gemini API integrations if they differ from Vertex AI's ADC.
+    *   API keys for Gemini (if not using ADC) should be configured via the `apiKeys` map (e.g. `"google": "YOUR_KEY"`) or the `GEMINI_API_KEY` environment variable.
 
 ## Key Commands
 

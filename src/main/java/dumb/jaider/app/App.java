@@ -7,9 +7,9 @@ import dev.langchain4j.data.message.ToolExecutionResultMessage;
 import dev.langchain4j.data.message.UserMessage;
 import dev.langchain4j.memory.ChatMemory;
 import dev.langchain4j.memory.chat.MessageWindowChatMemory;
-import dev.langchain4j.model.Tokenizer;
+import dev.langchain4j.model.Tokenizer; // Reverted to model package
 import dev.langchain4j.model.embedding.EmbeddingModel;
-import dev.langchain4j.model.chat.ChatLanguageModel;
+import dev.langchain4j.model.chat.ChatModel; // Changed from ChatLanguageModel
 import dumb.jaider.agents.Agent;
 import dumb.jaider.commands.*;
 import dumb.jaider.config.Config;
@@ -138,7 +138,7 @@ public class App {
             llmFactory = config.getComponent("llmProviderFactory", LlmProviderFactory.class);
             toolManager = config.getComponent("toolManager", ToolManager.class);
 
-            ChatLanguageModel localChatModel = llmFactory.createChatModel();
+            ChatModel localChatModel = llmFactory.createChatModel(); // Changed from ChatLanguageModel
             this.tokenizer = llmFactory.createTokenizer();
             this.embedding = llmFactory.createEmbeddingModel(); // Fallbacks to NoOpEmbeddingModel
 

@@ -3,19 +3,19 @@ package dumb.jaider.agents;
 // Removed unused imports: UserMessage, Response, AiMessage (directly)
 
 import dev.langchain4j.memory.ChatMemory;
-import dev.langchain4j.model.chat.ChatLanguageModel;
+import dev.langchain4j.model.chat.ChatModel; // Changed from ChatLanguageModel
 
 import java.util.Set;
 
 public class AskAgent extends AbstractAgent {
 
     // Constructor for production use
-    public AskAgent(ChatLanguageModel model, ChatMemory memory) {
+    public AskAgent(ChatModel model, ChatMemory memory) { // Changed from ChatLanguageModel
         super(model, memory, Set.of(), "You are a helpful assistant. Answer the user's questions clearly and concisely. You do not have access to any tools.");
     }
 
     // Constructor for testing, allowing JaiderAiService injection
-    protected AskAgent(ChatLanguageModel model, ChatMemory memory, JaiderAiService aiService) {
+    protected AskAgent(ChatModel model, ChatMemory memory, JaiderAiService aiService) { // Changed from ChatLanguageModel
         super(model, memory, Set.of(), aiService, null); // System prompt is not used by this constructor path if AiService is mocked
     }
 

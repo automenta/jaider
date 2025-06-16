@@ -30,9 +30,12 @@ import java.util.stream.Collectors;
  * API keys are resolved with the following precedence:
  * <ol>
  *     <li>Environment Variable (e.g., {@code OPENAI_API_KEY})</li>
- *     <li>Specific top-level key in {@code .jaider.json} (e.g., {@code "openaiApiKey"})</li>
  *     <li>Key within the {@code "apiKeys": {}} map in {@code .jaider.json} (e.g., {@code "openai"})</li>
  * </ol>
+ * The configuration also supports a {@code runCommand} for validation. A legacy field {@code testCommand}
+ * is also supported for backward compatibility but will be removed in future versions; users should
+ * migrate to using {@code runCommand}.
+ * <p>
  * Component definitions are used to initialize the {@link DependencyInjector}.
  */
 public class Config {
@@ -55,11 +58,28 @@ public class Config {
     private final String genericOpenaiBaseUrl;
     private final String genericOpenaiModelName;
     private final String genericOpenaiEmbeddingModelName;
+    /**
+     * @deprecated Configure via the {@code apiKeys} map (e.g., {@code "apiKeys": {"genericOpenai": "YOUR_KEY"}}) or environment variable {@code GENERIC_OPENAI_API_KEY} instead.
+     */
+    @Deprecated
     private final String genericOpenaiApiKey;
     private final String openaiModelName;
+    /**
+     * @deprecated Configure via the {@code apiKeys} map (e.g., {@code "apiKeys": {"openai": "YOUR_KEY"}}) or environment variable {@code OPENAI_API_KEY} instead.
+     */
+    @Deprecated
+    private final String openaiApiKey; // Added this field
+    /**
+     * @deprecated Configure via the {@code apiKeys} map (e.g., {@code "apiKeys": {"google": "YOUR_KEY"}}) or environment variable {@code GEMINI_API_KEY} instead.
+     */
+    @Deprecated
     private final String geminiApiKey;
     private final String geminiModelName;
     private final String geminiEmbeddingModelName;
+    /**
+     * @deprecated Configure via the {@code apiKeys} map (e.g., {@code "apiKeys": {"tavily": "YOUR_KEY"}}) or environment variable {@code TAVILY_API_KEY} instead.
+     */
+    @Deprecated
     private final String tavilyApiKey;
     private final String toolManifestsDir;
 
@@ -89,6 +109,7 @@ public class Config {
         this.genericOpenaiEmbeddingModelName = "text-embedding-ada-002";
         this.genericOpenaiApiKey = "";
         this.openaiModelName = "gpt-4o-mini";
+        this.openaiApiKey = ""; // Initialize openaiApiKey
         this.geminiApiKey = "";
         this.geminiModelName = "gemini-1.5-flash-latest";
         this.geminiEmbeddingModelName = "textembedding-gecko";
@@ -188,6 +209,7 @@ public class Config {
         String genericOpenaiEmbeddingModelNameVal = mergedJson.optString("genericOpenaiEmbeddingModelName", this.genericOpenaiEmbeddingModelName);
         String genericOpenaiApiKeyVal = mergedJson.optString("genericOpenaiApiKey", this.genericOpenaiApiKey);
         String openaiModelNameVal = mergedJson.optString("openaiModelName", this.openaiModelName);
+        String openaiApiKeyVal = mergedJson.optString("openaiApiKey", this.openaiApiKey); // Load openaiApiKey
         String geminiApiKeyVal = mergedJson.optString("geminiApiKey", this.geminiApiKey);
         String geminiModelNameVal = mergedJson.optString("geminiModelName", this.geminiModelName);
         String geminiEmbeddingModelNameVal = mergedJson.optString("geminiEmbeddingModelName", this.geminiEmbeddingModelName);
@@ -195,17 +217,20 @@ public class Config {
         String toolManifestsDirVal = mergedJson.optString("toolManifestsDir", this.toolManifestsDir);
 
         String runCommandVal = mergedJson.optString("runCommand", this.runCommand);
+        // Handle legacy "testCommand"
         if (mergedJson.has("testCommand")) {
             String testCommandVal = mergedJson.optString("testCommand");
-            if (!testCommandVal.isEmpty() && (runCommandVal.isEmpty() || !mergedJson.has("runCommand"))) {
-                logger.info("Using legacy 'testCommand' value ('{}') for 'runCommand'.", testCommandVal);
+            // If testCommand has a value AND (runCommand is empty OR runCommand was not explicitly set by the user)
+            // then use testCommand's value for runCommand.
+            if (!testCommandVal.isEmpty() && (runCommandVal.isEmpty() || !userJsonInput.has("runCommand"))) {
+                logger.warn("The configuration field 'testCommand' is deprecated and its value ('{}') is being used for 'runCommand'. Please update your .jaider.json to use 'runCommand' instead.", testCommandVal);
                 runCommandVal = testCommandVal;
             }
         }
-        // Ensure testCommand is not part of the final effective 'runCommand' if 'runCommand' was explicitly set.
-        // The logic above already handles this, but we ensure loadedJsonConfig reflects the final decision for runCommand.
+        // Ensure testCommand is not part of the final effective 'runCommand'.
+        // loadedJsonConfig should reflect the final command to be used.
         this.loadedJsonConfig.put("runCommand", runCommandVal);
-        this.loadedJsonConfig.remove("testCommand");
+        this.loadedJsonConfig.remove("testCommand"); // Remove testCommand from the effective config
 
 
         // Assign to final fields using reflection.
@@ -214,7 +239,7 @@ public class Config {
         // of these final fields.
         // It assumes populateFieldsFromJson is called as part of the object's construction sequence (via load()).
         java.lang.reflect.Field llmField, ollamaBaseUrlField, ollamaModelNameField, genericOpenaiBaseUrlField, genericOpenaiModelNameField,
-                                genericOpenaiEmbeddingModelNameField, genericOpenaiApiKeyField, openaiModelNameField,
+                                genericOpenaiEmbeddingModelNameField, genericOpenaiApiKeyField, openaiModelNameField, openaiApiKeyField, // Add openaiApiKeyField
                                 geminiApiKeyField, geminiModelNameField, geminiEmbeddingModelNameField, tavilyApiKeyField,
                                 toolManifestsDirField, runCommandField;
         try {
@@ -227,6 +252,7 @@ public class Config {
             genericOpenaiEmbeddingModelNameField = Config.class.getDeclaredField("genericOpenaiEmbeddingModelName");
             genericOpenaiApiKeyField = Config.class.getDeclaredField("genericOpenaiApiKey");
             openaiModelNameField = Config.class.getDeclaredField("openaiModelName");
+            openaiApiKeyField = Config.class.getDeclaredField("openaiApiKey"); // Get openaiApiKey field
             geminiApiKeyField = Config.class.getDeclaredField("geminiApiKey");
             geminiModelNameField = Config.class.getDeclaredField("geminiModelName");
             geminiEmbeddingModelNameField = Config.class.getDeclaredField("geminiEmbeddingModelName");
@@ -242,6 +268,7 @@ public class Config {
             genericOpenaiEmbeddingModelNameField.setAccessible(true);
             genericOpenaiApiKeyField.setAccessible(true);
             openaiModelNameField.setAccessible(true);
+            openaiApiKeyField.setAccessible(true); // Set openaiApiKey field accessible
             geminiApiKeyField.setAccessible(true);
             geminiModelNameField.setAccessible(true);
             geminiEmbeddingModelNameField.setAccessible(true);
@@ -257,6 +284,7 @@ public class Config {
             genericOpenaiEmbeddingModelNameField.set(this, genericOpenaiEmbeddingModelNameVal);
             genericOpenaiApiKeyField.set(this, genericOpenaiApiKeyVal);
             openaiModelNameField.set(this, openaiModelNameVal);
+            openaiApiKeyField.set(this, openaiApiKeyVal); // Set openaiApiKey field
             geminiApiKeyField.set(this, geminiApiKeyVal);
             geminiModelNameField.set(this, geminiModelNameVal);
             geminiEmbeddingModelNameField.set(this, geminiEmbeddingModelNameVal);
@@ -363,12 +391,10 @@ public class Config {
         if (value != null && !value.isEmpty()) {
             return value;
         }
-        if (this.loadedJsonConfig != null && this.loadedJsonConfig.has(specificJsonKey)) {
-            value = this.loadedJsonConfig.optString(specificJsonKey, null);
-            if (value != null && !value.isEmpty()) {
-                return value;
-            }
-        }
+        // Deprecated: Direct lookup of specificJsonKey is removed.
+        // Configuration should be via environment variable or the apiKeys map.
+        // The specificJsonKey field itself is still loaded for backward compatibility in populateFieldsFromJson,
+        // but getKeyValue will now prioritize apiKeys map over it if env var is not set.
         if (genericApiKeyMapKey != null) {
             value = this.apiKeys.get(genericApiKeyMapKey);
             if (value != null && !value.isEmpty()) {
@@ -430,7 +456,36 @@ public class Config {
         String envVarName = providerKeyInMap.toUpperCase() + "_API_KEY";
         String value = System.getenv(envVarName);
         if (value != null && !value.isEmpty()) return value;
-        return this.apiKeys.getOrDefault(providerKeyInMap, null);
+
+        // Fallback to deprecated top-level keys if not in apiKeys map and env var not set.
+        // This is to maintain a degree of backward compatibility for users who haven't migrated.
+        // However, the primary and recommended way is env var or apiKeys map.
+        String fallbackValue = null;
+        switch (providerKeyInMap.toLowerCase()) {
+            case "openai":
+                fallbackValue = this.openaiApiKey; // Access the deprecated field directly
+                break;
+            case "google": // Assuming "google" is used for Gemini in apiKeys
+                fallbackValue = this.geminiApiKey;
+                break;
+            case "tavily":
+                fallbackValue = this.tavilyApiKey;
+                break;
+            case "genericopenai":
+                fallbackValue = this.genericOpenaiApiKey;
+                break;
+        }
+
+        String apiKeyFromMap = this.apiKeys.get(providerKeyInMap);
+        if (apiKeyFromMap != null && !apiKeyFromMap.isEmpty()) {
+            return apiKeyFromMap;
+        }
+
+        if (fallbackValue != null && !fallbackValue.isEmpty()) {
+            logger.warn("Using deprecated top-level JSON key for '{}'. Please migrate to 'apiKeys' map or environment variables.", providerKeyInMap);
+            return fallbackValue;
+        }
+        return null;
     }
 
     public String readForEditing() {
@@ -508,7 +563,10 @@ public class Config {
     /** @return The configured LLM provider name (e.g., "ollama", "openai"). */
     public String getLlm() { return llm; }
 
-    /** @return The command string used for running validation or tests (e.g., "mvn test"). */
+    /**
+     * @return The command string used for running validation or tests (e.g., "mvn test").
+     * This may be populated from the legacy "testCommand" field if "runCommand" is not set.
+     */
     public String getRunCommand() { return runCommand; }
 
     /** @return The base URL for the Ollama service (e.g., "http://localhost:11434"). */

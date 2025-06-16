@@ -1,8 +1,8 @@
 package dumb.jaider.llm;
 
 import dev.langchain4j.data.message.AiMessage;
-import dev.langchain4j.model.Tokenizer;
-import dev.langchain4j.model.chat.ChatLanguageModel;
+import dev.langchain4j.model.Tokenizer; // Reverted to model package
+import dev.langchain4j.model.chat.ChatModel; // Changed from dev.langchain4j.model.chat.ChatLanguageModel
 import dev.langchain4j.model.embedding.EmbeddingModel;
 import dev.langchain4j.model.ollama.OllamaChatModel;
 import dev.langchain4j.model.ollama.OllamaEmbeddingModel;
@@ -18,7 +18,7 @@ public class LlmProviderFactory {
     private final Config config;
     private final JaiderModel model;
 
-    private ChatLanguageModel chatModel;
+    private ChatModel chatModel; // Changed from ChatLanguageModel
     private Tokenizer tokenizer;
     private EmbeddingModel embeddingModel;
 
@@ -27,7 +27,7 @@ public class LlmProviderFactory {
         this.model = model;
     }
 
-    public ChatLanguageModel createChatModel() {
+    public ChatModel createChatModel() { // Changed from ChatLanguageModel
         if ("ollama".equalsIgnoreCase(config.getLlm())) {
             setupOllama();
         } else if ("genericOpenai".equalsIgnoreCase(config.getLlm())) {

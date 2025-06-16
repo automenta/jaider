@@ -1,13 +1,17 @@
 package dumb.jaider.llm;
 
 import dev.langchain4j.agent.tool.ToolExecutionRequest;
-import dev.langchain4j.agent.tool.ToolSpecification; // Added import
+import dev.langchain4j.agent.tool.ToolSpecification;
 import dev.langchain4j.data.message.ChatMessage;
-// import dev.langchain4j.data.message.Content; // Reverted, will use message.text()
-// import dev.langchain4j.data.message.TextContent; // Reverted
-import dev.langchain4j.model.Tokenizer;
+import dev.langchain4j.data.message.UserMessage;
+import dev.langchain4j.data.message.AiMessage;
+import dev.langchain4j.data.message.SystemMessage;
+import dev.langchain4j.model.Tokenizer; // Reverted to model package
+import dev.langchain4j.data.message.Content;
+import dev.langchain4j.data.message.TextContent;
 
 import java.util.Collections;
+import java.util.stream.Collectors; // Added for Collectors.joining
 import java.util.List;
 
 public class NoOpTokenizer implements Tokenizer {
@@ -20,10 +24,15 @@ public class NoOpTokenizer implements Tokenizer {
 
     @Override
     public int estimateTokenCountInMessage(ChatMessage message) {
-        if (message == null) return 0;
-        // Reverting to message.text() to avoid symbol not found error for contents()
-        // This will likely re-introduce a deprecation warning, but aims to fix compilation error.
-        return estimateTokenCountInText(message.text());
+        if (message == null || message.contents() == null || message.contents().isEmpty()) {
+            return 0;
+        }
+        // Estimate based on the text content of the message
+        String textContent = message.contents().stream()
+                                  .filter(content -> content instanceof TextContent)
+                                  .map(content -> ((TextContent) content).text())
+                                  .collect(Collectors.joining(" "));
+        return estimateTokenCountInText(textContent);
     }
 
     @Override
@@ -68,14 +77,12 @@ public class NoOpTokenizer implements Tokenizer {
         return count;
     }
 
-    // Removing @Override temporarily due to persistent compilation errors
-    // and inability to verify exact interface signature.
-    // This is a workaround for a NoOp implementation.
+    @Override
     public List<Integer> encode(String text) {
         return Collections.emptyList();
     }
 
-    // Removing @Override temporarily
+    @Override
     public List<Integer> encode(String text, int maxTokens) {
         List<Integer> encoded = encode(text);
         if (encoded.size() > maxTokens) {
@@ -84,7 +91,7 @@ public class NoOpTokenizer implements Tokenizer {
         return encoded;
     }
 
-    // Removing @Override temporarily
+    @Override
     public String decode(List<Integer> tokens) {
         return "";
     }
