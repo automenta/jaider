@@ -152,9 +152,62 @@ Agents (primarily the CoderAgent) can use the following tools:
 
     Alternatively, for development purposes, you can run the application directly using Maven:
     ```bash
-    mvn exec:java -Dexec.mainClass="dumb.jaider.Jaider"
+    mvn exec:java -Dexec.mainClass="dumb.jaider.app.Jaider"
     ```
+    (Note: The main class for the primary Jaider application is `dumb.jaider.app.Jaider`. See the "Interactive Demo" section below for its specific main class.)
+
 4.  **First Run:** Jaider will create a default `.jaider.json` if one isn't found. You should edit this file to configure your preferred LLM provider and API keys. Use `/edit-config` or edit it manually.
+
+## Interactive Demo
+
+This project includes an interactive command-line demo (`dumb.integrationhandler.demo.InteractiveDemo`) that showcases a simplified workflow for generating a project from scratch using a selected Language Model.
+
+The demo will:
+1.  Prompt you to choose a Language Model (Gemini or Ollama - Ollama is currently a placeholder).
+2.  Ask for the necessary API key (for Gemini) or configuration details.
+3.  Ask you to choose a sample project or provide a custom project description.
+4.  Attempt to generate a single file based on your description using the chosen LLM.
+5.  Save this file in a temporary directory.
+6.  Print status messages, including the path to the temporary directory and the generated file.
+
+This demo serves as a basic example of TUI (console-based) interaction for LLM configuration and a simplified project generation task.
+
+### Prerequisites for the Demo
+
+*   Java 21 and Maven (as per the main project).
+*   If using Gemini:
+    *   A Google Gemini API key. You can provide this when prompted by the demo, or ensure the `GOOGLE_API_KEY` environment variable is set.
+    *   The demo also attempts to respect Google Cloud Application Default Credentials (ADC) if the API key is not directly provided and the environment variable is not set, though direct key input is prioritized for this specific demo.
+
+### Compiling and Running the Demo
+
+1.  **Build the Project:**
+    Ensure the entire project is compiled and packaged, as the demo might rely on shared classes or configurations.
+    ```bash
+    mvn clean package
+    ```
+    (Alternatively, `mvn clean install` if other modules depend on this one, though `package` is usually sufficient to compile all classes).
+
+2.  **Run the Demo:**
+    Use the `exec:java` Maven plugin to run the `InteractiveDemo` class:
+    ```bash
+    mvn exec:java -Dexec.mainClass="dumb.integrationhandler.demo.InteractiveDemo"
+    ```
+
+### Expected Behavior
+
+Upon running the command above, you should see:
+*   Prompts asking you to select a Language Model (Gemini/Ollama).
+*   A prompt for your API key if Gemini is selected.
+*   Prompts for choosing a project type or providing a custom description.
+*   Console messages indicating:
+    *   The selections you've made.
+    *   The path to the temporary directory being used.
+    *   The start of the project generation process.
+    *   The outcome of the generation (success or error).
+    *   Verification status of the generated file.
+    *   The cleanup of the temporary directory.
+*   If successful, a file (e.g., `generated_project_output.txt`) will be created in a temporary system directory. The path will be printed in the console. This directory is automatically cleaned up when the demo finishes.
 
 ---
 Inspired by [Aider](https://github.com/Aider-AI/aider).
