@@ -1,8 +1,8 @@
-package dumb.integrationhandler.demo;
+package dumb.jaider.demo;
 
+import dev.langchain4j.data.message.UserMessage;
 import dev.langchain4j.model.chat.ChatModel;
 import dev.langchain4j.model.googleai.GoogleAiGeminiChatModel;
-import dev.langchain4j.data.message.UserMessage;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -74,19 +74,19 @@ public class InteractiveDemo {
             try {
                 long fileSize = Files.size(outputFile);
                 if (fileSize > 0) {
-                    System.out.println("Verification successful: Project content generated and verified in " + outputFile.toString() + " (Size: " + fileSize + " bytes)");
+                    System.out.println("Verification successful: Project content generated and verified in " + outputFile + " (Size: " + fileSize + " bytes)");
                     return true;
                 } else {
-                    System.err.println("Verification failed: Output file is empty. Path: " + outputFile.toString());
+                    System.err.println("Verification failed: Output file is empty. Path: " + outputFile);
                     return false;
                 }
             } catch (IOException e) {
-                System.err.println("Verification failed: Error accessing file attributes for " + outputFile.toString() + " - " + e.getMessage());
+                System.err.println("Verification failed: Error accessing file attributes for " + outputFile + " - " + e.getMessage());
                 // e.printStackTrace();
                 return false;
             }
         } else {
-            System.err.println("Verification failed: Output file not found at path: " + outputFile.toString());
+            System.err.println("Verification failed: Output file not found at path: " + outputFile);
             return false;
         }
     }
@@ -117,12 +117,12 @@ public class InteractiveDemo {
                                 ". The output should be the content for a single file. For example, if it's a Python app, provide the content of the .py file.";
 
                 UserMessage userMessage = UserMessage.from(prompt);
-                String response = chatModel.generate(userMessage).content().text();
+                String response = chatModel.chat(userMessage).aiMessage().text();
                 System.out.println("Gemini response received.");
 
                 generatedFilePath = outputDirectory.resolve(GENERATED_FILE_NAME);
                 Files.writeString(generatedFilePath, response, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
-                System.out.println("Saving generated content to " + generatedFilePath.toString());
+                System.out.println("Saving generated content to " + generatedFilePath);
                 System.out.println("Project generation with Gemini complete.");
                 return true;
 
@@ -138,7 +138,7 @@ public class InteractiveDemo {
             try {
                 String placeholderContent = "Ollama integration is not demonstrated in this simplified demo. Full Ollama support is available in the main Jaider application.\nProject description for demo: " + description + "\nConfig entered in demo: " + key;
                 Files.writeString(generatedFilePath, placeholderContent, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
-                System.out.println("Saving generated content to " + generatedFilePath.toString());
+                System.out.println("Saving generated content to " + generatedFilePath);
                 return true;
             } catch (IOException e) {
                 System.err.println("Error: Failed to write Ollama placeholder file: " + e.getMessage());

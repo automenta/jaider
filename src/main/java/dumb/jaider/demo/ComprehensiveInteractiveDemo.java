@@ -1,4 +1,4 @@
-package dumb.integrationhandler.demo;
+package dumb.jaider.demo;
 
 import dumb.jaider.app.App;
 import dumb.jaider.ui.DemoUI;
@@ -23,41 +23,35 @@ public class ComprehensiveInteractiveDemo {
 
         // Create a default .jaider.json configuration file
         Path jaiderConfigPath = temporaryDemoDirectory.resolve(".jaider.json");
-        String defaultConfigContent = "{
-" +
-                "  \"llmProvider\": \"ollama\",
-" + // Default to ollama, user can change via demo script
-                "  \"ollamaBaseUrl\": \"http://localhost:11434\",
-" +
-                "  \"ollamaModelName\": \"nous-hermes2\",
-" + // A common default model
-                "  \"runCommand\": \"echo 'Validation command not configured for this demo project.'\",
-" +
-                "  \"apiKeys\": {},
-" +
-                "  \"autoApplyDiff\": false
-" +
-                "}";
+        String defaultConfigContent = """
+                    {
+                    llmProvider: "ollama",
+                    ollamaBaseUrl: "http://localhost:11434",
+                    ollamaModelName: "llamablit",
+                    runCommand: "echo 'Validation command not configured for this demo project.'",
+                    apiKeys: {},
+                    autoApplyDiff: false
+                    }
+                """;
         Files.writeString(jaiderConfigPath, defaultConfigContent, StandardOpenOption.CREATE);
         System.out.println("[DemoSetup] Created default .jaider.json in temporary directory.");
 
         // Create some sample files
         Path readmePath = temporaryDemoDirectory.resolve("README.md");
-        Files.writeString(readmePath, "# Sample Project
-
-This is a sample project for the Jaider demo.", StandardOpenOption.CREATE);
+        Files.writeString(readmePath, "# Sample Project\nThis is a sample project for the Jaider demo.", StandardOpenOption.CREATE);
 
         Path mainPyPath = temporaryDemoDirectory.resolve("main.py");
-        Files.writeString(mainPyPath, "def hello():
-    print(\"Hello from main.py\")
-
-hello()", StandardOpenOption.CREATE);
+        Files.writeString(mainPyPath,
+                """
+                            def hello():
+                                print(\"Hello from main.py\")
+                        
+                            hello()
+                        """
+                , StandardOpenOption.CREATE);
 
         Path utilsPyPath = temporaryDemoDirectory.resolve("utils.py");
-        Files.writeString(utilsPyPath, "# Utility functions
-
-def helper_function():
-    return \"Helpful string\"", StandardOpenOption.CREATE);
+        Files.writeString(utilsPyPath, "# Utility functions\ndef helper_function():\n\treturn \"Helpful string\"", StandardOpenOption.CREATE);
 
         System.out.println("[DemoSetup] Created sample files in temporary directory.");
     }
@@ -116,8 +110,8 @@ def helper_function():
             List<String> demoScript = Arrays.asList(
                 "DEMO_COMMENT: === Phase 1: Initial Setup & Basic Interaction ===",
                 "DEMO_COMMENT: Initializing demo. The .jaider.json in the temp directory should be loaded.",
-                "DEMO_COMMENT: Default LLM provider is 'ollama' with model 'nous-hermes2'. Ensure Ollama is running or edit .jaider.json.",
-                "DEMO_PAUSE: Check initial state (ollama/nous-hermes2). Press Enter to add README.md to context.",
+                    "DEMO_COMMENT: Default LLM provider is 'ollama'. Ensure Ollama is running or edit .jaider.json.",
+                    "DEMO_PAUSE: Check initial state. Press Enter to add README.md to context.",
                 "/add README.md",
                 "DEMO_PAUSE: README.md added. Press Enter to add main.py.",
                 "/add main.py",

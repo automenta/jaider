@@ -7,13 +7,13 @@ import dumb.jaider.model.JaiderModel;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.util.LinkedList;
 import java.util.List;
+import java.util.Queue;
 import java.util.Scanner;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.LinkedList;
-import java.util.Queue;
 import java.util.concurrent.TimeUnit;
 
 public class DemoUI implements UI {
@@ -73,27 +73,23 @@ public class DemoUI implements UI {
         try {
             if (command.startsWith("DEMO_OPERATOR_INPUT:")) {
                 String prompt = command.substring("DEMO_OPERATOR_INPUT:".length()).trim();
-                System.out.println("
-[DemoUI] PROMPT: " + prompt);
+                System.out.println("[DemoUI] PROMPT: " + prompt);
                 System.out.print("[DemoUI] Your input > ");
                 String userInput = directInputScanner.nextLine();
                 if (this.app != null) {
                     this.app.handleUserInput(userInput);
                 }
             } else if (command.startsWith("DEMO_COMMENT:")) {
-                System.out.println("
-[DemoUI] INFO: " + command.substring("DEMO_COMMENT:".length()).trim());
+                System.out.println("[DemoUI] INFO: " + command.substring("DEMO_COMMENT:".length()).trim());
                 uiInteractionExecutor.submit(this::processNextCommand);
             } else if (command.startsWith("DEMO_PAUSE:")) {
                  String message = command.substring("DEMO_PAUSE:".length()).trim();
-                 System.out.println("
-[DemoUI] PAUSED: " + message);
+                System.out.println("[DemoUI] PAUSED: " + message);
                  System.out.println("Press Enter to continue...");
                  directInputScanner.nextLine();
                  uiInteractionExecutor.submit(this::processNextCommand);
             } else {
-                System.out.println("
-[DemoUI] Executing scripted command: " + command);
+                System.out.println("[DemoUI] Executing scripted command: " + command);
                 if (this.app != null) {
                     this.app.handleUserInput(command);
                 }
@@ -116,8 +112,7 @@ public class DemoUI implements UI {
     public void redraw(JaiderModel model) {
         System.out.flush();
 
-        System.out.println("
-[DemoUI] --- REDRAW ---");
+        System.out.println("[DemoUI] --- REDRAW ---");
         System.out.println("[DemoUI] Mode: " + model.mode);
         System.out.println("[DemoUI] Status: " + model.statusBarText);
         System.out.println("[DemoUI] Current Tokens: " + model.currentTokenCount);
@@ -185,8 +180,7 @@ public class DemoUI implements UI {
     @Override
     public CompletableFuture<Boolean> confirm(String title, String text) {
         CompletableFuture<Boolean> future = new CompletableFuture<>();
-        System.out.println("
-[DemoUI] CONFIRMATION REQUEST:");
+        System.out.println("[DemoUI] CONFIRMATION REQUEST:");
         System.out.println("[DemoUI] Title: " + title);
         System.out.println("[DemoUI] Text: " + text);
         handleBlockingUiInteraction(future, "[DemoUI] Approve? (yes/no) > ", reader -> "yes".equalsIgnoreCase(reader.readLine().trim()));
@@ -196,8 +190,7 @@ public class DemoUI implements UI {
     @Override
     public CompletableFuture<DiffInteractionResult> diffInteraction(String diff) {
         CompletableFuture<DiffInteractionResult> future = new CompletableFuture<>();
-        System.out.println("
-[DemoUI] DIFF INTERACTION REQUEST:");
+        System.out.println("[DemoUI] DIFF INTERACTION REQUEST:");
         System.out.println("[DemoUI] Agent wants to apply these changes:");
         System.out.println("-------------------- DIFF START --------------------");
         System.out.println(diff);
@@ -228,8 +221,7 @@ public class DemoUI implements UI {
     @Override
     public CompletableFuture<String> configEdit(String currentConfig) {
         CompletableFuture<String> future = new CompletableFuture<>();
-        System.out.println("
-[DemoUI] CONFIGURATION EDIT REQUEST:");
+        System.out.println("[DemoUI] CONFIGURATION EDIT REQUEST:");
         System.out.println("[DemoUI] Current configuration:");
         System.out.println("-------------------- CONFIG START --------------------");
         System.out.println(currentConfig);
@@ -255,8 +247,7 @@ public class DemoUI implements UI {
     @Override
     public CompletableFuture<Boolean> confirmPlan(String title, String planText, AiMessage agentMessage) {
         CompletableFuture<Boolean> future = new CompletableFuture<>();
-        System.out.println("
-[DemoUI] PLAN CONFIRMATION REQUEST:");
+        System.out.println("[DemoUI] PLAN CONFIRMATION REQUEST:");
         System.out.println("[DemoUI] Title: " + title);
         System.out.println("[DemoUI] Agent's Proposed Plan:");
         System.out.println("-------------------- PLAN START --------------------");

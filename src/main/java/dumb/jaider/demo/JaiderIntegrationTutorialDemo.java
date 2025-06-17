@@ -1,43 +1,24 @@
-package dumb.integrationhandler.demo;
+package dumb.jaider.demo;
 
-import dev.langchain4j.model.chat.ChatLanguageModel; // Corrected import
-import dev.langchain4j.model.googleai.GoogleAiGeminiChatModel;
 import dev.langchain4j.data.message.UserMessage;
-// import dumb.jaider.config.Config; // Removed
-// import dumb.jaider.model.JaiderModel; // Removed
-// import dumb.jaider.agents.AskAgent; // Removed
-// import dev.langchain4j.data.message.AiMessage; // Removed
-import java.util.Collections; // For Collections.singletonList - RETAINED
-// import dumb.jaider.tools.DiffApplier; // Removed
-// import com.github.difflib.DiffUtils; // Removed
-// import com.github.difflib.patch.Patch; // Removed
-// import com.github.difflib.text.UnifiedDiffUtils; // Removed
-// import java.util.List; // Removed
-// import java.util.stream.Collectors; // Removed
-// import javax.tools.JavaCompiler; // Removed
-// import javax.tools.ToolProvider; // Removed
-// import java.io.ByteArrayOutputStream; // Removed
-// import java.io.BufferedReader; // Removed
-// import java.io.InputStreamReader; // Removed
-// import java.nio.charset.StandardCharsets; // Removed
+import dev.langchain4j.model.chat.ChatModel;
+import dev.langchain4j.model.googleai.GoogleAiGeminiChatModel;
 
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.StandardOpenOption;
 import java.util.Comparator;
 import java.util.Scanner;
 import java.util.stream.Stream;
 
 public class JaiderIntegrationTutorialDemo {
 
-    private ChatLanguageModel chatModel; // Corrected type
+    private static final String DEFAULT_GEMINI_MODEL_NAME = "gemini-2.5-flash-preview-05-20"; // Consider making this configurable or using Jaider's config
     private Path temporaryDirectoryPath;
     private Scanner scanner;
     // private Config config; // Removed
     // private JaiderModel jaiderModel; // Removed
-
-    private static final String DEFAULT_GEMINI_MODEL_NAME = "gemini-pro"; // Consider making this configurable or using Jaider's config
+    private ChatModel chatModel; // Corrected type
 
     public JaiderIntegrationTutorialDemo() {
         this.scanner = new Scanner(System.in);
@@ -202,7 +183,7 @@ public class JaiderIntegrationTutorialDemo {
 
         try {
             // Ensure this.chatModel is used, which is initialized in runTutorial()
-            String fullResponse = this.chatModel.generate(java.util.Collections.singletonList(UserMessage.from(promptString))).content().text();
+            String fullResponse = this.chatModel.chat(java.util.Collections.singletonList(UserMessage.from(promptString))).aiMessage().text();
 
             if (fullResponse == null || fullResponse.trim().isEmpty()) {
                 System.err.println("LLM returned an empty response. Cannot proceed with project generation.");
