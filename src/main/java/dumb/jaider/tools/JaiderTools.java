@@ -65,12 +65,13 @@ public class JaiderTools {
         boolean stagedSuccessfully = selfUpdateOrchestratorService.stageUpdate(update);
 
         if (stagedSuccessfully) {
+            selfUpdateOrchestratorService.triggerUserConfirmationProcess();
             // System.err no longer primary, orchestrator handles logging of staging.
             // System.err.println("SELF-UPDATE PROPOSED VIA ORCHESTRATOR:");
             // System.err.println("  File Path: " + filePath);
             // System.err.println("  Commit Message: " + effectiveCommitMessage);
             // System.err.println("  Diff Content:\n---\n" + diffContent + "\n---");
-            return "Update for file '" + filePath + "' has been successfully staged with commit message: '" + effectiveCommitMessage + "'. Please await user confirmation to apply this change.";
+            return "Update for file '" + filePath + "' has been successfully staged and the user confirmation process has been initiated. Please respond to the confirmation dialog to apply this change.";
         } else {
             return "Error: Could not stage the update for '" + filePath + "'. The system might be busy or an internal error occurred (e.g., another update already in progress or pending).";
         }

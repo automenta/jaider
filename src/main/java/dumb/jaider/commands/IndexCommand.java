@@ -10,8 +10,12 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.concurrent.CompletableFuture;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class IndexCommand implements Command {
+    private static final Logger logger = LoggerFactory.getLogger(IndexCommand.class);
+
     @Override
     public void execute(String args, AppContext context) {
         var m = context.model();
@@ -75,6 +79,7 @@ public class IndexCommand implements Command {
                 m.isIndexed = true;
                 context.app().finishTurnPublic(AiMessage.from("[Jaider] Project successfully indexed with " + segments.size() + " segments."));
             } catch (Exception e) {
+                logger.error("Error during indexing for path '{}': {}", args, e.getMessage(), e); // Added SLF4J logging
                 // Log the full stack trace for better debugging on the server/log file
                 // Consider also sending a more user-friendly part of the message to the UI
                 e.printStackTrace(); // Good for server logs

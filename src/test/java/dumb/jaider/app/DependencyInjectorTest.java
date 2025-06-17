@@ -1,366 +1,474 @@
 package dumb.jaider.app;
 
+import dumb.jaider.app.exceptions.CircularDependencyException;
+import dumb.jaider.app.exceptions.ComponentNotFoundException;
+import dumb.jaider.app.exceptions.ComponentInstantiationException;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import java.util.List;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Objects;
 
 import static org.junit.jupiter.api.Assertions.*;
 
 public class DependencyInjectorTest {
 
-    private Map<String, JSONObject> definitions;
     private DependencyInjector injector;
+    private Map<String, JSONObject> componentDefinitions;
+
+    // --- Dummy Classes for Testing ---
+
+    static class ComponentA {
+        public String name = "ComponentA_DefaultName";
+        public ComponentA() {}
+    }
+
+    static class ComponentBWithDep {
+        public ComponentA depA;
+        public String id;
+        public ComponentBWithDep(ComponentA depA) {
+            this.depA = depA;
+            this.id = "B-" + System.nanoTime();
+        }
+    }
+
+    static class ComponentWithValCon {
+        public String text;
+        public int number;
+        public boolean flag;
+        public ComponentWithValCon(String text, int number, boolean flag) {
+            this.text = text;
+            this.number = number;
+            this.flag = flag;
+        }
+    }
+
+    static class ComponentWithMixedCon {
+        public String textVal;
+        public ComponentA compARef;
+        public int intVal;
+        public ComponentWithMixedCon(String textVal, ComponentA compARef, int intVal) {
+            this.textVal = textVal;
+            this.compARef = compARef;
+            this.intVal = intVal;
+        }
+    }
+
+    static class ComponentWithListVal {
+        public List<String> namesList;
+        public ComponentWithListVal(List<String> namesList) {
+            this.namesList = namesList;
+        }
+    }
+
+    static class ComponentWithListRef {
+        public List<ComponentA> componentAList;
+        public ComponentWithListRef(List<ComponentA> componentAList) {
+            this.componentAList = componentAList;
+        }
+    }
+
+    static class ComponentWithListMixed {
+        public List<Object> mixedItemsList;
+        public ComponentWithListMixed(List<Object> mixedItemsList){
+            this.mixedItemsList = mixedItemsList;
+        }
+    }
+
+    static class ComponentWithStaticFactoryNoArgs {
+        public String identifier = "FactoryNoArgsInstance";
+        private ComponentWithStaticFactoryNoArgs() {}
+        public static ComponentWithStaticFactoryNoArgs createInstance() {
+            return new ComponentWithStaticFactoryNoArgs();
+        }
+    }
+
+    static class ComponentWithStaticFactoryWithArgs {
+        public String stringArg;
+        public ComponentA componentArg;
+        public String identifier = "FactoryWithArgsInstance";
+        private ComponentWithStaticFactoryWithArgs(String stringArg, ComponentA componentArg) {
+            this.stringArg = stringArg;
+            this.componentArg = componentArg;
+        }
+        public static ComponentWithStaticFactoryWithArgs createInstance(String stringArg, ComponentA componentArg) {
+            return new ComponentWithStaticFactoryWithArgs(stringArg, componentArg);
+        }
+    }
+
+    static class ComponentWithStaticFactoryWithListArgs {
+        public List<String> stringListArg;
+        public List<ComponentA> componentListArg;
+        private ComponentWithStaticFactoryWithListArgs(List<String> stringListArg, List<ComponentA> componentListArg) {
+            this.stringListArg = stringListArg;
+            this.componentListArg = componentListArg;
+        }
+        public static ComponentWithStaticFactoryWithListArgs createInstance(List<String> stringListArg, List<ComponentA> componentListArg) {
+            return new ComponentWithStaticFactoryWithListArgs(stringListArg, componentListArg);
+        }
+    }
+
+    // For circular dependency tests
+    static class CompX {
+        CompY yDep;
+        public CompX(CompY yDep) { this.yDep = yDep; }
+    }
+    static class CompY {
+        CompZ zDep;
+        CompX xDep;
+        public CompY(CompX xDep) { this.xDep = xDep; } // Constructor for Direct circular: Y -> X
+        public CompY(CompZ zDep) { this.zDep = zDep; } // Constructor for Indirect circular: Y -> Z
+    }
+    static class CompZ {
+        CompX xDep;
+        public CompZ(CompX xDep) { this.xDep = xDep; }
+    }
+
 
     @BeforeEach
     void setUp() {
-        definitions = new HashMap<>();
+        componentDefinitions = new HashMap<>();
+        injector = new DependencyInjector(new HashMap<>(componentDefinitions));
     }
 
-    // Helper Classes
-    public static class SimpleComponent {
-        public SimpleComponent() {}
-        // Override equals and hashCode for potential comparisons if needed, though instance identity is primary here.
-        @Override public boolean equals(Object o) { return this == o || (o != null && getClass() == o.getClass()); }
-        @Override public int hashCode() { return Objects.hash(getClass()); }
+    private JSONObject defineComponent(String id, String className) {
+        JSONObject def = new JSONObject();
+        def.put("id", id);
+        def.put("class", className);
+        componentDefinitions.put(id, def);
+        injector = new DependencyInjector(new HashMap<>(componentDefinitions));
+        return def;
     }
 
-    public static class LiteralArgComponent {
-        final String name;
-        final int version;
-        final boolean active;
-        long longVal;
-        float floatVal;
-        double doubleVal;
-
-        public LiteralArgComponent(String name, int version, boolean active) {
-            this.name = name;
-            this.version = version;
-            this.active = active;
-        }
-
-        public LiteralArgComponent(String name, int version, boolean active, long longVal, float floatVal, double doubleVal) {
-            this.name = name;
-            this.version = version;
-            this.active = active;
-            this.longVal = longVal;
-            this.floatVal = floatVal;
-            this.doubleVal = doubleVal;
-        }
+    private JSONObject defineComponentInMap(String id, String className, Map<String, JSONObject> definitionsMap) {
+        JSONObject def = new JSONObject();
+        def.put("id", id);
+        def.put("class", className);
+        definitionsMap.put(id, def);
+        return def;
     }
 
-    public static class RefArgComponent {
-        final SimpleComponent dependency;
-        public RefArgComponent(SimpleComponent dep) { this.dependency = dep; }
+
+    private JSONObject defineComponentWithFactory(String id, String className, String factoryMethod) {
+        JSONObject def = defineComponent(id, className);
+        def.put("staticFactoryMethod", factoryMethod);
+        return def;
     }
 
-    public static class StaticFactoryTarget {
-        String val;
-        SimpleComponent dep;
-        int num;
-        private StaticFactoryTarget(String val) { this.val = val; }
-        private StaticFactoryTarget(SimpleComponent dep, int num) { this.dep = dep; this.num = num; }
-
-        public static StaticFactoryTarget create(String val) { return new StaticFactoryTarget(val); }
-        public static StaticFactoryTarget createWithDep(SimpleComponent dep, int num) { return new StaticFactoryTarget(dep, num); }
+    private JSONArray createArgsArray() {
+        return new JSONArray();
     }
 
-    public static class InstanceFactoryProduct {
-        final String type;
-        SimpleComponent dep;
-        boolean flag;
-        public InstanceFactoryProduct(String type) { this.type = type;}
-        public InstanceFactoryProduct(SimpleComponent dep, boolean flag, String type) {
-            this.dep = dep;
-            this.flag = flag;
-            this.type = type + "-dep"; // to differentiate
-        }
+    private JSONObject createValueArg(Object value, String type) {
+        return new JSONObject().put("value", value).put("type", type);
     }
 
-    public static class InstanceFactory {
-        public InstanceFactoryProduct createProduct(String type) { return new InstanceFactoryProduct(type); }
-        public InstanceFactoryProduct createProductWithDep(SimpleComponent dep, boolean flag) {
-            return new InstanceFactoryProduct(dep, flag, "product");
-        }
+    private JSONObject createRefArg(String refId) {
+        return new JSONObject().put("ref", refId);
     }
 
-    public static class CircularA {
-        final CircularB b;
-        public CircularA(CircularB b) { this.b = b; }
-    }
-
-    public static class CircularB {
-        final CircularA a;
-        public CircularB(CircularA a) { this.a = a; }
-    }
-
-    // Test Cases
-    @Test
-    void testNoArgConstructor() {
-        definitions.put("simple", new JSONObject()
-                .put("id", "simple")
-                .put("class", SimpleComponent.class.getName()));
-        injector = new DependencyInjector(definitions);
-        SimpleComponent component = (SimpleComponent) injector.getComponent("simple");
-        assertNotNull(component);
-        assertInstanceOf(SimpleComponent.class, component);
+    private JSONObject createListArg(JSONArray listElementDefs) {
+        return new JSONObject().put("list", listElementDefs);
     }
 
     @Test
-    void testLiteralArgConstructor() {
-        definitions.put("literalComp", new JSONObject()
-                .put("id", "literalComp")
-                .put("class", LiteralArgComponent.class.getName())
-                .put("constructorArgs", new JSONArray()
-                        .put(new JSONObject().put("value", "TestName").put("type", "String"))
-                        .put(new JSONObject().put("value", 101).put("type", "int"))
-                        .put(new JSONObject().put("value", true).put("type", "boolean"))));
-        injector = new DependencyInjector(definitions);
-        LiteralArgComponent component = (LiteralArgComponent) injector.getComponent("literalComp");
-        assertNotNull(component);
-        assertEquals("TestName", component.name);
-        assertEquals(101, component.version);
-        assertTrue(component.active);
+    void testRegisterAndGetComponent_simpleSingleton() {
+        defineComponent("compA_id", "dumb.jaider.app.DependencyInjectorTest$ComponentA");
+        ComponentA instance1 = (ComponentA) injector.getComponent("compA_id");
+        assertNotNull(instance1);
+        assertEquals("ComponentA_DefaultName", instance1.name);
+        ComponentA instance2 = (ComponentA) injector.getComponent("compA_id");
+        assertSame(instance1, instance2, "Singleton instance should be the same");
     }
 
     @Test
-    void testReferenceArgConstructor() {
-        definitions.put("simple", new JSONObject().put("id", "simple").put("class", SimpleComponent.class.getName()));
-        definitions.put("refComp", new JSONObject()
-                .put("id", "refComp")
-                .put("class", RefArgComponent.class.getName())
-                .put("constructorArgs", new JSONArray()
-                        .put(new JSONObject().put("ref", "simple"))));
-        injector = new DependencyInjector(definitions);
-        RefArgComponent refComp = (RefArgComponent) injector.getComponent("refComp");
-        assertNotNull(refComp);
-        assertNotNull(refComp.dependency);
-        assertInstanceOf(SimpleComponent.class, refComp.dependency);
+    void testGetComponent_notFound_throwsException() {
+        assertThrows(ComponentNotFoundException.class, () -> injector.getComponent("nonExistentId"));
     }
 
     @Test
-    void testStaticFactoryMethod_withLiterals() {
-        definitions.put("staticFac", new JSONObject()
-                .put("id", "staticFac")
-                .put("class", StaticFactoryTarget.class.getName())
-                .put("staticFactoryMethod", "create")
-                .put("staticFactoryArgs", new JSONArray()
-                        .put(new JSONObject().put("value", "StaticValue").put("type", "String"))));
-        injector = new DependencyInjector(definitions);
-        StaticFactoryTarget component = (StaticFactoryTarget) injector.getComponent("staticFac");
-        assertNotNull(component);
-        assertEquals("StaticValue", component.val);
+    void testGetComponent_constructorWithDirectValues() {
+        JSONObject definition = defineComponent("compVal_id", "dumb.jaider.app.DependencyInjectorTest$ComponentWithValCon");
+        JSONArray ctorArgs = createArgsArray()
+            .put(createValueArg("text value", "java.lang.String"))
+            .put(createValueArg(99, "int"))
+            .put(createValueArg(false, "boolean"));
+        definition.put("constructorArgs", ctorArgs);
+        injector = new DependencyInjector(new HashMap<>(componentDefinitions));
+        ComponentWithValCon instance = (ComponentWithValCon) injector.getComponent("compVal_id");
+        assertNotNull(instance);
+        assertEquals("text value", instance.text);
+        assertEquals(99, instance.number);
+        assertFalse(instance.flag);
     }
 
     @Test
-    void testStaticFactoryMethod_withReference() {
-        definitions.put("simple", new JSONObject().put("id", "simple").put("class", SimpleComponent.class.getName()));
-        definitions.put("staticFacDep", new JSONObject()
-                .put("id", "staticFacDep")
-                .put("class", StaticFactoryTarget.class.getName())
-                .put("staticFactoryMethod", "createWithDep")
-                .put("staticFactoryArgs", new JSONArray()
-                        .put(new JSONObject().put("ref", "simple"))
-                        .put(new JSONObject().put("value", 99).put("type", "int"))));
-        injector = new DependencyInjector(definitions);
-        StaticFactoryTarget component = (StaticFactoryTarget) injector.getComponent("staticFacDep");
-        assertNotNull(component);
-        assertNotNull(component.dep);
-        assertInstanceOf(SimpleComponent.class, component.dep);
-        assertEquals(99, component.num);
+    void testGetComponent_constructorWithMixedArgsRefAndValue() {
+        defineComponent("compA_ref_id", "dumb.jaider.app.DependencyInjectorTest$ComponentA");
+        JSONObject defMixed = defineComponent("compMixed_id", "dumb.jaider.app.DependencyInjectorTest$ComponentWithMixedCon");
+        JSONArray ctorArgsMixed = createArgsArray()
+            .put(createValueArg("mixed string", "java.lang.String"))
+            .put(createRefArg("compA_ref_id"))
+            .put(createValueArg(77, "int"));
+        defMixed.put("constructorArgs", ctorArgsMixed);
+        injector = new DependencyInjector(new HashMap<>(componentDefinitions));
+        ComponentWithMixedCon instanceMixed = (ComponentWithMixedCon) injector.getComponent("compMixed_id");
+        assertNotNull(instanceMixed);
+        assertEquals("mixed string", instanceMixed.textVal);
+        assertNotNull(instanceMixed.compARef);
+        assertEquals("ComponentA_DefaultName", instanceMixed.compARef.name);
+        assertEquals(77, instanceMixed.intVal);
+        ComponentA instanceA = (ComponentA) injector.getComponent("compA_ref_id");
+        assertSame(instanceA, instanceMixed.compARef);
     }
 
     @Test
-    void testInstanceFactoryMethod_withLiterals() {
-        definitions.put("instanceFacBean", new JSONObject().put("id", "instanceFacBean").put("class", InstanceFactory.class.getName()));
-        definitions.put("instanceProd", new JSONObject()
-                .put("id", "instanceProd")
-                // class is not needed here as factoryBean implies the class to call factoryMethod on
-                .put("factoryBean", "instanceFacBean")
-                .put("factoryMethod", "createProduct")
-                .put("factoryArgs", new JSONArray()
-                        .put(new JSONObject().put("value", "DynamicProduct").put("type", "String"))));
-        injector = new DependencyInjector(definitions);
-        InstanceFactoryProduct component = (InstanceFactoryProduct) injector.getComponent("instanceProd");
-        assertNotNull(component);
-        assertEquals("DynamicProduct", component.type);
+    void testGetComponent_constructorWithRefDependencies() {
+        defineComponent("compA_dep_id", "dumb.jaider.app.DependencyInjectorTest$ComponentA");
+        JSONObject defB = defineComponent("compB_with_dep_id", "dumb.jaider.app.DependencyInjectorTest$ComponentBWithDep");
+        defB.put("constructorArgs", createArgsArray().put(createRefArg("compA_dep_id")));
+        injector = new DependencyInjector(new HashMap<>(componentDefinitions));
+        ComponentBWithDep instanceB = (ComponentBWithDep) injector.getComponent("compB_with_dep_id");
+        assertNotNull(instanceB);
+        assertNotNull(instanceB.depA);
+        assertEquals("ComponentA_DefaultName", instanceB.depA.name);
+        assertSame(injector.getComponent("compA_dep_id"), instanceB.depA);
     }
 
     @Test
-    void testInstanceFactoryMethod_withReference() {
-        definitions.put("simple", new JSONObject().put("id", "simple").put("class", SimpleComponent.class.getName()));
-        definitions.put("instanceFacBean", new JSONObject().put("id", "instanceFacBean").put("class", InstanceFactory.class.getName()));
-        definitions.put("instanceProdDep", new JSONObject()
-                .put("id", "instanceProdDep")
-                .put("factoryBean", "instanceFacBean")
-                .put("factoryMethod", "createProductWithDep")
-                .put("factoryArgs", new JSONArray()
-                        .put(new JSONObject().put("ref", "simple"))
-                        .put(new JSONObject().put("value", true).put("type", "boolean"))));
-        injector = new DependencyInjector(definitions);
-        InstanceFactoryProduct component = (InstanceFactoryProduct) injector.getComponent("instanceProdDep");
-        assertNotNull(component);
-        assertNotNull(component.dep);
-        assertInstanceOf(SimpleComponent.class, component.dep);
-        assertTrue(component.flag);
-        assertEquals("product-dep", component.type);
+    void testGetComponent_constructorWithListOfValues() {
+        JSONObject def = defineComponent("listValComp_id", "dumb.jaider.app.DependencyInjectorTest$ComponentWithListVal");
+        JSONArray stringListJson = createArgsArray()
+            .put(createValueArg("Xyz", "java.lang.String"))
+            .put(createValueArg("Abc", "java.lang.String"));
+        def.put("constructorArgs", createArgsArray().put(createListArg(stringListJson)));
+        injector = new DependencyInjector(new HashMap<>(componentDefinitions));
+        ComponentWithListVal instance = (ComponentWithListVal) injector.getComponent("listValComp_id");
+        assertNotNull(instance);
+        assertNotNull(instance.namesList);
+        assertEquals(2, instance.namesList.size());
+        assertEquals("Xyz", instance.namesList.get(0));
+        assertEquals("Abc", instance.namesList.get(1));
     }
 
     @Test
-    void testSingletonBehavior() {
-        definitions.put("simple", new JSONObject().put("id", "simple").put("class", SimpleComponent.class.getName()));
-        injector = new DependencyInjector(definitions);
-        Object s1 = injector.getComponent("simple");
-        Object s2 = injector.getComponent("simple");
-        assertSame(s1, s2);
+    void testGetComponent_constructorWithListOfRefs() {
+        defineComponent("compA_for_list1", "dumb.jaider.app.DependencyInjectorTest$ComponentA");
+        defineComponent("compA_for_list2", "dumb.jaider.app.DependencyInjectorTest$ComponentA");
+        JSONObject def = defineComponent("listRefComp_id", "dumb.jaider.app.DependencyInjectorTest$ComponentWithListRef");
+        JSONArray refListJson = createArgsArray()
+            .put(createRefArg("compA_for_list1"))
+            .put(createRefArg("compA_for_list2"));
+        def.put("constructorArgs", createArgsArray().put(createListArg(refListJson)));
+        injector = new DependencyInjector(new HashMap<>(componentDefinitions));
+        ComponentWithListRef instance = (ComponentWithListRef) injector.getComponent("listRefComp_id");
+        assertNotNull(instance);
+        assertNotNull(instance.componentAList);
+        assertEquals(2, instance.componentAList.size());
+        assertSame(injector.getComponent("compA_for_list1"), instance.componentAList.get(0));
+        assertSame(injector.getComponent("compA_for_list2"), instance.componentAList.get(1));
     }
 
     @Test
-    void testRegisterSingleton() {
-        // definitions map is new for each test via @BeforeEach setUp
-        SimpleComponent external = new SimpleComponent();
-
-        // Define "refToExternal" which depends on "externalSimple".
-        // This definition needs to be in the map when the injector is created.
-        definitions.put("refToExternal", new JSONObject()
-                .put("id", "refToExternal")
-                .put("class", RefArgComponent.class.getName())
-                .put("constructorArgs", new JSONArray().put(new JSONObject().put("ref", "externalSimple"))));
-
-        // If "externalSimple" itself needs a definition for some reason (e.g., if it were also created by DI first),
-        // it would be added here. But since it's externally created and registered,
-        // registerSingleton will handle its definition within the injector.
-
-        injector = new DependencyInjector(definitions); // Injector is created, knows about "refToExternal"
-
-        // Now, register the external singleton. This will add "externalSimple" to the injector's
-        // internal definitions map and its instance cache.
-        injector.registerSingleton("externalSimple", external);
-
-        RefArgComponent component = (RefArgComponent) injector.getComponent("refToExternal");
-        assertNotNull(component, "The referencing component should not be null.");
-        assertNotNull(component.dependency, "The dependency injected into RefArgComponent should not be null.");
-        assertSame(external, component.dependency, "The injected dependency should be the externally registered instance.");
-    }
-
-
-    @Test
-    void testCircularDependency() {
-        definitions.put("circA", new JSONObject()
-                .put("id", "circA").put("class", CircularA.class.getName())
-                .put("constructorArgs", new JSONArray().put(new JSONObject().put("ref", "circB"))));
-        definitions.put("circB", new JSONObject()
-                .put("id", "circB").put("class", CircularB.class.getName())
-                .put("constructorArgs", new JSONArray().put(new JSONObject().put("ref", "circA"))));
-        injector = new DependencyInjector(definitions);
-        Exception exception = assertThrows(RuntimeException.class, () -> injector.getComponent("circA"));
-        assertTrue(exception.getMessage().contains("Circular dependency detected"));
+    void testGetComponent_constructorWithListOfMixedValuesAndRefs() {
+        defineComponent("compA_for_mixed_list", "dumb.jaider.app.DependencyInjectorTest$ComponentA");
+        JSONObject def = defineComponent("listMixedComp_id", "dumb.jaider.app.DependencyInjectorTest$ComponentWithListMixed");
+        JSONArray mixedJsonElArray = createArgsArray()
+            .put(createValueArg("First String", "java.lang.String"))
+            .put(createRefArg("compA_for_mixed_list"))
+            .put(createValueArg(2024, "int"));
+        def.put("constructorArgs", createArgsArray().put(createListArg(mixedJsonElArray)));
+        injector = new DependencyInjector(new HashMap<>(componentDefinitions));
+        ComponentWithListMixed instance = (ComponentWithListMixed) injector.getComponent("listMixedComp_id");
+        assertNotNull(instance);
+        assertNotNull(instance.mixedItemsList);
+        assertEquals(3, instance.mixedItemsList.size());
+        assertEquals("First String", instance.mixedItemsList.get(0));
+        assertTrue(instance.mixedItemsList.get(1) instanceof ComponentA);
+        assertSame(injector.getComponent("compA_for_mixed_list"), instance.mixedItemsList.get(1));
+        assertEquals(2024, instance.mixedItemsList.get(2));
     }
 
     @Test
-    void testClassNotFound() {
-        definitions.put("badClass", new JSONObject().put("id", "badClass").put("class", "com.example.NonExistent"));
-        injector = new DependencyInjector(definitions);
-        Exception exception = assertThrows(RuntimeException.class, () -> injector.getComponent("badClass"));
-        assertTrue(exception.getMessage().contains("Class 'com.example.NonExistent' not found"));
+    void testGetComponent_staticFactoryMethod_noArgs() {
+        defineComponentWithFactory("factoryNoArgs_id", "dumb.jaider.app.DependencyInjectorTest$ComponentWithStaticFactoryNoArgs", "createInstance");
+        ComponentWithStaticFactoryNoArgs instance = (ComponentWithStaticFactoryNoArgs) injector.getComponent("factoryNoArgs_id");
+        assertNotNull(instance);
+        assertEquals("FactoryNoArgsInstance", instance.identifier);
     }
 
     @Test
-    void testMethodNotFound_staticFactory() {
-        definitions.put("badStatic", new JSONObject()
-                .put("id", "badStatic")
-                .put("class", StaticFactoryTarget.class.getName())
-                .put("staticFactoryMethod", "nonExistentCreate"));
-        injector = new DependencyInjector(definitions);
-        Exception exception = assertThrows(RuntimeException.class, () -> injector.getComponent("badStatic"));
-        assertTrue(exception.getMessage().contains("Static factory method 'nonExistentCreate'"));
+    void testGetComponent_staticFactoryMethod_withArgs() {
+        defineComponent("compA_for_factory_id", "dumb.jaider.app.DependencyInjectorTest$ComponentA");
+        JSONObject def = defineComponentWithFactory("factoryWithArgs_id", "dumb.jaider.app.DependencyInjectorTest$ComponentWithStaticFactoryWithArgs", "createInstance");
+        JSONArray factoryMethodArgs = createArgsArray()
+            .put(createValueArg("ValueForFactory", "java.lang.String"))
+            .put(createRefArg("compA_for_factory_id"));
+        def.put("staticFactoryArgs", factoryMethodArgs);
+        injector = new DependencyInjector(new HashMap<>(componentDefinitions));
+        ComponentWithStaticFactoryWithArgs instance = (ComponentWithStaticFactoryWithArgs) injector.getComponent("factoryWithArgs_id");
+        assertNotNull(instance);
+        assertEquals("ValueForFactory", instance.stringArg);
+        assertNotNull(instance.componentArg);
+        assertSame(injector.getComponent("compA_for_factory_id"), instance.componentArg);
     }
 
     @Test
-    void testMethodNotFound_instanceFactory() {
-        definitions.put("instanceFacBean", new JSONObject().put("id", "instanceFacBean").put("class", InstanceFactory.class.getName()));
-        definitions.put("badInstance", new JSONObject()
-                .put("id", "badInstance")
-                .put("factoryBean", "instanceFacBean")
-                .put("factoryMethod", "nonExistentProduct"));
-        injector = new DependencyInjector(definitions);
-        Exception exception = assertThrows(RuntimeException.class, () -> injector.getComponent("badInstance"));
-        assertTrue(exception.getMessage().contains("Instance factory method 'nonExistentProduct'"));
+    void testGetComponent_staticFactoryMethod_withListArgs() {
+        defineComponent("compA_factory_list1", "dumb.jaider.app.DependencyInjectorTest$ComponentA");
+        defineComponent("compA_factory_list2", "dumb.jaider.app.DependencyInjectorTest$ComponentA");
+        JSONObject def = defineComponentWithFactory("factoryListArgs_id", "dumb.jaider.app.DependencyInjectorTest$ComponentWithStaticFactoryWithListArgs", "createInstance");
+        JSONArray factoryStringListJson = createArgsArray()
+            .put(createValueArg("str1", "java.lang.String"))
+            .put(createValueArg("str2", "java.lang.String"));
+        JSONArray factoryRefListJson = createArgsArray()
+            .put(createRefArg("compA_factory_list1"))
+            .put(createRefArg("compA_factory_list2"));
+        JSONArray factoryMethodArgs = createArgsArray()
+            .put(createListArg(factoryStringListJson))
+            .put(createListArg(factoryRefListJson));
+        def.put("staticFactoryArgs", factoryMethodArgs);
+        injector = new DependencyInjector(new HashMap<>(componentDefinitions));
+        ComponentWithStaticFactoryWithListArgs instance = (ComponentWithStaticFactoryWithListArgs) injector.getComponent("factoryListArgs_id");
+        assertNotNull(instance);
+        assertNotNull(instance.stringListArg);
+        assertEquals(2, instance.stringListArg.size());
+        assertEquals("str1", instance.stringListArg.get(0));
+        assertNotNull(instance.componentListArg);
+        assertEquals(2, instance.componentListArg.size());
+        assertSame(injector.getComponent("compA_factory_list1"), instance.componentListArg.get(0));
+        assertSame(injector.getComponent("compA_factory_list2"), instance.componentListArg.get(1));
     }
 
     @Test
-    void testFactoryBeanNotFound() {
-        definitions.put("badFactoryBean", new JSONObject()
-                .put("id", "badFactoryBean")
-                .put("factoryBean", "nonExistentFactoryBean")
-                .put("factoryMethod", "someMethod"));
-        injector = new DependencyInjector(definitions);
-        Exception exception = assertThrows(RuntimeException.class, () -> injector.getComponent("badFactoryBean"));
-        // This will likely fail with "Component definition not found for id: nonExistentFactoryBean" first
-        assertTrue(exception.getMessage().contains("Component definition not found for id: nonExistentFactoryBean") || exception.getMessage().contains("Error creating component 'badFactoryBean'"));
+    void testGetComponent_invalidConfiguration_classNotFound() {
+        defineComponent("invalidClass_id", "dumb.jaider.app.NonExistentClassName");
+        assertThrows(ComponentInstantiationException.class, () -> injector.getComponent("invalidClass_id"));
     }
 
     @Test
-    void testLiteralTypeConversion() {
-         definitions.put("literalCompFull", new JSONObject()
-                .put("id", "literalCompFull")
-                .put("class", LiteralArgComponent.class.getName())
-                .put("constructorArgs", new JSONArray()
-                        .put(new JSONObject().put("value", "TestName").put("type", "String"))
-                        .put(new JSONObject().put("value", 101).put("type", "int"))
-                        .put(new JSONObject().put("value", true).put("type", "boolean"))
-                        .put(new JSONObject().put("value", 1234567890123L).put("type", "long"))
-                        .put(new JSONObject().put("value", 123.45f).put("type", "float"))
-                        .put(new JSONObject().put("value", 987.654).put("type", "double"))
-                 ));
-        injector = new DependencyInjector(definitions);
-        LiteralArgComponent component = (LiteralArgComponent) injector.getComponent("literalCompFull");
-        assertNotNull(component);
-        assertEquals("TestName", component.name);
-        assertEquals(101, component.version);
-        assertTrue(component.active);
-        assertEquals(1234567890123L, component.longVal);
-        assertEquals(123.45f, component.floatVal, 0.001f);
-        assertEquals(987.654, component.doubleVal, 0.001);
+    void testGetComponent_invalidConfiguration_methodNotFound() {
+        defineComponentWithFactory("invalidMethod_id", "dumb.jaider.app.DependencyInjectorTest$ComponentA", "nonExistentFactoryName");
+        assertThrows(ComponentInstantiationException.class, () -> injector.getComponent("invalidMethod_id"));
     }
 
     @Test
-    void testClearCacheAndRecreation() {
-        definitions.put("simple", new JSONObject().put("id", "simple").put("class", SimpleComponent.class.getName()));
-        injector = new DependencyInjector(definitions);
-        Object s1 = injector.getComponent("simple");
-        assertNotNull(s1);
+    void testGetComponent_invalidConfiguration_staticFactoryMethodArgMismatch_type() {
+        defineComponent("compA_type_mismatch", "dumb.jaider.app.DependencyInjectorTest$ComponentA");
+        JSONObject def = defineComponentWithFactory("factoryTypeMismatch_id", "dumb.jaider.app.DependencyInjectorTest$ComponentWithStaticFactoryWithArgs", "createInstance");
+        JSONArray factoryArgs = createArgsArray()
+            .put(createValueArg(789, "int"))
+            .put(createRefArg("compA_type_mismatch"));
+        def.put("staticFactoryArgs", factoryArgs);
+        injector = new DependencyInjector(new HashMap<>(componentDefinitions));
+        Exception ex = assertThrows(ComponentInstantiationException.class, () -> injector.getComponent("factoryTypeMismatch_id"));
+        assertTrue(ex.getMessage().toLowerCase().contains("suitable method not found") || ex.getMessage().toLowerCase().contains("matching arguments not found"),
+                "Exception message should indicate a method/argument mismatch. Actual: " + ex.getMessage());
+    }
+
+    @Test
+    void testGetComponent_invalidConfiguration_constructorArgMismatch_type() {
+        JSONObject def = defineComponent("ctorTypeMismatch_id", "dumb.jaider.app.DependencyInjectorTest$ComponentWithValCon");
+        JSONArray ctorArgs = createArgsArray()
+            .put(createValueArg(true, "boolean"))
+            .put(createValueArg(321, "int"))
+            .put(createValueArg(true, "boolean"));
+        def.put("constructorArgs", ctorArgs);
+        injector = new DependencyInjector(new HashMap<>(componentDefinitions));
+        Exception ex = assertThrows(ComponentInstantiationException.class, () -> injector.getComponent("ctorTypeMismatch_id"));
+        assertTrue(ex.getMessage().toLowerCase().contains("suitable constructor not found"),
+                "Exception message should indicate a constructor/argument mismatch. Actual: " + ex.getMessage());
+    }
+
+    @Test
+    void testGetComponent_invalidConfiguration_constructorArgMismatch_count() {
+        JSONObject def = defineComponent("ctorArgCountMismatch_id", "dumb.jaider.app.DependencyInjectorTest$ComponentWithValCon");
+        JSONArray ctorArgs = createArgsArray().put(createValueArg("short string", "java.lang.String"));
+        def.put("constructorArgs", ctorArgs);
+        injector = new DependencyInjector(new HashMap<>(componentDefinitions));
+        Exception ex = assertThrows(ComponentInstantiationException.class, () -> injector.getComponent("ctorArgCountMismatch_id"));
+        assertTrue(ex.getMessage().toLowerCase().contains("suitable constructor not found"),
+             "Exception message should indicate a constructor/argument count mismatch. Actual: " + ex.getMessage());
+    }
+
+    @Test
+    void testCircularDependency_direct() {
+        Map<String, JSONObject> circularDefs = new HashMap<>();
+        JSONObject defX = defineComponentInMap("compX_circular_id", "dumb.jaider.app.DependencyInjectorTest$CompX", circularDefs);
+        defX.put("constructorArgs", createArgsArray().put(createRefArg("compY_circular_id")));
+        JSONObject defY = defineComponentInMap("compY_circular_id", "dumb.jaider.app.DependencyInjectorTest$CompY", circularDefs);
+        defY.put("constructorArgs", createArgsArray().put(createRefArg("compX_circular_id")));
+        injector = new DependencyInjector(circularDefs);
+        assertThrows(CircularDependencyException.class, () -> injector.getComponent("compX_circular_id"));
+        assertThrows(CircularDependencyException.class, () -> injector.getComponent("compY_circular_id"));
+    }
+
+    @Test
+    void testCircularDependency_indirect() {
+        Map<String, JSONObject> indirectCircularDefs = new HashMap<>();
+        JSONObject defX = defineComponentInMap("compX_indirect_id", "dumb.jaider.app.DependencyInjectorTest$CompX", indirectCircularDefs);
+        defX.put("constructorArgs", createArgsArray().put(createRefArg("compY_indirect_id")));
+        JSONObject defY = defineComponentInMap("compY_indirect_id", "dumb.jaider.app.DependencyInjectorTest$CompY", indirectCircularDefs);
+        defY.put("constructorArgs", createArgsArray().put(createRefArg("compZ_indirect_id")));
+        JSONObject defZ = defineComponentInMap("compZ_indirect_id", "dumb.jaider.app.DependencyInjectorTest$CompZ", indirectCircularDefs);
+        defZ.put("constructorArgs", createArgsArray().put(createRefArg("compX_indirect_id")));
+        injector = new DependencyInjector(indirectCircularDefs);
+        assertThrows(CircularDependencyException.class, () -> injector.getComponent("compX_indirect_id"));
+    }
+
+    @Test
+    void testClearCache_componentsRecreated() {
+        defineComponent("compA_cache_test_id", "dumb.jaider.app.DependencyInjectorTest$ComponentA");
+        ComponentA instanceOne = (ComponentA) injector.getComponent("compA_cache_test_id");
+        injector.clearCache();
+        ComponentA instanceTwo = (ComponentA) injector.getComponent("compA_cache_test_id");
+        assertNotNull(instanceOne);
+        assertNotNull(instanceTwo);
+        assertNotSame(instanceOne, instanceTwo);
+    }
+
+    @Test
+    void testRegisterSingleton_instanceAlreadyCreated() {
+        ComponentA manualExternalInstance = new ComponentA();
+        manualExternalInstance.name = "ManuallyRegisteredExternalInstance";
+
+        injector = new DependencyInjector(new HashMap<>());
+        injector.registerSingleton("manualCompA_id", manualExternalInstance);
+
+        ComponentA retrievedInst = (ComponentA) injector.getComponent("manualCompA_id");
+        assertSame(manualExternalInstance, retrievedInst);
+        assertEquals("ManuallyRegisteredExternalInstance", retrievedInst.name);
+
+        ComponentA retrievedInst2 = (ComponentA) injector.getComponent("manualCompA_id");
+        assertSame(manualExternalInstance, retrievedInst2);
 
         injector.clearCache();
+        ComponentA retrievedAfterClear = (ComponentA) injector.getComponent("manualCompA_id");
+        assertNotSame(manualExternalInstance, retrievedAfterClear, "After clear, a new instance should be created from the minimal definition.");
+        assertEquals("ComponentA_DefaultName", retrievedAfterClear.name, "The new instance should have default name.");
 
-        Object s2 = injector.getComponent("simple");
-        assertNotNull(s2);
-        assertNotSame(s1, s2, "Should be a new instance after cache clear");
+        // Test interaction: define, then registerSingleton (override), then clearCache
+        Map<String, JSONObject> defsForOverride = new HashMap<>();
+        defineComponentInMap("override_id", "dumb.jaider.app.DependencyInjectorTest$ComponentA", defsForOverride);
+        injector = new DependencyInjector(defsForOverride);
 
-        // Test that registered singletons are NOT recreated if they were externally registered
-        SimpleComponent external = new SimpleComponent();
-        injector.registerSingleton("externalManual", external);
-        Object ext1 = injector.getComponent("externalManual");
-        assertSame(external, ext1, "Should be the manually registered instance");
+        ComponentA jsonDefinedInstance = (ComponentA) injector.getComponent("override_id");
+        jsonDefinedInstance.name = "JSON_Version";
 
-        injector.clearCache(); // Clear cache again
+        ComponentA manualOverrideInstance = new ComponentA();
+        manualOverrideInstance.name = "ManualOverride_Version";
+        injector.registerSingleton("override_id", manualOverrideInstance);
 
-        // After clearCache, a definition for "externalManual" was added by registerSingleton.
-        // getComponent will now try to *create* it using that minimal definition if not found in singletons.
-        // This part of the test highlights a nuance: clearCache clears instances, but not definitions.
-        // If registerSingleton also stored the instance in a way that clearCache doesn't remove "pre-registered"
-        // instances, then behavior would be different. Current clearCache clears all singletonInstances.
-        // So, "externalManual" will be re-created by its class name.
-        Object ext2 = injector.getComponent("externalManual");
-        assertNotSame(external, ext2, "Should be a new instance of externalManual based on its class, as original was only in cache");
-        assertInstanceOf(SimpleComponent.class, ext2);
+        ComponentA currentInstance = (ComponentA) injector.getComponent("override_id");
+        assertSame(manualOverrideInstance, currentInstance);
+        assertEquals("ManualOverride_Version", currentInstance.name);
 
-        // To keep an externally registered singleton truly persistent across clearCache,
-        // the injector would need a separate map for them, or registerSingleton would need to re-add them after clear.
-        // For this test, we'll verify it's at least a SimpleComponent.
+        injector.clearCache();
+        ComponentA afterClearInstance = (ComponentA) injector.getComponent("override_id");
+        assertNotSame(manualOverrideInstance, afterClearInstance);
+        assertEquals("ComponentA_DefaultName", afterClearInstance.name);
     }
 }

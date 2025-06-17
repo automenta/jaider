@@ -68,7 +68,7 @@ public class StartupService {
                 ));
                 logger.info("Validating update for: {}, Commit: '{}', Attempt: {}", filePath, commitMessage, attempt);
 
-                String runCommand = config.runCommand;
+                String runCommand = config.getRunCommand();
 
                 if (runCommand != null && !runCommand.trim().isEmpty()) {
                     model.addLog(AiMessage.from("[StartupService] Executing validation command: " + runCommand));

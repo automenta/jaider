@@ -137,17 +137,25 @@ public class StandardTools {
     @Tool("Runs the project's configured validation command (e.g., tests, linter, build). Usage: runValidationCommand <optional_arguments_for_command>")
     public String runValidationCommand(String commandArgs) {
         JSONObject resultJson = new JSONObject();
-        if (config.runCommand == null || config.runCommand.isBlank()) {
+        if (config.getRunCommand() == null || config.getRunCommand().isBlank()) {
             resultJson.put("error", "No validation command configured in .jaider.json (key: runCommand).");
             resultJson.put("success", false);
             resultJson.put("exitCode", -1);
             return resultJson.toString();
         }
 
-        String commandToExecute = config.runCommand;
+        String baseCommand = config.getRunCommand();
+        String commandToExecute;
+
+        if (commandArgs == null || commandArgs.trim().isEmpty()) {
+            commandToExecute = baseCommand;
+        } else {
+            commandToExecute = baseCommand + " " + commandArgs.trim();
+        }
 
         try {
-            ProcessBuilder pb = new ProcessBuilder(commandToExecute.split("\\s+"))
+            // Ensure ProcessBuilder splits the commandToExecute correctly
+            ProcessBuilder pb = new ProcessBuilder(commandToExecute.trim().split("\\s+"))
                     .directory(model.dir.toFile())
                     .redirectErrorStream(true);
             Process process = pb.start();
@@ -168,7 +176,7 @@ public class StandardTools {
             resultJson.put("output", outputString);
 
             // --- Jaider AI Agent: Added test report generation ---
-            if (config.runCommand != null && config.runCommand.contains("mvn test")) {
+            if (config.getRunCommand() != null && config.getRunCommand().contains("mvn test")) {
                 List<Map<String, String>> testReportList = new ArrayList<>();
                 String[] lines = outputString.split("\n");
                 final String[] currentTestClassHolder = new String[1]; // Holder for effectively final variable

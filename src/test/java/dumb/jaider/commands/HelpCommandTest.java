@@ -1,69 +1,94 @@
 package dumb.jaider.commands;
 
-import dumb.jaider.app.App;
+import dumb.jaider.app.App; // Added import
+import dumb.jaider.commands.AppContext;
 import dumb.jaider.model.JaiderModel;
+import dev.langchain4j.data.message.AiMessage; // Added import
+import dev.langchain4j.data.message.ChatMessage;
+// UserMessage import is not strictly needed if only AiMessage is used for verification now
+// import dev.langchain4j.data.message.UserMessage;
 import org.junit.jupiter.api.BeforeEach;
+import java.util.HashSet; // Added import
+import java.util.Arrays; // Added for Arrays.asList
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.util.Collections;
-
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
-class HelpCommandTest {
+public class HelpCommandTest {
 
     @Mock
-    private AppContext appContext;
-
+    private AppContext mockAppContext;
     @Mock
-    private JaiderModel model;
-
-    @Mock // Mock the App class
-    private App app;
+    private JaiderModel mockJaiderModel;
+    @Mock // Added mock for App
+    private App mockApp;
 
     @InjectMocks
     private HelpCommand helpCommand;
 
     @BeforeEach
     void setUp() {
-        when(appContext.model()).thenReturn(model); // Corrected
-        when(appContext.app()).thenReturn(app); // Configure appContext to return mocked app
-        when(app.getAvailableAgentNames()).thenReturn(Collections.emptySet()); // Configure mocked app
+        when(mockAppContext.model()).thenReturn(mockJaiderModel);
+        when(mockAppContext.app()).thenReturn(mockApp); // Stubbing app call
+        // Provide a default set of agent names for the tests
+        when(mockApp.getAvailableAgentNames()).thenReturn(new HashSet<>(java.util.Arrays.asList("coder", "architect", "ask")));
     }
 
     @Test
-    void execute_shouldLogHelpTextToModel() {
-        helpCommand.execute(null, appContext); // Corrected // Argument is not used
+    void testExecute_logsHelpMessageForEachCommand() {
+        helpCommand.execute("", mockAppContext); // Argument to execute is typically ignored by HelpCommand
 
-        ArgumentCaptor<dev.langchain4j.data.message.AiMessage> messageCaptor = ArgumentCaptor.forClass(dev.langchain4j.data.message.AiMessage.class); // Specific to AiMessage
-        verify(model).addLog(messageCaptor.capture()); // Corrected
+        // Verify the main help title is logged
+        verify(mockJaiderModel).addLog(AiMessage.from(HelpCommand.ANSI_BOLD + "Jaider Commands:" + HelpCommand.ANSI_RESET));
 
-        String capturedHelpText = messageCaptor.getValue().text(); // AiMessage has .text()
-        assertNotNull(capturedHelpText);
-        assertTrue(capturedHelpText.contains("COMMANDS:"), "Help text should list available commands under 'COMMANDS:'.");
-        assertTrue(capturedHelpText.contains("/add <files...>"), "Help text should contain /add command.");
-        // Assertions for commands not currently listed in HelpCommand.java are commented out.
-        // Revisit these if HelpCommand.java is updated to include them (e.g., dynamically).
-        // assertTrue(capturedHelpText.contains("/ask <question>"), "Help text should contain /ask command."); // Not listed under COMMANDS
-        // assertTrue(capturedHelpText.contains("/commit <message>"), "Help text should contain /commit command."); // Not listed
-        // assertTrue(capturedHelpText.contains("/config"), "Help text should contain /config command."); // Not listed
-        assertTrue(capturedHelpText.contains("/edit-config"), "Help text should contain /edit-config command.");
-        assertTrue(capturedHelpText.contains("/exit"), "Help text should contain /exit command.");
-        assertTrue(capturedHelpText.contains("/help"), "Help text should contain /help command.");
-        assertTrue(capturedHelpText.contains("/index"), "Help text should contain /index command.");
-        assertTrue(capturedHelpText.contains("/mode <ModeName>"), "Help text should contain /mode command description under MODES.");
-        // Assertions for commands not currently listed in HelpCommand.java are commented out.
-        // Revisit these if HelpCommand.java is updated to include them (e.g., dynamically).
-        // assertTrue(capturedHelpText.contains("/reset"), "Help text should contain /reset command."); // Not listed
-        assertTrue(capturedHelpText.contains("/undo"), "Help text should contain /undo command.");
-        // Add more assertions if specific phrasing or other commands are critical
+        // Verify that addLog is called for each command's help string.
+        HelpCommand.COMMANDS_HELP.forEach((cmd, desc) -> {
+            verify(mockJaiderModel).addLog(AiMessage.from(HelpCommand.ANSI_BOLD + cmd + HelpCommand.ANSI_RESET + " - " + desc));
+        });
+
+        // Verify the "MODES" help block is logged as one AiMessage
+        String availableModes = "architect, ask, coder"; // Based on setUp
+        String modesHelp = String.format("""
+
+            %sMODES:%s
+            Switch modes with %s/mode <ModeName>%s. Available modes: %s.
+            - Coder: The default mode for writing and fixing code.
+            - Architect: A read-only mode for high-level questions about the codebase.
+            - Ask: A simple Q&A mode with no access to your files.
+            """, HelpCommand.ANSI_BOLD, HelpCommand.ANSI_RESET, HelpCommand.ANSI_BOLD, HelpCommand.ANSI_RESET, availableModes);
+        verify(mockJaiderModel).addLog(AiMessage.from(modesHelp));
+
+        // Total calls: 1 (title) + size of COMMANDS_HELP + 1 (modes block)
+        verify(mockJaiderModel, times(1 + HelpCommand.COMMANDS_HELP.size() + 1)).addLog(any(AiMessage.class));
+    }
+
+    @Test
+    void testExecute_withArgs_behaviorIsSameAsNoArgs() {
+        // HelpCommand is expected to ignore any arguments passed to it.
+        helpCommand.execute("some arguments that should be ignored", mockAppContext);
+
+        verify(mockJaiderModel).addLog(AiMessage.from(HelpCommand.ANSI_BOLD + "Jaider Commands:" + HelpCommand.ANSI_RESET));
+
+        HelpCommand.COMMANDS_HELP.forEach((cmd, desc) -> {
+            verify(mockJaiderModel).addLog(AiMessage.from(HelpCommand.ANSI_BOLD + cmd + HelpCommand.ANSI_RESET + " - " + desc));
+        });
+
+        String availableModes = "architect, ask, coder"; // Based on setUp
+        String modesHelp = String.format("""
+
+            %sMODES:%s
+            Switch modes with %s/mode <ModeName>%s. Available modes: %s.
+            - Coder: The default mode for writing and fixing code.
+            - Architect: A read-only mode for high-level questions about the codebase.
+            - Ask: A simple Q&A mode with no access to your files.
+            """, HelpCommand.ANSI_BOLD, HelpCommand.ANSI_RESET, HelpCommand.ANSI_BOLD, HelpCommand.ANSI_RESET, availableModes);
+        verify(mockJaiderModel).addLog(AiMessage.from(modesHelp));
+
+        verify(mockJaiderModel, times(1 + HelpCommand.COMMANDS_HELP.size() + 1)).addLog(any(AiMessage.class));
     }
 }

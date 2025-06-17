@@ -192,38 +192,33 @@ public class TUI implements UI {
     public CompletableFuture<Boolean> confirmPlan(String title, String planText, AiMessage agentMessage) {
         var future = new CompletableFuture<Boolean>();
         gui.getGUIThread().invokeLater(() -> {
-            // For now, just display the planText. agentMessage can be used for more details if needed.
-            // This dialog should be scrollable if planText is long, but MessageDialog might not support that directly.
-            // For a long plan, a custom dialog like diffInteraction would be better.
-            // Let's keep it simple like the 'confirm' dialog for now.
-            // Consider using a TextBox in a custom dialog for scrollability if plans are often long.
+            var dialog = new BasicWindow(title);
+            dialog.setHints(Arrays.asList(Window.Hint.CENTERED)); // Center the dialog
 
-            // Truncate planText if it's too long for a simple dialog to prevent UI issues.
-            // This is a temporary workaround. A better solution would be a scrollable view.
-            int maxLength = 500; // Arbitrary max length for the dialog
-            String displayedText = planText;
-            if (planText.length() > maxLength) {
-                displayedText = planText.substring(0, maxLength - 3) + "...";
-            }
+            var contentPanel = new Panel(new LinearLayout(Direction.VERTICAL));
+            contentPanel.addComponent(new Label("Agent's Proposed Plan:")); // General instruction or use title if more specific
 
-            // Using MessageDialog similar to confirm()
-            // Title: "Agent's Proposed Plan"
-            // Text: planText (or displayedText)
-            // Buttons: Approve, Reject
-            // MessageDialogButton result = MessageDialog.showMessageDialog( // Commented out due to persistent "enum classes may not be instantiated" error
-            //     gui,
-            //     title,
-            //     displayedText, // Use potentially truncated text
-            //     new MessageDialogButton("Approve", () -> future.complete(true)),
-            //     new MessageDialogButton("Reject", () -> future.complete(false))
-            // );
-            System.err.println("TUI.confirmPlan MessageDialog call commented out due to build issues. Auto-approving plan for now.");
-            future.complete(true); // Auto-approve to allow flow to continue somewhat
-            // The MessageDialog.showMessageDialog with custom buttons doesn't return the pressed button directly in the same way
-            // as the Yes/No version. The action in the button itself completes the future.
-            // If no button is pressed (e.g. dialog closed), the future might not complete.
-            // However, standard MessageDialogs are modal and typically force a choice.
-            // For custom buttons, we rely on their actions to complete the future.
+            // Use a TextBox for the plan text to make it scrollable
+            var planTextBox = new TextBox(planText, TextBox.Style.MULTI_LINE);
+            planTextBox.setReadOnly(true);
+            // Make the TextBox scrollable and reasonably sized.
+            // Adjust preferred size as needed, e.g., based on typical plan length or screen size.
+            planTextBox.setPreferredSize(new TerminalSize(80, 15));
+            contentPanel.addComponent(planTextBox);
+
+            var buttonPanel = new Panel(new LinearLayout(Direction.HORIZONTAL));
+            buttonPanel.addComponent(new Button("Approve", () -> {
+                future.complete(true);
+                dialog.close();
+            }));
+            buttonPanel.addComponent(new Button("Reject", () -> {
+                future.complete(false);
+                dialog.close();
+            }));
+            contentPanel.addComponent(buttonPanel);
+
+            dialog.setComponent(contentPanel);
+            gui.addWindow(dialog);
         });
         return future;
     }

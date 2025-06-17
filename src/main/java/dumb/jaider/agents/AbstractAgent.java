@@ -3,7 +3,7 @@ package dumb.jaider.agents;
 import dev.langchain4j.data.message.AiMessage;
 import dev.langchain4j.data.message.ChatMessage;
 import dev.langchain4j.memory.ChatMemory;
-import dev.langchain4j.model.chat.ChatLanguageModel;
+import dev.langchain4j.model.chat.ChatModel; // Changed from ChatLanguageModel
 import dev.langchain4j.model.output.Response;
 import dev.langchain4j.service.AiServices;
 
@@ -11,18 +11,18 @@ import java.util.List;
 import java.util.Set;
 
 public abstract class AbstractAgent implements Agent {
-    protected final ChatLanguageModel model;
+    protected final ChatModel model; // Changed from ChatLanguageModel
     protected final ChatMemory memory;
     protected final JaiderAiService ai;
     protected final Set<Object> tools;
 
     // Constructor for actual use, creates the AiService
-    public AbstractAgent(ChatLanguageModel model, ChatMemory memory, Set<Object> tools, String systemPrompt) {
+    public AbstractAgent(ChatModel model, ChatMemory memory, Set<Object> tools, String systemPrompt) { // Changed from ChatLanguageModel
         this.model = model;
         this.memory = memory;
         this.tools = tools;
         this.ai = AiServices.builder(JaiderAiService.class)
-                .chatLanguageModel(model)
+                .chatModel(model) // Changed from chatLanguageModel to chatModel
                 .chatMemory(memory)
                 .tools(tools.toArray())
                 .systemMessageProvider(prompVars -> systemPrompt) // Ensure prompVars is used or removed if not needed by lambda
@@ -30,7 +30,7 @@ public abstract class AbstractAgent implements Agent {
     }
 
     // Constructor for testing, allows injecting a mock AiService
-    protected AbstractAgent(ChatLanguageModel model, ChatMemory memory, Set<Object> tools, JaiderAiService aiService, String systemPromptWontBeUsedByAskAgent) {
+    protected AbstractAgent(ChatModel model, ChatMemory memory, Set<Object> tools, JaiderAiService aiService, String systemPromptWontBeUsedByAskAgent) { // Changed from ChatLanguageModel
         this.model = model;
         this.memory = memory;
         this.tools = tools;

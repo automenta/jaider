@@ -1,0 +1,350 @@
+{
+  "llmProvider": "ollama",
+  "ollamaBaseUrl": "http://localhost:11434",
+  "ollamaModelName": "llamablit",
+  "genericOpenaiBaseUrl": "http://localhost:8080/v1",
+  "genericOpenaiModelName": "local-model",
+  "genericOpenaiEmbeddingModelName": "text-embedding-ada-002",
+  "openaiModelName": "gpt-4o-mini",
+  "geminiModelName": "gemini-1.5-flash-latest",
+  "geminiEmbeddingModelName": "textembedding-gecko",
+  "runCommand": "mvn clean test",
+  "toolManifestsDir": "src/main/resources/tool-descriptors",
+  "apiKeys": {
+    "openai": "YOUR_OPENAI_API_KEY",
+    "google": "YOUR_GOOGLE_API_KEY",
+    "tavily": "",
+    "genericOpenai": ""
+  },
+  "components": [
+    {
+      "id": "chatMemory",
+      "class": "dev.langchain4j.memory.chat.MessageWindowChatMemory",
+      "staticFactoryMethod": "withMaxMessages",
+      "staticFactoryArgs": [
+        {
+          "value": 20,
+          "type": "int"
+        }
+      ]
+    },
+    {
+      "id": "llmProviderFactory",
+      "class": "dumb.jaider.llm.LlmProviderFactory",
+      "constructorArgs": [
+        {
+          "ref": "appConfig"
+        },
+        {
+          "ref": "jaiderModel"
+        }
+      ]
+    },
+    {
+      "id": "toolManager",
+      "class": "dumb.jaider.toolmanager.ToolManager",
+      "constructorArgs": [
+        {
+          "value": "src/main/resources/tool-descriptors",
+          "type": "java.lang.String"
+        }
+      ]
+    },
+    {
+      "id": "standardTools",
+      "class": "dumb.jaider.tools.StandardTools",
+      "constructorArgs": [
+        {
+          "ref": "jaiderModel"
+        },
+        {
+          "ref": "appConfig"
+        },
+        {
+          "ref": "appEmbeddingModel"
+        }
+      ]
+    },
+    {
+      "id": "parserRegistry",
+      "class": "dumb.jaider.refactoring.ParserRegistry"
+    },
+    {
+      "id": "refactoringService",
+      "class": "dumb.jaider.refactoring.RefactoringService",
+      "constructorArgs": [
+        {
+          "ref": "parserRegistry"
+        }
+      ]
+    },
+    {
+      "id": "smartRenameTool",
+      "class": "dumb.jaider.tools.SmartRenameTool",
+      "constructorArgs": [
+        {
+          "ref": "refactoringService"
+        }
+      ]
+    },
+    {
+      "id": "listContextFilesTool",
+      "class": "dumb.jaider.tools.ListContextFilesTool",
+      "constructorArgs": [
+        {
+          "ref": "jaiderModel"
+        }
+      ]
+    },
+    {
+      "id": "staticAnalysisService",
+      "class": "dumb.jaider.staticanalysis.StaticAnalysisService",
+      "constructorArgs": [
+        {
+          "ref": "toolManager"
+        }
+      ]
+    },
+    {
+      "id": "analysisTools",
+      "class": "dumb.jaider.tools.AnalysisTools",
+      "constructorArgs": [
+        {
+          "ref": "staticAnalysisService"
+        },
+        {
+          "ref": "jaiderModel"
+        }
+      ]
+    },
+    {
+      "id": "userInterfaceService",
+      "class": "dumb.jaider.ui.CommandLineUserInterfaceService"
+    },
+    {
+      "id": "gitService",
+      "class": "dumb.jaider.service.LocalGitService"
+    },
+    {
+      "id": "buildManagerService",
+      "class": "dumb.jaider.service.BuildManagerService"
+    },
+    {
+      "id": "restartService",
+      "class": "dumb.jaider.service.BasicRestartService"
+    },
+    {
+      "id": "selfUpdateOrchestratorService",
+      "class": "dumb.jaider.service.SelfUpdateOrchestratorService",
+      "constructorArgs": [
+        {
+          "ref": "jaiderModel"
+        },
+        {
+          "ref": "userInterfaceService"
+        },
+        {
+          "ref": "buildManagerService"
+        },
+        {
+          "ref": "gitService"
+        },
+        {
+          "ref": "restartService"
+        }
+      ]
+    },
+    {
+      "id": "jaiderTools",
+      "class": "dumb.jaider.tools.JaiderTools",
+      "constructorArgs": [
+        {
+          "ref": "jaiderModel"
+        },
+        {
+          "ref": "selfUpdateOrchestratorService"
+        }
+      ]
+    },
+    {
+      "id": "coderAgent",
+      "class": "dumb.jaider.agents.CoderAgent",
+      "constructorArgs": [
+        {
+          "ref": "appChatLanguageModel"
+        },
+        {
+          "ref": "chatMemory"
+        },
+        {
+          "ref": "standardTools"
+        },
+        {
+          "ref": "jaiderTools"
+        },
+        {
+          "ref": "smartRenameTool"
+        },
+        {
+          "ref": "analysisTools"
+        },
+        {
+          "ref": "listContextFilesTool"
+        }
+      ]
+    },
+    {
+      "id": "architectAgent",
+      "class": "dumb.jaider.agents.ArchitectAgent",
+      "constructorArgs": [
+        {
+          "ref": "appChatLanguageModel"
+        },
+        {
+          "ref": "chatMemory"
+        },
+        {
+          "ref": "standardTools"
+        }
+      ]
+    },
+    {
+      "id": "askAgent",
+      "class": "dumb.jaider.agents.AskAgent",
+      "constructorArgs": [
+        {
+          "ref": "appChatLanguageModel"
+        },
+        {
+          "ref": "chatMemory"
+        }
+      ]
+    },
+    {
+      "id": "proactiveSuggestionService",
+      "class": "dumb.jaider.suggestion.ProactiveSuggestionService",
+      "constructorArgs": [
+        {
+          "ref": "toolManager"
+        }
+      ]
+    },
+    {
+      "id": "agentService",
+      "class": "dumb.jaider.app.AgentService",
+      "constructorArgs": [
+        {
+          "ref": "appConfig"
+        },
+        {
+          "ref": "jaiderModel"
+        },
+        {
+          "ref": "chatMemory"
+        },
+        {
+          "ref": "llmProviderFactory"
+        }
+      ]
+    },
+    {
+      "id": "sessionManager",
+      "class": "dumb.jaider.app.SessionManager",
+      "constructorArgs": [
+        {
+          "ref": "jaiderModel"
+        },
+        {
+          "ref": "chatMemory"
+        },
+        {
+          "ref": "ui"
+        }
+      ]
+    },
+    {
+      "id": "toolLifecycleManager",
+      "class": "dumb.jaider.app.ToolLifecycleManager",
+      "constructorArgs": [
+        {
+          "ref": "app"
+        },
+        {
+          "ref": "agentService"
+        }
+      ]
+    },
+    {
+      "id": "selfUpdateService",
+      "class": "dumb.jaider.app.SelfUpdateService",
+      "constructorArgs": [
+        {
+          "ref": "appConfig"
+        },
+        {
+          "ref": "jaiderModel"
+        },
+        {
+          "ref": "app"
+        }
+      ]
+    },
+    {
+      "id": "agentInteractionService",
+      "class": "dumb.jaider.app.AgentInteractionService",
+      "constructorArgs": [
+        {
+          "ref": "app"
+        },
+        {
+          "ref": "jaiderModel"
+        },
+        {
+          "ref": "chatMemory"
+        },
+        {
+          "ref": "ui"
+        },
+        {
+          "ref": "agentService"
+        },
+        {
+          "ref": "toolLifecycleManager"
+        },
+        {
+          "ref": "sessionManager"
+        },
+        {
+          "ref": "selfUpdateService"
+        }
+      ]
+    },
+    {
+      "id": "userInputHandler",
+      "class": "dumb.jaider.app.UserInputHandler",
+      "constructorArgs": [
+        {
+          "ref": "app"
+        },
+        {
+          "ref": "jaiderModel"
+        },
+        {
+          "ref": "appConfig"
+        },
+        {
+          "ref": "ui"
+        },
+        {
+          "ref": "agentService"
+        },
+        {
+          "ref": "proactiveSuggestionService"
+        },
+        {
+          "ref": "commandsMap"
+        }
+      ]
+    }
+  ]
+}

@@ -7,12 +7,16 @@ import dumb.jaider.service.LocalGitService;
 import dumb.jaider.service.SelfUpdateOrchestratorService;
 import dumb.jaider.tools.JaiderTools;
 import dumb.jaider.ui.CommandLineUserInterfaceService;
+import org.slf4j.Logger; // Added import
+import org.slf4j.LoggerFactory; // Added import
+import java.io.IOException; // Added import for IOException in shutdown hook
 
 import java.nio.file.Paths;
 import java.util.Scanner;
 
 public class JaiderApplication {
 
+    private static final Logger logger = LoggerFactory.getLogger(JaiderApplication.class); // Added logger
     private static CommandLineUserInterfaceService uiService;
     private static JaiderTools jaiderTools; // The tool the LLM would use
 
@@ -23,21 +27,20 @@ public class JaiderApplication {
         // Initialize JaiderModel with the project directory
         JaiderModel jaiderModel = new JaiderModel(Paths.get(".").toAbsolutePath());
         jaiderModel.setOriginalArgs(args);
-        // TODO: Set the project directory correctly. For now, using current directory.
-        // This needs to be the root of the Maven project Jaider is working on (which is Jaider itself for self-update)
+        // The project directory is the current directory from which Jaider is run.
+        // This is typically the root of the Maven project Jaider is working on (which includes Jaider itself for self-update).
         System.out.println("Project directory set to: " + jaiderModel.dir.toAbsolutePath());
 
         System.out.println("SELF-UPDATE TARGET MARKER: This line is a target for modification."); // Marker for diff
 
-        // uiService = new CommandLineUserInterfaceService(); // Commented out
+        uiService = new CommandLineUserInterfaceService();
         LocalGitService gitService = new LocalGitService();
         BuildManagerService buildManagerService = new BuildManagerService();
         BasicRestartService restartService = new BasicRestartService();
 
-        // uiService, // Commented out
         SelfUpdateOrchestratorService selfUpdateOrchestratorService = new SelfUpdateOrchestratorService(
                 jaiderModel,
-                null, // uiService, // Commented out
+                uiService,
                 buildManagerService,
                 gitService,
                 restartService
@@ -46,12 +49,16 @@ public class JaiderApplication {
         jaiderTools = new JaiderTools(jaiderModel, selfUpdateOrchestratorService);
 
         // Add shutdown hook to clean up UI service resources
-        // Runtime.getRuntime().addShutdownHook(new Thread(() -> { // Commented out
-        //     System.out.println("Jaider Application Shutting Down...");
-        //     if (uiService != null) {
-        //         uiService.shutdown();
-        //     }
-        // }));
+        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+            System.out.println("Jaider Application Shutting Down...");
+            if (uiService != null) {
+                try {
+                    uiService.close();
+                } catch (IOException e) {
+                    logger.error("Error closing UI service on shutdown: {}", e.getMessage(), e);
+                }
+            }
+        }));
 
         // 2. Application Main Loop (simplified)
         // In a real Langchain4j app, the agent would call jaiderTools.proposeSelfUpdate.
@@ -86,9 +93,15 @@ public class JaiderApplication {
             System.err.println("Main loop interrupted.");
             Thread.currentThread().interrupt();
         } finally {
-            // if (uiService != null) { // Ensure shutdown if exiting normally through loop // Commented out
-            //     uiService.shutdown();
-            // }
+            if (uiService != null) { // Ensure shutdown if exiting normally through loop
+                try {
+                    uiService.close();
+                } catch (IOException e) {
+                    // In JaiderApplication, direct logging might be okay, or use its own logger if it had one.
+                    System.err.println("Error closing UI service in finally block: " + e.getMessage());
+                    e.printStackTrace();
+                }
+            }
         }
         System.out.println("Jaider Application Exited.");
     }

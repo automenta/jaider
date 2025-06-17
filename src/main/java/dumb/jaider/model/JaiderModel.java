@@ -114,4 +114,10 @@ public class JaiderModel {
                 .map(path -> dir.relativize(path).toString())
                 .collect(com.google.common.collect.ImmutableList.toImmutableList());
     }
+
+    public Path getDir() { // Changed return type to Path
+        return this.dir;
+    }
+
+    // Removed getFiles() method as AddCommand will use the public field model.files directly
 }

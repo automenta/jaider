@@ -1,0 +1,29 @@
+{
+    "toolName": "DependencyUpdater",
+    "displayName": "Maven Dependency Updater",
+    "description": "Identifies outdated Maven dependencies using 'mvn versions:display-dependency-updates' and proposes updates to the pom.xml file. It also runs testing (via the project's configured runCommand) to verify that updates are safe before finalizing suggestions.",
+    "version": "0.1.0",
+    "homepageUrl": "",
+    "availabilityCheckCommand": "mvn --version",
+    "availabilityCheckExitCode": 0,
+    "installationCommands": {
+        "linux": [
+            "echo 'Please ensure Apache Maven is installed. Visit https://maven.apache.org/install.html'"
+        ],
+        "macos": [
+            "echo 'Please ensure Apache Maven is installed. Visit https://maven.apache.org/install.html or use sdkman/brew'"
+        ],
+        "windows": [
+            "echo 'Please ensure Apache Maven is installed. Visit https://maven.apache.org/install.html'"
+        ],
+        "any": [
+            "echo 'Please ensure Apache Maven is installed. Visit https://maven.apache.org/install.html'"
+        ]
+    },
+    "lmInstallationQueries": [
+        "how to install apache maven",
+        "install maven on my system"
+    ],
+    "defaultConfig": {},
+    "category": "project-maintenance"
+}
