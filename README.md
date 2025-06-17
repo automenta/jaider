@@ -158,56 +158,72 @@ Agents (primarily the CoderAgent) can use the following tools:
 
 4.  **First Run:** Jaider will create a default `.jaider.json` if one isn't found. You should edit this file to configure your preferred LLM provider and API keys. Use `/edit-config` or edit it manually.
 
-## Interactive Demo
+## Demonstrations and Examples
 
-This project includes an interactive command-line demo (`dumb.integrationhandler.demo.InteractiveDemo`) that showcases a simplified workflow for generating a project from scratch using a selected Language Model.
+This project includes ways to see Jaider in action and understand its capabilities.
 
-The demo will:
-1.  Prompt you to choose a Language Model (Gemini or Ollama - Ollama is currently a placeholder).
-2.  Ask for the necessary API key (for Gemini) or configuration details.
-3.  Ask you to choose a sample project or provide a custom project description.
-4.  Attempt to generate a single file based on your description using the chosen LLM.
-5.  Save this file in a temporary directory.
-6.  Print status messages, including the path to the temporary directory and the generated file.
+### 1. Comprehensive Interactive Demo
 
-This demo serves as a basic example of TUI (console-based) interaction for LLM configuration and a simplified project generation task.
+This is the **primary way to experience Jaider's full range of features**. It runs Jaider with a special UI that executes a predefined script of commands, while still allowing you (the operator) to interact with key decision points like applying diffs, confirming plans, or editing configurations.
 
-### Prerequisites for the Demo
+**Features Showcased:**
+*   Setting up Jaider and adding files to context.
+*   Using different agent modes (Ask, Coder, Architect).
+*   The core Coder workflow: generating code changes, reviewing diffs, running validation commands.
+*   Advanced tools: Web search (requires Tavily API key), project indexing, and code search.
+*   Configuration editing via `/edit-config` (allowing on-the-fly LLM provider changes if desired).
+*   Undo functionality.
+*   And more, covering most of Jaider's commands and agent capabilities.
 
-*   Java 21 and Maven (as per the main project).
-*   If using Gemini:
-    *   A Google Gemini API key. You can provide this when prompted by the demo, or ensure the `GOOGLE_API_KEY` environment variable is set.
-    *   The demo also attempts to respect Google Cloud Application Default Credentials (ADC) if the API key is not directly provided and the environment variable is not set, though direct key input is prioritized for this specific demo.
-
-### Compiling and Running the Demo
-
-1.  **Build the Project:**
-    Ensure the entire project is compiled and packaged, as the demo might rely on shared classes or configurations.
+**Running the Comprehensive Demo:**
+1.  **Build the Project:** Ensure the entire project is compiled:
     ```bash
     mvn clean package
     ```
-    (Alternatively, `mvn clean install` if other modules depend on this one, though `package` is usually sufficient to compile all classes).
-
 2.  **Run the Demo:**
-    Use the `exec:java` Maven plugin to run the `InteractiveDemo` class:
     ```bash
-    mvn exec:java -Dexec.mainClass="dumb.integrationhandler.demo.InteractiveDemo"
+    mvn exec:java -Dexec.mainClass="dumb.integrationhandler.demo.ComprehensiveInteractiveDemo"
     ```
+3.  **Follow On-Screen Prompts:** The demo will guide you through various phases. You will be prompted to provide input (e.g., for AI prompts, or decisions like accepting a diff) or press Enter to continue.
+    *   **LLM Configuration:** The demo starts with a default `.jaider.json` (using Ollama) created in a temporary directory. The script includes steps where you can use `/edit-config` to change LLM providers (e.g., to Gemini or OpenAI).
+    *   **API Keys:** For features like web search (Tavily) or using cloud-based LLMs (Gemini, OpenAI), ensure you have the respective API keys set as environment variables (e.g., `TAVILY_API_KEY`, `GEMINI_API_KEY`, `OPENAI_API_KEY`) or be prepared to add them to the `.jaider.json` configuration when prompted during the `/edit-config` step of the demo.
 
-### Expected Behavior
+This demo provides a thorough walkthrough and helps verify that Jaider's components are integrating and functioning correctly.
 
-Upon running the command above, you should see:
-*   Prompts asking you to select a Language Model (Gemini/Ollama).
-*   A prompt for your API key if Gemini is selected.
-*   Prompts for choosing a project type or providing a custom description.
-*   Console messages indicating:
-    *   The selections you've made.
-    *   The path to the temporary directory being used.
-    *   The start of the project generation process.
-    *   The outcome of the generation (success or error).
-    *   Verification status of the generated file.
-    *   The cleanup of the temporary directory.
-*   If successful, a file (e.g., `generated_project_output.txt`) will be created in a temporary system directory. The path will be printed in the console. This directory is automatically cleaned up when the demo finishes.
+### 2. Simplified Integration Tutorial
+
+Class: `dumb.integrationhandler.demo.JaiderIntegrationTutorialDemo`
+
+This is a very basic, stripped-down tutorial primarily intended for developers looking to understand the most fundamental LLM interaction for single file generation within Jaider's ecosystem. It performs a single code generation task using a configured LLM (e.g., Gemini, requiring an API key).
+
+**Key Characteristics:**
+*   Focuses on programmatic LLM interaction, not the full Jaider application loop.
+*   Does **not** showcase most of Jaider's interactive commands or advanced features.
+*   It now primarily serves as a minimal example and explicitly directs users to the `ComprehensiveInteractiveDemo` for a complete Jaider experience.
+
+**Running the Simplified Tutorial:**
+1.  **Build the Project:**
+    ```bash
+    mvn clean package
+    ```
+2.  **Run the Tutorial:**
+    ```bash
+    mvn exec:java -Dexec.mainClass="dumb.integrationhandler.demo.JaiderIntegrationTutorialDemo"
+    ```
+    You will be prompted for a Gemini API key if you choose to use Gemini.
+
+### 3. Original Basic Interactive Demo (Legacy)
+
+Class: `dumb.integrationhandler.demo.InteractiveDemo`
+
+This was the original simple demo. It showcases a very simplified workflow for generating a single file using a selected Language Model (Gemini or a placeholder for Ollama) and saves it to a temporary directory. It has been largely superseded by the `ComprehensiveInteractiveDemo` for feature exploration and the `JaiderIntegrationTutorialDemo` for a focused look at basic generation.
+
+**Running the Original Basic Demo:**
+```bash
+mvn exec:java -Dexec.mainClass="dumb.integrationhandler.demo.InteractiveDemo"
+```
+
+It is recommended to use the **Comprehensive Interactive Demo** for the best understanding of Jaider's capabilities.
 
 ---
 Inspired by [Aider](https://github.com/Aider-AI/aider).
