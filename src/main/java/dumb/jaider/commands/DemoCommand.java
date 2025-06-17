@@ -4,6 +4,7 @@ import dumb.jaider.app.App;
 import dumb.jaider.demo.DemoProvider;
 import dumb.jaider.demo.DemoStep;
 import dumb.jaider.demo.InteractiveDemoExecutor;
+import dumb.jaider.demo.demos.ContextualQADemo; // Import for the new demo
 import dumb.jaider.demo.demos.HelloWorldDemo; // For explicit registration
 import dumb.jaider.demo.demos.MissileCommandDemo; // For explicit registration
 import dumb.jaider.integration.OllamaService;
@@ -50,6 +51,8 @@ public class DemoCommand implements Command {
         availableDemos.put(missileDemo.getName(), missileDemo);
         DemoProvider helloDemo = new HelloWorldDemo();
         availableDemos.put(helloDemo.getName(), helloDemo);
+        DemoProvider contextualQADemo = new ContextualQADemo(); // Instantiate the new demo
+        availableDemos.put(contextualQADemo.getName(), contextualQADemo); // Register the new demo
         logger.info("Discovered demos: {}", availableDemos.keySet());
     }
 

@@ -225,5 +225,22 @@ mvn exec:java -Dexec.mainClass="dumb.integrationhandler.demo.InteractiveDemo"
 
 It is recommended to use the **Comprehensive Interactive Demo** for the best understanding of Jaider's capabilities.
 
+### 4. In-Application Command Demos
+
+Beyond the standalone demos run via `mvn exec:java`, Jaider also includes interactive demos that can be run directly within the Jaider application using the `/demo` command. These showcase specific features or workflows in a guided manner.
+
+**a. Contextual Q&A Demo (`contextual_qa_demo`)**
+
+*   **Command:** `/demo contextual_qa_demo`
+*   **Description:** This demo highlights Jaider's ability to maintain context during interactions.
+    1.  It begins by generating a simple Java class (e.g., a `Calculator` class).
+    2.  It then explains the generated code.
+    3.  Following this, it engages in a two-step Q&A session:
+        *   First, it asks a general question about the generated code (e.g., "What operations does the Calculator class provide?").
+        *   Second, it asks a follow-up question that requires understanding the context of the first question and the generated code (e.g., "Can you show me the implementation of the 'add' operation?").
+*   **Purpose:** This demonstrates how Jaider can understand and respond to questions that build upon previous interactions and the current code context, a key feature for effective AI-assisted development.
+
+Other demos like "hello_world" (a basic code generation and compilation example) and "missile_command" (a more complex, multi-step code generation, Q&A, and enhancement scenario) are also available via the `/demo <demoname>` command within the application. Refer to the `/help demo` command in Jaider for a full list of available in-application demos.
+
 ---
 Inspired by [Aider](https://github.com/Aider-AI/aider).
