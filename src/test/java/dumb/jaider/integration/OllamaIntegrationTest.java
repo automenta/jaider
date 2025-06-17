@@ -1,17 +1,17 @@
 package dumb.jaider.integration;
 
 import dumb.jaider.service.BuildManagerService;
+import dumb.jaider.workflow.CodeGenerationWorkflow; // Import the new workflow class
 import org.junit.jupiter.api.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.nio.file.Path;
-import java.nio.file.Files; // Added for Files.exists
+import java.nio.file.Files;
 
-import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.*; // Standard JUnit 5 assertions
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
-
 
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 public class OllamaIntegrationTest {
@@ -22,26 +22,24 @@ public class OllamaIntegrationTest {
     private static OllamaService ollamaService;
     private static ProjectManager projectManager;
     private static VerificationService verificationService;
+    private static CodeGenerationWorkflow codeGenerationWorkflow; // New workflow field
 
+    // These fields will now be populated from the results of workflow methods
     private static String generatedInitialCode;
     private static String generatedEnhancedCode;
     private static Path projectJavaFile;
-
+    private static Path projectDirectory; // To store the project directory path
 
     @BeforeAll
-    static void globalSetup() {
+    static void globalSetup() throws CodeGenerationWorkflow.WorkflowException { // Add WorkflowException
         logger.info("Starting global setup for OllamaIntegrationTest...");
-        testConfig = new TestConfig(); // Uses defaults, can be configured via environment or properties if needed
+        testConfig = new TestConfig();
+        ollamaService = new OllamaService(testConfig);
 
-        ollamaService = new OllamaService(testConfig); // Initialize service first
-
-        // Basic check to see if Ollama might be running at the default location.
-        // This doesn't guarantee the model is available or works, but is a basic sanity check.
         try {
-            assumeTrue(ollamaService.chatModel != null, "OllamaChatModel failed to initialize. Check previous logs from OllamaService constructor.");
-            // Try a very simple ping-like interaction
+            assumeTrue(ollamaService.chatModel != null, "OllamaChatModel failed to initialize. Check logs from OllamaService constructor.");
             String testPrompt = "Respond with just the word 'test'.";
-            String response = ollamaService.chatModel.chat(testPrompt); // Direct access for this simple check
+            String response = ollamaService.chatModel.chat(testPrompt);
             assumeTrue(response != null && response.toLowerCase().contains("test"), "Ollama instance not responding as expected at " + testConfig.getOllamaBaseUrl());
             logger.info("Ollama instance responded to basic check.");
         } catch (Exception e) {
@@ -52,12 +50,16 @@ public class OllamaIntegrationTest {
         projectManager = new ProjectManager();
         verificationService = new VerificationService();
 
+        // Instantiate the workflow class
+        codeGenerationWorkflow = new CodeGenerationWorkflow(ollamaService, projectManager, verificationService);
+
         try {
-            projectManager.createTemporaryProject("OllamaMissileCommandTest");
-            logger.info("Global setup complete. Project directory: {}", projectManager.getProjectDir());
+            // Create the temporary project directory. This is a prerequisite for the workflow methods.
+            projectDirectory = projectManager.createTemporaryProject("OllamaMissileCommandTest");
+            logger.info("Global setup complete. Project directory: {}", projectDirectory);
         } catch (IOException e) {
             logger.error("Failed to create temporary project in globalSetup", e);
-            Assertions.fail("Global setup failed: Could not create temporary project directory.", e);
+            fail("Global setup failed: Could not create temporary project directory.", e);
         }
     }
 
@@ -65,7 +67,7 @@ public class OllamaIntegrationTest {
     static void globalTeardown() {
         logger.info("Starting global teardown for OllamaIntegrationTest...");
         if (projectManager != null) {
-            projectManager.cleanupProject();
+            projectManager.cleanupProject(); // ProjectManager handles its own cleanup
         }
         logger.info("Global teardown complete.");
     }
@@ -107,95 +109,136 @@ public class OllamaIntegrationTest {
     @Test
     @Order(1)
     @DisplayName("/code: Generate Missile Command from scratch")
-    void step1_generateMissileCommand() throws IOException {
-        logger.info("STEP 1: Generating Missile Command game...");
+    void step1_generateMissileCommand() throws CodeGenerationWorkflow.WorkflowException {
+        logger.info("STEP 1: Generating Missile Command game using CodeGenerationWorkflow...");
         String gameDescription = "a complete, runnable, single-file Missile Command game in Java using Swing. The main class should be named 'MissileCommandGame' and be in package 'com.example.game'.";
-        generatedInitialCode = ollamaService.generateCode(gameDescription);
+
+        CodeGenerationWorkflow.ProjectGenerationResult result = codeGenerationWorkflow.generateInitialProject(
+            gameDescription,
+            "com.example.game",
+            "MissileCommandGame",
+            getMissileCommandPom(),
+            // Verification keywords for the generated code:
+            "MissileCommandGame", "JFrame", "Swing", "java.awt"
+        );
+
+        assertNotNull(result, "ProjectGenerationResult should not be null");
+        generatedInitialCode = result.generatedCode();
+        projectJavaFile = result.javaFilePath();
+        // projectDirectory is already set in globalSetup and available to projectManager
+
         assertNotNull(generatedInitialCode, "Generated code should not be null");
-        Assertions.assertFalse(generatedInitialCode.isEmpty(), "Generated code should not be empty");
+        assertFalse(generatedInitialCode.isEmpty(), "Generated code should not be empty");
+        assertNotNull(projectJavaFile, "Project Java file path should not be null");
+        assertTrue(Files.exists(projectJavaFile), "Project Java file should exist");
 
-        logger.info("Initial code generated by Ollama. Length: {}", generatedInitialCode.length());
-        verificationService.verifyCodeContains(generatedInitialCode, "Initial Code", "MissileCommandGame", "JFrame", "Swing", "java.awt");
-
-
-        projectJavaFile = projectManager.saveJavaFile("com.example.game", "MissileCommandGame", generatedInitialCode);
-        projectManager.createPomFile(getMissileCommandPom());
         logger.info("STEP 1: Completed.");
     }
 
     @Test
     @Order(2)
     @DisplayName("Verify project structure and compilation (Initial)")
-    void step2_verifyAndCompileInitialProject() {
-        logger.info("STEP 2: Verifying initial project structure and compilation...");
-        Assumptions.assumeTrue(generatedInitialCode != null && !generatedInitialCode.isEmpty(), "Initial code generation must have succeeded.");
-        Assumptions.assumeTrue(projectManager.getProjectDir() != null && Files.exists(projectManager.getProjectDir()), "Project directory must exist.");
+    void step2_verifyAndCompileInitialProject() throws CodeGenerationWorkflow.WorkflowException {
+        logger.info("STEP 2: Verifying initial project structure and compilation using CodeGenerationWorkflow...");
+        assumeTrue(generatedInitialCode != null && !generatedInitialCode.isEmpty(), "Initial code generation must have succeeded in Step 1.");
+        assumeTrue(projectDirectory != null && Files.exists(projectDirectory), "Project directory must exist.");
+        assumeTrue(projectManager.getProjectDir() != null && Files.exists(projectManager.getProjectDir()), "ProjectManager must have a valid project directory.");
 
-        verificationService.verifyJavaFileExists(projectManager.getProjectDir(), "com.example.game", "MissileCommandGame");
-        verificationService.verifyPomExists(projectManager.getProjectDir());
 
-        BuildManagerService.BuildResult compileResult = projectManager.compile();
-        verificationService.verifyCompilationSucceeded(compileResult, "Initial project");
+        // Verification of file existence is implicitly handled by the workflow's compile step (and generateInitialProject)
+        // but can be explicitly called if needed:
+        // verificationService.verifyJavaFileExists(projectDirectory, "com.example.game", "MissileCommandGame");
+        // verificationService.verifyPomExists(projectDirectory);
+
+        BuildManagerService.BuildResult compileResult = codeGenerationWorkflow.compileProject("Initial project");
+
+        assertNotNull(compileResult, "Compilation result should not be null");
+        assertTrue(compileResult.success(), "Initial project compilation should be successful. Output: " + compileResult.output());
+        assertEquals(0, compileResult.exitCode(), "Initial project compilation exit code should be 0.");
         logger.info("STEP 2: Completed.");
     }
 
     @Test
     @Order(3)
     @DisplayName("/ask: Ask questions about the program")
-    void step3_askQuestions() {
-        logger.info("STEP 3: Asking questions about the program...");
-        Assumptions.assumeTrue(generatedInitialCode != null && !generatedInitialCode.isEmpty(), "Initial code generation must have succeeded.");
+    void step3_askQuestions() throws CodeGenerationWorkflow.WorkflowException {
+        logger.info("STEP 3: Asking questions about the program using CodeGenerationWorkflow...");
+        assumeTrue(generatedInitialCode != null && !generatedInitialCode.isEmpty(), "Initial code generation must have succeeded.");
 
         String question1 = "What is the main class of this game as specified in the initial prompt?";
-        String answer1 = ollamaService.askQuestion(generatedInitialCode, question1);
+        CodeGenerationWorkflow.AskQuestionResult answer1Result = codeGenerationWorkflow.askQuestionAboutCode(
+            generatedInitialCode,
+            question1,
+            "missilecommandgame" // Keywords for answer verification
+        );
+        String answer1 = answer1Result.answer();
         logger.info("Question 1: '{}' - Answer: '{}'", question1, answer1);
         assertNotNull(answer1, "Answer to question 1 should not be null");
-        Assertions.assertFalse(answer1.isEmpty(), "Answer to question 1 should not be empty");
-        verificationService.verifyCodeContains(answer1.toLowerCase(), "Answer 1", "missilecommandgame");
-
+        assertFalse(answer1.isEmpty(), "Answer to question 1 should not be empty");
+        // Specific assertion on content already handled by workflow if keywords are provided
 
         String question2 = "How is the game window (JFrame) initialized?";
-        String answer2 = ollamaService.askQuestion(generatedInitialCode, question2);
+        CodeGenerationWorkflow.AskQuestionResult answer2Result = codeGenerationWorkflow.askQuestionAboutCode(
+            generatedInitialCode,
+            question2
+            // No specific keywords for this answer verification in this test
+        );
+        String answer2 = answer2Result.answer();
         logger.info("Question 2: '{}' - Answer: '{}'", question2, answer2);
         assertNotNull(answer2, "Answer to question 2 should not be null");
-        Assertions.assertFalse(answer2.isEmpty(), "Answer to question 2 should not be empty");
+        assertFalse(answer2.isEmpty(), "Answer to question 2 should not be empty");
         logger.info("STEP 3: Completed.");
     }
 
     @Test
     @Order(4)
     @DisplayName("/code: Enhance Missile Command with sound")
-    void step4_enhanceWithSound() throws IOException {
-        logger.info("STEP 4: Enhancing Missile Command with sound...");
-        Assumptions.assumeTrue(generatedInitialCode != null && !generatedInitialCode.isEmpty(), "Initial code generation must have succeeded.");
-        Assumptions.assumeTrue(projectJavaFile != null && Files.exists(projectJavaFile), "Project Java file must exist.");
+    void step4_enhanceWithSound() throws CodeGenerationWorkflow.WorkflowException {
+        logger.info("STEP 4: Enhancing Missile Command with sound using CodeGenerationWorkflow...");
+        assumeTrue(generatedInitialCode != null && !generatedInitialCode.isEmpty(), "Initial code generation must have succeeded.");
+        assumeTrue(projectJavaFile != null && Files.exists(projectJavaFile), "Project Java file must exist for enhancement.");
 
         String enhancementDescription = "Add sound effects for two events: when a missile is fired and when an explosion occurs. Use javax.sound.sampled.Clip for playing sounds. Create placeholder methods playFireSound() and playExplosionSound() if actual sound file loading is complex, but include necessary imports for javax.sound.sampled.*.";
-        generatedEnhancedCode = ollamaService.enhanceCode(generatedInitialCode, enhancementDescription);
+
+        CodeGenerationWorkflow.EnhanceProjectResult enhanceResult = codeGenerationWorkflow.enhanceProject(
+            generatedInitialCode,
+            enhancementDescription,
+            "com.example.game",
+            "MissileCommandGame",
+            // Verification keywords for the enhanced code:
+            "javax.sound.sampled", "playFireSound", "playExplosionSound"
+        );
+
+        generatedEnhancedCode = enhanceResult.enhancedCode();
+        projectJavaFile = enhanceResult.javaFilePath(); // Update projectJavaFile path if it changed (it shouldn't for overwrite)
+
         assertNotNull(generatedEnhancedCode, "Enhanced code should not be null");
-        Assertions.assertFalse(generatedEnhancedCode.isEmpty(), "Enhanced code should not be empty");
+        assertFalse(generatedEnhancedCode.isEmpty(), "Enhanced code should not be empty");
+        assertTrue(Files.exists(projectJavaFile), "Enhanced Java file should exist");
 
-        logger.info("Enhanced code generated by Ollama. Length: {}", generatedEnhancedCode.length());
-
-        projectManager.saveJavaFile("com.example.game", "MissileCommandGame", generatedEnhancedCode); // Overwrite existing file
         logger.info("STEP 4: Completed.");
     }
 
     @Test
     @Order(5)
     @DisplayName("Verify enhanced project and re-compilation")
-    void step5_verifyAndCompileEnhancedProject() {
-        logger.info("STEP 5: Verifying enhanced project and re-compilation...");
-        Assumptions.assumeTrue(generatedInitialCode != null && !generatedInitialCode.isEmpty(), "Initial code must have been generated.");
-        Assumptions.assumeTrue(generatedEnhancedCode != null && !generatedEnhancedCode.isEmpty(), "Enhanced code generation must have succeeded.");
-        Assumptions.assumeTrue(projectManager.getProjectDir() != null && Files.exists(projectManager.getProjectDir()), "Project directory must exist.");
+    void step5_verifyAndCompileEnhancedProject() throws CodeGenerationWorkflow.WorkflowException {
+        logger.info("STEP 5: Verifying enhanced project and re-compilation using CodeGenerationWorkflow...");
+        assumeTrue(generatedInitialCode != null && !generatedInitialCode.isEmpty(), "Initial code must have been generated.");
+        assumeTrue(generatedEnhancedCode != null && !generatedEnhancedCode.isEmpty(), "Enhanced code generation must have succeeded in Step 4.");
+        assumeTrue(projectDirectory != null && Files.exists(projectDirectory), "Project directory must exist.");
+        assumeTrue(projectManager.getProjectDir() != null && Files.exists(projectManager.getProjectDir()), "ProjectManager must have a valid project directory.");
 
-        verificationService.verifyJavaFileExists(projectManager.getProjectDir(), "com.example.game", "MissileCommandGame"); // File should still exist
-        verificationService.verifyCodeIsLonger(generatedInitialCode, generatedEnhancedCode, "MissileCommandGame.java");
-        verificationService.verifyCodeContains(generatedEnhancedCode, "Enhanced Code", "javax.sound.sampled", "playFireSound", "playExplosionSound");
+        // Verification of file existence and content (longer, keywords) are handled by enhanceProject workflow method.
+        // verificationService.verifyJavaFileExists(projectDirectory, "com.example.game", "MissileCommandGame");
+        // verificationService.verifyCodeIsLonger(generatedInitialCode, generatedEnhancedCode, "MissileCommandGame.java");
+        // verificationService.verifyCodeContains(generatedEnhancedCode, "Enhanced Code", "javax.sound.sampled", "playFireSound", "playExplosionSound");
 
-        BuildManagerService.BuildResult compileResult = projectManager.compile();
-        verificationService.verifyCompilationSucceeded(compileResult, "Enhanced project");
+        BuildManagerService.BuildResult compileResult = codeGenerationWorkflow.compileProject("Enhanced project");
+
+        assertNotNull(compileResult, "Compilation result for enhanced project should not be null");
+        assertTrue(compileResult.success(), "Enhanced project compilation should be successful. Output: " + compileResult.output());
+        assertEquals(0, compileResult.exitCode(), "Enhanced project compilation exit code should be 0.");
         logger.info("STEP 5: Completed.");
     }
 }

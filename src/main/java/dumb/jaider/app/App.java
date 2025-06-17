@@ -99,6 +99,7 @@ public class App {
         commands.put("/a", new AcceptSuggestionCommand());
         commands.put("/run", new RunCommand());
         commands.put("/self-develop", new SelfDevelopCommand());
+        commands.put("/demo", new DemoCommand(this));
     }
 
     public synchronized void update() {

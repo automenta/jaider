@@ -18,5 +18,6 @@ public interface UI {
 
     CompletableFuture<Boolean> confirmPlan(String title, String planText, dev.langchain4j.data.message.AiMessage agentMessage);
     void setInputText(String text); // Added method
+    CompletableFuture<Void> showScrollableText(String title, String textContent);
     void close() throws IOException;
 }

@@ -237,4 +237,40 @@ public class TUI implements UI {
             });
         }
     }
+
+   // Add this method to TUI.java
+   // @Override // If UI interface is updated, otherwise remove. UI.java was updated, so @Override is appropriate.
+   @Override
+   public CompletableFuture<Void> showScrollableText(String title, String textContent) {
+       CompletableFuture<Void> future = new CompletableFuture<>();
+       gui.getGUIThread().invokeLater(() -> {
+           BasicWindow window = new BasicWindow(title);
+           window.setHints(Arrays.asList(Window.Hint.CENTERED));
+
+           Panel panel = new Panel(new BorderLayout());
+
+           TextBox textBox = new TextBox(textContent, TextBox.Style.MULTI_LINE);
+           textBox.setReadOnly(true);
+           textBox.setPreferredSize(new TerminalSize(80, 20)); // Adjust size as needed
+
+           panel.addComponent(textBox, BorderLayout.Location.CENTER);
+
+           Button okButton = new Button("OK", () -> {
+               window.close();
+               future.complete(null);
+           });
+
+           Panel buttonPanel = new Panel(new LinearLayout(Direction.HORIZONTAL).setSpacing(1));
+           buttonPanel.addComponent(okButton);
+           // Center the button panel (optional, might need more complex layout for true centering)
+           // For simplicity, let's add it directly to the bottom.
+           // If direct centering of a single button is hard, can wrap it or just let it align left/right.
+
+           panel.addComponent(buttonPanel.withBorder(Borders.empty()), BorderLayout.Location.BOTTOM);
+
+           window.setComponent(panel);
+           gui.addWindow(window);
+       });
+       return future;
+   }
 }
