@@ -23,6 +23,10 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 
+// Import for CalculatorDemo
+import com.example.math.CalculatorDemo;
+import java.io.ByteArrayOutputStream;
+import java.io.PrintStream;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -117,9 +121,87 @@ public class DemoExecutionIntegrationTest {
         demoCommand = new DemoCommand(mockApp, mockOllamaService, mockProjectManager);
     }
 
+    @Test
+    void testDemoRunner_HelloWorld() {
+        // Note: This test uses the real ProjectManager and DemoRunner, not mocks for these.
+        // It will perform actual file IO, compilation, and execution.
+        String demoName = "DemoRunnerTest_HW";
+        DemoRunner testDemoRunner = new DemoRunner(demoName);
+        try {
+            System.out.println("DemoRunnerTest: Setting up project...");
+            testDemoRunner.setupProject();
+
+            String helloWorldCode = "package com.example.hw;\n" +
+                                    "public class HelloWorld {\n" +
+                                    "    public static void main(String[] args) {\n" +
+                                    "        System.out.println(\"Hello from DemoRunner!\");\n" +
+                                    "        if (args.length > 0) {\n" +
+                                    "           System.out.println(\"Received args: \" + String.join(\", \", args));\n" +
+                                    "        }\n" +
+                                    "    }\n" +
+                                    "}";
+            System.out.println("DemoRunnerTest: Adding source file...");
+            testDemoRunner.addSourceFile("com/example/hw/HelloWorld.java", helloWorldCode);
+
+            System.out.println("DemoRunnerTest: Compiling project...");
+            boolean compiled = testDemoRunner.compileProject();
+            assertTrue(compiled, "DemoRunner project should compile successfully.");
+
+            System.out.println("DemoRunnerTest: Running project...");
+            DemoRunner.ExecutionResult result = testDemoRunner.runProject("com.example.hw.HelloWorld");
+
+            assertNotNull(result, "ExecutionResult should not be null.");
+            assertEquals(0, result.exitCode, "Project execution should have exit code 0.");
+            assertTrue(result.stdout.contains("Hello from DemoRunner!"), "stdout should contain 'Hello from DemoRunner!'.");
+            assertTrue(result.stderr.isEmpty(), "stderr should be empty for successful HelloWorld run, but was: " + result.stderr);
+
+            System.out.println("DemoRunnerTest: Verifying with arguments...");
+            // Test with arguments (though ProjectManager.runMainClass doesn't support them yet, this is for future)
+            // For now, this part of the test might not pass args correctly to the app,
+            // but the check above without args should pass.
+            // We'll assume runProject might be enhanced later or ProjectManager.runMainClass.
+            // The current ProjectManager.runMainClass does not pass arguments.
+            // To make this fully testable, ProjectManager.runMainClass would need to accept args.
+            // For now, the test primarily validates the no-arg run.
+
+        } catch (Exception e) {
+            fail("testDemoRunner_HelloWorld failed with exception: " + e.getMessage(), e);
+        } finally {
+            System.out.println("DemoRunnerTest: Cleaning up project...");
+            try {
+                testDemoRunner.cleanupProject();
+            } catch (Exception e) {
+                System.err.println("Error during DemoRunner cleanup: " + e.getMessage());
+                e.printStackTrace();
+            }
+        }
+    }
+
     private void prepareModalMessageInteractions(int count) {
         for (int i = 0; i < count; i++) {
             mockTUI.addShowModalMessageFuture(CompletableFuture.completedFuture(null));
+        }
+    }
+
+    @Test
+    void testCalculatorDemo_RunsSuccessfully() {
+        PrintStream originalOut = System.out;
+        ByteArrayOutputStream bos = new ByteArrayOutputStream();
+        System.setOut(new PrintStream(bos)); // Redirect System.out
+
+        try {
+            // Execute the main method of CalculatorDemo
+            assertDoesNotThrow(() -> CalculatorDemo.main(new String[0]),
+                "CalculatorDemo.main(String[]) should not throw an exception.");
+
+            // Verify that some output was produced
+            String output = bos.toString();
+            assertFalse(output.isEmpty(), "CalculatorDemo should produce some output to the console.");
+            assertTrue(output.contains("Jaider Calculator Demo"), "CalculatorDemo output should contain introductory text.");
+            assertTrue(output.contains("Calculator Demo finished."), "CalculatorDemo output should contain finishing text.");
+
+        } finally {
+            System.setOut(originalOut); // Restore System.out
         }
     }
 
@@ -350,7 +432,9 @@ public class DemoExecutionIntegrationTest {
         // compileProject is called by InitialProjectGenerationStep and ExplainCodeStep (if it compiles to verify)
         // However, the current structure of InitialProjectGenerationStep internally compiles.
         // ExplainCodeStep might not compile again if not explicitly designed to.
-        // Let's assume compile is called once by InitialProjectGenerationStep.
+        // InitialProjectGenerationStep does one compilation.
+        // ExplainCodeStep does not compile.
+        // So, only one compileProject call is expected for contextual_qa_demo.
         Mockito.verify(mockProjectManager, Mockito.times(1)).compileProject();
         Mockito.verify(mockProjectManager, Mockito.times(1)).cleanupProject();
     }

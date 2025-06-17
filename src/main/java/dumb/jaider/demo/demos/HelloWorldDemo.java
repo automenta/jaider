@@ -18,35 +18,59 @@ public class HelloWorldDemo implements DemoProvider {
 
     @Override
     public String getDescription() {
-        return "Generates a simple Hello World application.";
+        return "Generates a simple Hello World application, showcasing basic code generation and compilation.";
     }
 
     @Override
     public List<DemoStep> getSteps() {
         List<DemoStep> steps = new ArrayList<>();
-        steps.add(new DisplayMessageStep("Hello, World! Demo", "Welcome to the Interactive Hello, World! Java Application Demo.\nThis demo will generate and compile a simple Hello World program.\nPress OK to start."));
+        steps.add(new DisplayMessageStep("Hello, World! Demo - Introduction",
+                "Welcome to the Interactive 'Hello, World!' Java Application Demo.\n\n" +
+                "This demo will walk you through using Jaider to:\n" +
+                "1. Generate a simple 'Hello, World!' Java program based on a prompt.\n" +
+                "2. Compile the generated code using Maven.\n\n" +
+                "This showcases Jaider's basic code generation and verification capabilities.\n" +
+                "Press OK to start."));
+
         steps.add(new InitialProjectGenerationStep(
-                "a simple Hello World application in Java. The main class should be named 'HelloWorld' in package 'com.example.hello', and it should print 'Hello, World!' to the console.",
+                "Create a simple Hello World application in Java. The main class should be named 'HelloWorld' in the package 'com.example.hello', and it must print the exact string 'Hello, World!' to the console.",
                 "com.example.hello",
                 "HelloWorld",
                 getInitialPomContent(),
                 "initialCode",
                 "HelloWorld", "System.out.println", "Hello, World!"
         ));
+
         steps.add(new DisplayMessageStep("Project Generation Explained",
-        "Jaider has generated a new Java project for the 'Hello, World!' application.\n\n" +
-        "This included:\n" +
-        "- Creating a 'pom.xml' for the project's build configuration.\n" +
-        "- Generating the main 'HelloWorld.java' class in the 'com.example.hello' package, which prints 'Hello, World!' to the console.\n\n" +
-        "This was done by Jaider's CodeGenerationWorkflow using the provided description."));
-        steps.add(new DisplayMessageStep("Compilation Time",
-        "Next, Jaider will attempt to compile the generated 'HelloWorld.java' code using Maven.\n\n" +
-        "This step checks if the Language Model produced valid, compilable Java code."));
+                "Jaider has now processed the prompt and generated a new Java project.\n\n" +
+                "What happened behind the scenes?\n" +
+                "- Jaider's `CodeGenerationWorkflow` took your text prompt.\n" +
+                "- It instructed the underlying Language Model (LLM) to generate the necessary Java code.\n" +
+                "- A 'pom.xml' file for Maven build configuration was created.\n" +
+                "- The main 'HelloWorld.java' class was generated in the 'com.example.hello' package, designed to print 'Hello, World!' to the console.\n\n" +
+                "This step demonstrates how Jaider translates natural language requirements into functional code structure."));
+
+        steps.add(new DisplayMessageStep("Compilation - Verifying the Code",
+                "Next, Jaider will attempt to compile the generated 'HelloWorld.java' code using Maven.\n\n" +
+                "Why is this important?\n" +
+                "- This step automatically verifies if the Language Model produced syntactically correct and compilable Java code.\n" +
+                "- It's a crucial part of the iterative development process. If compilation fails, you'd typically refine the prompt or manually correct the code and try again.\n\n" +
+                "Press OK to proceed with compilation."));
+
         steps.add(new CompileProjectStep("Hello, World! Compilation"));
+
         steps.add(new DisplayMessageStep("Compilation Successful!",
-        "The 'Hello, World!' application code has been successfully compiled!\n\n" +
-        "This demonstrates Jaider's ability to generate correct and runnable basic Java applications from a simple prompt."));
-        steps.add(new DisplayMessageStep("Demo Complete", "You've reached the end of the Hello, World! Interactive Demo!\nPress OK to exit."));
+                "The 'Hello, World!' application code has been successfully compiled by Maven!\n\n" +
+                "This confirms that Jaider, given a clear prompt, generated valid Java code for this basic scenario.\n" +
+                "In more complex projects, you would proceed with further testing and refinement."));
+
+        steps.add(new DisplayMessageStep("Demo Complete - Hello, World!",
+                "You've reached the end of the 'Hello, World!' Interactive Demo!\n\n" +
+                "Key takeaways:\n" +
+                "- Jaider can generate code from natural language prompts.\n" +
+                "- Jaider can integrate with build tools like Maven to compile code.\n" +
+                "- The process is iterative: generate, review, compile, (refine if necessary).\n\n" +
+                "Press OK to exit."));
         return steps;
     }
 
