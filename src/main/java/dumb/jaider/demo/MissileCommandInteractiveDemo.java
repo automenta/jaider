@@ -1,6 +1,11 @@
 package dumb.jaider.demo;
 
-import dumb.jaider.demo.steps.*;
+import dumb.jaider.demo.steps.common.AskQuestionStep; // Updated import
+import dumb.jaider.demo.steps.common.CompileProjectStep; // Updated import
+import dumb.jaider.demo.steps.missilecommand.MCEnhanceProjectStep; // Updated import
+import dumb.jaider.demo.steps.missilecommand.MCInitialProjectGenerationStep; // Updated import
+// import dumb.jaider.demo.steps.MessageStep; // No longer used
+import dumb.jaider.demo.steps.common.DisplayMessageStep; // Updated import
 import dumb.jaider.integration.OllamaService;
 import dumb.jaider.integration.ProjectManager;
 import dumb.jaider.integration.TestConfig;
@@ -83,10 +88,10 @@ public class MissileCommandInteractiveDemo {
             // Define the demo steps
             List<DemoStep> steps = new ArrayList<>();
 
-            steps.add(new MessageStep("Welcome", "Welcome to the Interactive Missile Command Generation Demo!\nPress OK to start."));
+            steps.add(new DisplayMessageStep("Welcome", "Welcome to the Interactive Missile Command Generation Demo!\nPress OK to start."));
 
             // Step 1: Generate Missile Command
-            steps.add(new InitialProjectGenerationStep(
+            steps.add(new MCInitialProjectGenerationStep( // Updated constructor call
                 "a complete, runnable, single-file Missile Command game in Java using Swing. The main class should be named 'MissileCommandGame' and be in package 'com.example.game'.",
                 "com.example.game",
                 "MissileCommandGame",
@@ -98,7 +103,7 @@ public class MissileCommandInteractiveDemo {
             steps.add(new CompileProjectStep("Initial Missile Command Compilation"));
 
             // Step 3: Ask Questions
-            steps.add(new MessageStep("Q&A Time", "Now let's ask the LLM some questions about the generated code."));
+            steps.add(new DisplayMessageStep("Q&A Time", "Now let's ask the Language Model some questions about the generated code."));
             steps.add(new AskQuestionStep(
                 "What is the main class of this game as specified in the initial prompt?",
                 "initialCode", // Key in DemoContext where initial code is stored
@@ -111,8 +116,8 @@ public class MissileCommandInteractiveDemo {
             ));
 
             // Step 4: Enhance Missile Command with Sound
-            steps.add(new MessageStep("Code Enhancement", "Next, we'll ask the LLM to enhance the game by adding sound effects."));
-            steps.add(new EnhanceProjectStep(
+            steps.add(new DisplayMessageStep("Code Enhancement", "Next, we'll ask the Language Model to enhance the game by adding sound effects."));
+            steps.add(new MCEnhanceProjectStep( // Updated constructor call
                 "Add sound effects for two events: when a missile is fired and when an explosion occurs. Use javax.sound.sampled.Clip for playing sounds. Create placeholder methods playFireSound() and playExplosionSound() if actual sound file loading is complex, but include necessary imports for javax.sound.sampled.*.",
                 "com.example.game",
                 "MissileCommandGame",
@@ -124,7 +129,7 @@ public class MissileCommandInteractiveDemo {
             // Step 5: Compile Enhanced Project
             steps.add(new CompileProjectStep("Enhanced Missile Command Compilation"));
 
-            steps.add(new MessageStep("Demo Complete", "You've reached the end of the Missile Command Interactive Demo!\nPress OK to exit."));
+            steps.add(new DisplayMessageStep("Demo Complete", "You've reached the end of the Missile Command Interactive Demo!\nPress OK to exit."));
 
             // --- Run the Demo through TUI ---
             // TUI init needs an App instance. For a standalone demo, we might need a lightweight App mock or a way to run TUI more directly.

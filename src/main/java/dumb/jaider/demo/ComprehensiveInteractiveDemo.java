@@ -13,9 +13,39 @@ import java.util.List;
 import java.util.concurrent.ExecutionException;
 import java.util.stream.Stream;
 
+/**
+ * Provides a comprehensive, scripted demonstration of Jaider's capabilities using a console-based
+ * UI simulator ({@link DemoUI}). This demo walks through various Jaider commands and agent interactions,
+ * simulating user input and showcasing features like code generation, modification, context management,
+ * configuration, and different agent modes.
+ * <p>
+ * The demo operates within a temporary directory containing a sample project (Python files and a README)
+ * and a default {@code .jaider.json} configuration. It guides the "user" (via console prompts)
+ * through a sequence of operations, explaining each step and the Jaider features being demonstrated.
+ * </p>
+ * <p>
+ * Key features showcased:
+ * <ul>
+ *     <li>Adding files to Jaider's context ({@code /add})</li>
+ *     <li>Interacting with different agent modes (Ask, Coder, Architect via {@code /mode} and direct questions/requests)</li>
+ *     <li>Code modification and diff application (simulated via {@link DemoUI})</li>
+ *     <li>Running validation commands ({@code /run})</li>
+ *     <li>Undoing previous changes ({@code /undo})</li>
+ *     <li>Editing Jaider's configuration ({@code /edit-config}) and observing behavior changes (e.g., LLM provider)</li>
+ *     <li>Web search capabilities ({@code /searchweb}, dependent on Tavily API key)</li>
+ *     <li>Project indexing and semantic code search ({@code /index} and then asking questions requiring code search)</li>
+ *     <li>Summarizing files ({@code /summarize})</li>
+ * </ul>
+ * </p>
+ * <p>
+ * This demo is intended for developers to understand Jaider's command set and interaction flows.
+ * It uses {@link DemoUI} to simulate the Jaider UI, printing interactions to the console and
+ * accepting scripted or direct console input.
+ * </p>
+ */
 public class ComprehensiveInteractiveDemo {
 
-    private static Path temporaryDemoDirectory;
+    private static Path temporaryDemoDirectory; // Stores the root path of the temporary demo project.
 
     private static void setupTemporaryDirectory() throws IOException {
         temporaryDemoDirectory = Files.createTempDirectory("jaiderComprehensiveDemo_");
@@ -109,89 +139,119 @@ public class ComprehensiveInteractiveDemo {
 
             List<String> demoScript = Arrays.asList(
                 "DEMO_COMMENT: === Phase 1: Initial Setup & Basic Interaction ===",
-                "DEMO_COMMENT: Initializing demo. The .jaider.json in the temp directory should be loaded.",
-                    "DEMO_COMMENT: Default LLM provider is 'ollama'. Ensure Ollama is running or edit .jaider.json.",
-                    "DEMO_PAUSE: Check initial state. Press Enter to add README.md to context.",
+                "DEMO_COMMENT: This phase demonstrates how Jaider starts up, loads its configuration (from .jaider.json),",
+                "DEMO_COMMENT: and how to add files to its working context using the /add command.",
+                "DEMO_COMMENT: We'll be using a temporary project with a README.md, main.py, and utils.py.",
+                "DEMO_COMMENT: The default LLM provider in .jaider.json is 'ollama'. Ensure Ollama is running locally",
+                "DEMO_COMMENT: and the specified model (e.g., 'llamablit') is available, or edit .jaider.json accordingly before running.",
+                "DEMO_PAUSE: Initial setup complete. Jaider is ready. Press Enter to add README.md to the context.",
                 "/add README.md",
-                "DEMO_PAUSE: README.md added. Press Enter to add main.py.",
+                "DEMO_COMMENT: README.md has been added to Jaider's context. The agent now knows about this file.",
+                "DEMO_PAUSE: README.md added. Press Enter to add main.py to the context.",
                 "/add main.py",
-                "DEMO_PAUSE: main.py added. Press Enter to add utils.py.",
+                "DEMO_COMMENT: main.py added. Jaider's context now includes both README.md and main.py.",
+                "DEMO_PAUSE: main.py added. Press Enter to add utils.py to the context.",
                 "/add utils.py",
+                "DEMO_COMMENT: All sample files (README.md, main.py, utils.py) are now in Jaider's context.",
 
                 "DEMO_COMMENT: === Phase 2: Agent Modes & Core Functionality (Ask & Coder) ===",
-                "DEMO_PAUSE: All files added. Press Enter to use Ask mode (implicitly, or explicitly if needed) for a question about main.py.",
+                "DEMO_COMMENT: This phase showcases Jaider's different agent modes and core functionalities like asking questions and modifying code.",
+                "DEMO_PAUSE: All files are in context. Press Enter to ask a question about main.py (Jaider defaults to 'Ask' mode or infers it).",
                 "DEMO_OPERATOR_INPUT: What is the content of the file main.py?",
-                "DEMO_PAUSE: Response received. Press Enter to switch to Coder mode.",
+                "DEMO_COMMENT: The Ask agent should respond with the content of main.py.",
+                "DEMO_PAUSE: Response received. Press Enter to switch to 'Coder' mode. Coder mode is for tasks involving code generation or modification.",
                 "/mode Coder",
-                "DEMO_PAUSE: Switched to Coder mode. Let's ask the Coder to modify main.py.",
+                "DEMO_PAUSE: Switched to Coder mode. Let's request a code modification in main.py.",
                 "DEMO_OPERATOR_INPUT: In main.py, change the print statement inside the hello function to \"Hello from an enhanced Jaider demo!\"",
-                "DEMO_COMMENT: AI should now propose a diff. DemoUI will prompt for accept/reject/edit. Please ACCEPT.",
-                "DEMO_PAUSE: Diff applied (if accepted). Press Enter to run validation (/run).",
+                "DEMO_COMMENT: The Coder agent should propose a diff for main.py. The DemoUI will simulate prompting you to accept, reject, or edit the diff.",
+                "DEMO_COMMENT: For this demo, please type 'accept' when prompted by DemoUI.",
+                "DEMO_PAUSE: If you accepted, the diff has been applied to main.py. Press Enter to run the validation command (defined in .jaider.json as 'runCommand').",
                 "/run",
-                "DEMO_PAUSE: Validation run. Now, let's ask Coder to add a new function to utils.py.",
+                "DEMO_COMMENT: The validation command (e.g., running linters or tests) has been executed. Check the output.",
+                "DEMO_PAUSE: Validation complete. Now, let's ask Coder to add a new function to utils.py.",
                 "DEMO_OPERATOR_INPUT: In utils.py, add a new Python function called 'another_helper' that returns the integer 42.",
-                "DEMO_COMMENT: AI should propose a diff for utils.py. Please ACCEPT.",
-                "DEMO_PAUSE: Diff applied. Press Enter to ask Coder to use the new function in main.py.",
+                "DEMO_COMMENT: Coder should propose a diff for utils.py. Please type 'accept' when prompted.",
+                "DEMO_PAUSE: Diff applied to utils.py. Now, let's ask Coder to use this new function in main.py.",
                 "DEMO_OPERATOR_INPUT: In main.py, import 'another_helper' from 'utils' and print its return value after calling hello().",
-                "DEMO_COMMENT: AI should propose changes for main.py. Please ACCEPT.",
-                "DEMO_PAUSE: Diff applied. Press Enter to run validation again.",
+                "DEMO_COMMENT: Coder should propose changes for main.py, including an import statement and a call to the new function. Please 'accept'.",
+                "DEMO_PAUSE: Diff applied to main.py. Press Enter to run validation again to see if the changes are okay.",
                 "/run",
-                "DEMO_PAUSE: Validation run. Content of main.py and utils.py should be updated.",
-                "DEMO_COMMENT: Note: Committing changes is a feature, but this demo won't perform actual git commits to avoid altering your git history.",
+                "DEMO_PAUSE: Validation run. Both main.py and utils.py should now reflect the changes. You can ask their content to verify.",
+                "DEMO_COMMENT: Note: Jaider supports committing changes to Git, but this demo avoids actual git operations to keep your repository clean.",
 
                 "DEMO_COMMENT: === Phase 3: Undo Functionality ===",
-                "DEMO_PAUSE: Let's demonstrate /undo. The last change was modifying main.py. Press Enter to undo it.",
+                "DEMO_COMMENT: This phase demonstrates Jaider's /undo command, which reverts the last applied code modification.",
+                "DEMO_PAUSE: The last change was modifying main.py (importing and using 'another_helper'). Press Enter to undo this change.",
                 "/undo",
-                "DEMO_COMMENT: The undo command should revert main.py to its state before the last modification (importing and using another_helper).",
-                "DEMO_PAUSE: Check the log for undo status. Ask a question to see the content of main.py to verify.",
+                "DEMO_COMMENT: The /undo command should have reverted main.py to its state *before* the last modification.",
+                "DEMO_PAUSE: Check the application log for undo status. To verify, ask for the content of main.py.",
                 "DEMO_OPERATOR_INPUT: What is the current content of main.py?",
-                "DEMO_PAUSE: Content displayed. Now undo the change to utils.py (addition of another_helper).",
+                "DEMO_COMMENT: main.py should no longer have the import or call to 'another_helper'.",
+                "DEMO_PAUSE: Content displayed. Now, let's undo the change to utils.py (the addition of 'another_helper' function).",
                 "/undo",
-                "DEMO_PAUSE: Check log. utils.py should be reverted. Ask for its content.",
+                "DEMO_COMMENT: utils.py should now be reverted to its original state.",
+                "DEMO_PAUSE: Check log. To verify, ask for the content of utils.py.",
                 "DEMO_OPERATOR_INPUT: What is the current content of utils.py?",
+                "DEMO_COMMENT: utils.py should no longer contain the 'another_helper' function.",
 
                 "DEMO_COMMENT: === Phase 4: Configuration & LLM Switching ===",
-                "DEMO_PAUSE: Let's try editing the configuration with /edit-config. Press Enter.",
+                "DEMO_COMMENT: This phase shows how to edit Jaider's configuration using /edit-config. This allows changing settings like the LLM provider.",
+                "DEMO_PAUSE: Let's try editing the configuration. Press Enter to execute /edit-config.",
                 "/edit-config",
-                "DEMO_COMMENT: DemoUI will show the current .jaider.json. You'll be prompted to provide the new content.",
-                "DEMO_COMMENT: IMPORTANT: If you want to switch to Gemini for the next step (web search),",
-                "DEMO_COMMENT: modify 'llmProvider' to 'gemini' and 'geminiModelName' to e.g. 'gemini-1.5-flash-latest'.",
-                "DEMO_COMMENT: Ensure you have GEMINI_API_KEY env var set, or add it to 'apiKeys': { \"google\": \"YOUR_KEY\" }.",
-                "DEMO_COMMENT: If you don't want to switch or setup Gemini, you can make a small change like modifying 'ollamaModelName', or just save without changes.",
-                "DEMO_PAUSE: After /edit-config completes and reloads, press Enter to test the new config with a simple request.",
+                "DEMO_COMMENT: DemoUI will display the current .jaider.json content and prompt you to provide the new content.",
+                "DEMO_COMMENT: IMPORTANT: To test switching to Gemini for the web search phase:",
+                "DEMO_COMMENT:   1. Modify 'llmProvider' from 'ollama' to 'gemini'.",
+                "DEMO_COMMENT:   2. Optionally, set 'geminiModelName' (e.g., 'gemini-1.5-flash-latest' or 'gemini-pro').",
+                "DEMO_COMMENT:   3. Ensure you have the GEMINI_API_KEY environment variable set, OR",
+                "DEMO_COMMENT:      add your key to the 'apiKeys' object: \"apiKeys\": { \"google\": \"YOUR_GEMINI_API_KEY\" }.",
+                "DEMO_COMMENT: If you prefer not to switch or set up Gemini, you can make a minor change (like modifying 'ollamaModelName') or save without changes.",
+                "DEMO_PAUSE: After /edit-config completes, Jaider will reload the configuration. Press Enter to test the (potentially new) config with a simple request.",
                 "DEMO_OPERATOR_INPUT: What is 1+1?",
+                "DEMO_COMMENT: The agent (Ollama or Gemini, depending on your change) should answer this simple question.",
 
                 "DEMO_COMMENT: === Phase 5: Web Search (Requires Coder mode & Tavily API Key) ===",
-                "DEMO_PAUSE: Ensure you are in Coder mode. If not, use '/mode Coder'. Press Enter to attempt web search.",
-                "/mode Coder",
-                "DEMO_COMMENT: For web search, Jaider uses Tavily. Ensure TAVILY_API_KEY is set in your environment OR in .jaider.json (e.g. apiKeys: { \"tavily\": \"YOUR_KEY\" }).",
-                "DEMO_COMMENT: If not configured, the agent should state it cannot perform web search.",
+                "DEMO_COMMENT: This phase demonstrates Jaider's web search capability, which uses the Tavily API.",
+                "DEMO_PAUSE: Ensure you are in Coder mode (use '/mode Coder' if not). Press Enter to attempt a web search.",
+                "/mode Coder", // Ensure Coder mode for web search tool
+                "DEMO_COMMENT: For web search, Jaider (specifically, the LangChain4j integration) needs a Tavily API key.",
+                "DEMO_COMMENT: Ensure the TAVILY_API_KEY environment variable is set, OR add it to .jaider.json:",
+                "DEMO_COMMENT:   \"apiKeys\": { ..., \"tavily\": \"YOUR_TAVILY_API_KEY\" }",
+                "DEMO_COMMENT: If the key is not configured, the agent should inform you it cannot perform a web search.",
                 "DEMO_OPERATOR_INPUT: What is the current weather in London? Search the web if you don't know.",
-                "DEMO_PAUSE: Review the agent's response, which may include search results or an inability to search.",
+                "DEMO_PAUSE: Review the agent's response. It might include search results or a message about missing API keys.",
 
                 "DEMO_COMMENT: === Phase 6: Project Indexing & Code Search (Requires Coder mode) ===",
-                "DEMO_PAUSE: Next, we'll test project indexing and code search. Press Enter to run /index.",
+                "DEMO_COMMENT: This phase showcases Jaider's project indexing (/index) and semantic code search features.",
+                "DEMO_COMMENT: Indexing creates vector embeddings of your codebase to enable understanding and finding relevant code.",
+                "DEMO_PAUSE: Ensure Coder mode. Press Enter to run /index. This might take a moment.",
+                "/mode Coder", // Ensure Coder mode for findRelevantCode tool
                 "/index",
-                "DEMO_COMMENT: Indexing creates embeddings. This might take a moment depending on the LLM provider for embeddings (e.g., Ollama, Gemini, OpenAI).",
-                "DEMO_COMMENT: The default .jaider.json uses Ollama for embeddings if llmProvider is ollama. If you switched to Gemini, it will use Gemini embeddings.",
-                "DEMO_PAUSE: Indexing complete. Press Enter to ask a question that uses findRelevantCode.",
-                "DEMO_OPERATOR_INPUT: Where is the helper_function defined in this project?",
-                "DEMO_PAUSE: Agent should respond with the location of helper_function in utils.py.",
+                "DEMO_COMMENT: Indexing creates embeddings based on the configured embedding service (Ollama, Gemini, or OpenAI via .jaider.json).",
+                "DEMO_COMMENT: The default .jaider.json uses Ollama for embeddings if 'llmProvider' is 'ollama'.",
+                "DEMO_COMMENT: If you switched 'llmProvider' to 'gemini', it will use Gemini embeddings.",
+                "DEMO_PAUSE: Indexing complete. Press Enter to ask a question that requires finding relevant code.",
+                "DEMO_OPERATOR_INPUT: Where is the helper_function defined in this project and what does it do?",
+                "DEMO_COMMENT: The agent should use its 'findRelevantCode' tool, analyze the retrieved code, and answer.",
+                "DEMO_PAUSE: Agent should respond with the location and description of helper_function in utils.py.",
 
                 "DEMO_COMMENT: === Phase 7: Architect Mode ===",
+                "DEMO_COMMENT: This phase demonstrates the 'Architect' mode, designed for high-level project understanding and planning.",
                 "DEMO_PAUSE: Let's switch to Architect mode. Press Enter.",
                 "/mode Architect",
-                "DEMO_PAUSE: Switched to Architect mode. Ask a high-level question about the project.",
-                "DEMO_OPERATOR_INPUT: Describe the overall structure of this sample project and how the files relate to each other.",
+                "DEMO_PAUSE: Switched to Architect mode. Now, ask a high-level question about the project's structure.",
+                "DEMO_OPERATOR_INPUT: Describe the overall structure of this sample project and how the files (README.md, main.py, utils.py) relate to each other.",
+                "DEMO_COMMENT: The Architect agent should provide a high-level overview of the project components.",
                 "DEMO_PAUSE: Review the Architect agent's response.",
 
                 "DEMO_COMMENT: === Phase 8: Summarize Command ===",
-                "DEMO_PAUSE: The /summarize command can be useful. Press Enter to summarize README.md.",
+                "DEMO_COMMENT: This phase shows the /summarize command, useful for getting a quick overview of a file's content.",
+                "DEMO_PAUSE: The /summarize command provides a concise summary of a specified file. Press Enter to summarize README.md.",
                 "/summarize README.md",
-                "DEMO_PAUSE: Summary provided.",
+                "DEMO_PAUSE: A summary of README.md should be displayed in the log.",
 
-                "DEMO_COMMENT: === End of Demo ===",
-                "DEMO_PAUSE: All planned features demonstrated. Press Enter to exit the demo.",
+                "DEMO_COMMENT: === End of Comprehensive Demo ===",
+                "DEMO_COMMENT: All core features included in this script have been demonstrated.",
+                "DEMO_PAUSE: All planned features demonstrated. Press Enter to issue the /exit command and end the demo.",
                 "/exit"
             );
 
