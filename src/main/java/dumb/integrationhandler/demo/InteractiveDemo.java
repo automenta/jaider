@@ -97,21 +97,13 @@ public class InteractiveDemo {
 
         if ("Gemini".equalsIgnoreCase(lmChoice)) {
             System.out.println("Initializing Gemini API...");
-            String originalApiKeyEnv = System.getenv("GOOGLE_API_KEY"); // Check env for existing key
-            String originalApiKeyProp = System.getProperty("GOOGLE_API_KEY");
 
             try {
                 if (key != null && !key.isEmpty()) {
-                    System.setProperty("GOOGLE_API_KEY", key); // Temporarily set for this call
-                    System.out.println("Using user-provided API key for Gemini call.");
-                } else if (originalApiKeyEnv != null && !originalApiKeyEnv.isEmpty()) {
-                    System.out.println("Using GOOGLE_API_KEY from environment variable for Gemini call.");
-                     // No need to set property if env var is picked up by library
-                } else if (originalApiKeyProp != null && !originalApiKeyProp.isEmpty()) {
-                     System.out.println("Using GOOGLE_API_KEY from system property for Gemini call.");
-                }
-                else {
-                    System.err.println("Warning: Gemini API key not provided and not found in GOOGLE_API_KEY environment/system property. API call might fail.");
+                    System.out.println("Attempting to use user-provided API key for Gemini call.");
+                } else {
+                    System.out.println("No API key provided by user. Attempting to use credentials from environment (e.g., GOOGLE_API_KEY or Application Default Credentials).");
+                    // The warning about potential failure if none are found can remain or be part of the catch block.
                 }
 
                 ChatModel chatModel = GoogleAiGeminiChatModel.builder()
@@ -138,21 +130,13 @@ public class InteractiveDemo {
                 System.err.println("Error: During Gemini project generation: " + e.getClass().getSimpleName() + " - " + e.getMessage());
                 // e.printStackTrace();
                 return false;
-            } finally {
-                // Restore original GOOGLE_API_KEY system property if it was changed
-                if (key != null && !key.isEmpty()) { // Only restore if we set it from user input
-                    if (originalApiKeyProp != null) {
-                        System.setProperty("GOOGLE_API_KEY", originalApiKeyProp);
-                    } else {
-                        System.clearProperty("GOOGLE_API_KEY");
-                    }
-                }
             }
+            // No finally block needed for API key restoration anymore
         } else if ("Ollama".equalsIgnoreCase(lmChoice)) {
-            System.out.println("Ollama integration is not yet implemented. Creating a placeholder file.");
+            System.out.println("Full Ollama integration is available in the main Jaider application. This demo will create a placeholder file for Ollama selection.");
             generatedFilePath = outputDirectory.resolve(OLLAMA_PLACEHOLDER_FILE_NAME);
             try {
-                String placeholderContent = "Ollama generation is not yet implemented for project: " + description + "\nAPI/Config used: " + key;
+                String placeholderContent = "Ollama integration is not demonstrated in this simplified demo. Full Ollama support is available in the main Jaider application.\nProject description for demo: " + description + "\nConfig entered in demo: " + key;
                 Files.writeString(generatedFilePath, placeholderContent, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
                 System.out.println("Saving generated content to " + generatedFilePath.toString());
                 return true;
@@ -169,6 +153,12 @@ public class InteractiveDemo {
 
     public void runDemo() {
         System.out.println("Starting interactive demo...");
+        System.out.println("\n*** Disclaimer ***");
+        System.out.println("This is a simplified interactive demo showcasing the basic capability of generating a single file using a Large Language Model (LLM).");
+        System.out.println("The full Jaider application provides a much richer and more powerful AI-assisted development experience,");
+        System.out.println("including features like applying changes via diffs, running validation commands, working with your project's full context, and more.");
+        System.out.println("For the complete feature set, please run the main Jaider application.");
+        System.out.println("******************\n");
         Scanner scanner = new Scanner(System.in);
 
         try {
@@ -261,6 +251,10 @@ public class InteractiveDemo {
         } finally {
             scanner.close();
             cleanupTemporaryDirectory();
+            System.out.println("\n*** Demo Scope Reminder ***");
+            System.out.println("This simplified demo focused on single-file generation.");
+            System.out.println("To explore Jaider's full capabilities for AI-assisted coding, please try the main application.");
+            System.out.println("*************************");
             System.out.println("\nInteractive demo finished.");
         }
     }
