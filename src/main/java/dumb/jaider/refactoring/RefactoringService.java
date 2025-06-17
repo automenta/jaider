@@ -2,14 +2,11 @@ package dumb.jaider.refactoring;
 
 import com.github.difflib.DiffUtils;
 import com.github.difflib.UnifiedDiffUtils;
-import com.github.difflib.patch.Patch;
 
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Arrays;
-import java.util.List;
-import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -22,8 +19,8 @@ public class RefactoringService {
 
     public String smartRename(Path filePath, String originalName, int position, String newName) {
         try {
-            String content = Files.readString(filePath);
-            Optional<LanguageParser> parserOptional = parserRegistry.getParserForFile(filePath);
+            var content = Files.readString(filePath);
+            var parserOptional = parserRegistry.getParserForFile(filePath);
 
             if (parserOptional.isPresent()) {
                 // AST-based rename path
@@ -65,9 +62,9 @@ public class RefactoringService {
                 // Simple whole-word text search and replace
                 // Using Pattern.quote on originalName to treat it literally in regex
                 // Using \\b for word boundaries
-                Pattern pattern = Pattern.compile("\\b" + Pattern.quote(originalName) + "\\b");
-                Matcher matcher = pattern.matcher(content);
-                String modifiedContent = matcher.replaceAll(Matcher.quoteReplacement(newName));
+                var pattern = Pattern.compile("\\b" + Pattern.quote(originalName) + "\\b");
+                var matcher = pattern.matcher(content);
+                var modifiedContent = matcher.replaceAll(Matcher.quoteReplacement(newName));
 
                 if (content.equals(modifiedContent)) {
                     return "Original name '" + originalName + "' not found as a whole word in " + filePath + ". No changes made.";
@@ -82,17 +79,17 @@ public class RefactoringService {
     }
 
     private String generateDiff(Path filePath, String originalContent, String modifiedContent) {
-        List<String> originalLines = Arrays.asList(originalContent.split("\\r?\\n"));
-        List<String> modifiedLines = Arrays.asList(modifiedContent.split("\\r?\\n"));
+        var originalLines = Arrays.asList(originalContent.split("\\r?\\n"));
+        var modifiedLines = Arrays.asList(modifiedContent.split("\\r?\\n"));
 
         try {
-            Patch<String> patch = DiffUtils.diff(originalLines, modifiedLines);
+            var patch = DiffUtils.diff(originalLines, modifiedLines);
             if (patch.getDeltas().isEmpty()) {
                 return "No textual differences found after rename operation (this might be unexpected if a change was intended).";
             }
             // The context size (5 lines) is a common default.
             // The filePath.toString() is used for the "--- a/" and "+++ b/" lines in the diff.
-            List<String> unifiedDiff = UnifiedDiffUtils.generateUnifiedDiff(
+            var unifiedDiff = UnifiedDiffUtils.generateUnifiedDiff(
                     filePath.toString(), // Original file path for diff header
                     filePath.toString(), // New file path for diff header (same file for rename)
                     originalLines,

@@ -21,7 +21,7 @@ public record SourceChange(Path filePath, int offset, int length, String newText
     public boolean equals(Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
-        SourceChange that = (SourceChange) o;
+        var that = (SourceChange) o;
         return offset == that.offset &&
                 length == that.length &&
                 filePath.equals(that.filePath) &&

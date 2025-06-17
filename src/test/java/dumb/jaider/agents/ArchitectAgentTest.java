@@ -1,7 +1,7 @@
 package dumb.jaider.agents;
 
 import dev.langchain4j.memory.ChatMemory;
-import dev.langchain4j.model.chat.ChatLanguageModel;
+import dev.langchain4j.model.chat.ChatModel;
 import dumb.jaider.tools.StandardTools;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -19,7 +19,7 @@ import static org.mockito.Mockito.*;
 class ArchitectAgentTest {
 
     @Mock
-    ChatLanguageModel chatLanguageModel; // Still needed for AbstractAgent constructor
+    ChatModel ChatModel; // Still needed for AbstractAgent constructor
     @Mock
     ChatMemory chatMemory; // Still needed for AbstractAgent constructor
     @Mock
@@ -43,7 +43,7 @@ class ArchitectAgentTest {
         // Specific tests can override this mock behavior if needed *before* their specific setup.
         when(standardTools.getReadOnlyTools()).thenReturn(Collections.emptySet()); // Default for setUp
 
-        architectAgent = new ArchitectAgent(chatLanguageModel, chatMemory, standardTools, jaiderAiServiceMock);
+        architectAgent = new ArchitectAgent(ChatModel, chatMemory, standardTools, jaiderAiServiceMock);
     }
 
     @Test
@@ -58,7 +58,7 @@ class ArchitectAgentTest {
         // Here, standardTools is a mock. getReadOnlyTools() by default returns null for a mock.
         // So, the set of tools in architectAgent will be whatever getReadOnlyTools() returns.
         // We need to set the specific mock behavior for this test case.
-        Set<Object> expectedToolsSet = Set.of(new Object()); // A dummy set
+        var expectedToolsSet = Set.of(new Object()); // A dummy set
         when(standardTools.getReadOnlyTools()).thenReturn(expectedToolsSet);
 
         // ArchitectAgent is already constructed in setUp with standardTools mock.
@@ -72,9 +72,9 @@ class ArchitectAgentTest {
         // However, getTools() just returns the set. The crucial part is what was passed during construction.
 
         // Let's stick to re-mocking and re-constructing for this specific test logic to be clear.
-        architectAgent = new ArchitectAgent(chatLanguageModel, chatMemory, standardTools, jaiderAiServiceMock); // Re-construct with new mock behavior
+        architectAgent = new ArchitectAgent(ChatModel, chatMemory, standardTools, jaiderAiServiceMock); // Re-construct with new mock behavior
 
-        Set<Object> actualTools = architectAgent.tools();
+        var actualTools = architectAgent.tools();
         assertEquals(expectedToolsSet, actualTools);
         verify(standardTools, times(2)).getReadOnlyTools(); // Called once in setUp, once in re-construction.
     }
@@ -83,14 +83,14 @@ class ArchitectAgentTest {
 
     @Test
     void act_shouldCallAiServiceChat() {
-        String testQuery = "What is the architecture of this project?";
-        String expectedResponse = "It's a monolith with microservices aspirations.";
+        var testQuery = "What is the architecture of this project?";
+        var expectedResponse = "It's a monolith with microservices aspirations.";
 
         // Set up the mock behavior for the JaiderAiService
         when(jaiderAiServiceMock.chat(anyString())).thenReturn(expectedResponse);
 
         // Execute the act method (the one taking String)
-        String actualResponse = architectAgent.act(testQuery);
+        var actualResponse = architectAgent.act(testQuery);
 
         // Verify the response
         assertEquals(expectedResponse, actualResponse);

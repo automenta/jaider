@@ -1,16 +1,15 @@
 package dumb.jaider.app;
 
-import dumb.jaider.model.JaiderModel;
-import dev.langchain4j.memory.ChatMemory;
-import dumb.jaider.ui.UI;
 import dev.langchain4j.data.message.AiMessage;
 import dev.langchain4j.data.message.UserMessage;
+import dev.langchain4j.memory.ChatMemory;
+import dumb.jaider.model.JaiderModel;
+import dumb.jaider.ui.UI;
+import org.json.JSONArray;
+import org.json.JSONObject;
 
 import java.io.IOException;
 import java.nio.file.Files;
-import java.nio.file.Path;
-import org.json.JSONArray;
-import org.json.JSONObject;
 import java.util.stream.Collectors;
 
 
@@ -28,9 +27,9 @@ public class SessionManager {
 
     public void saveSession() {
         try {
-            Path sessionDir = model.dir.resolve(".jaider");
+            var sessionDir = model.dir.resolve(".jaider");
             Files.createDirectories(sessionDir);
-            JSONObject session = new JSONObject();
+            var session = new JSONObject();
             session.put("filesInContext", new JSONArray(model.files.stream().map(p -> model.dir.relativize(p).toString()).collect(Collectors.toList())));
             session.put("chatMemory", new JSONArray(chatMemory.messages().stream()
                 .map(m -> {
@@ -45,30 +44,30 @@ public class SessionManager {
     }
 
     public void loadSession() {
-        Path sessionFile = model.dir.resolve(".jaider/session.json");
+        var sessionFile = model.dir.resolve(".jaider/session.json");
         if (Files.exists(sessionFile)) {
             ui.confirm("Session Found", "Restore previous session?").thenAccept(restore -> {
                 if (restore) {
                     try {
-                        String content = Files.readString(sessionFile);
+                        var content = Files.readString(sessionFile);
                         if (content.trim().isEmpty()) {
                             model.addLog(AiMessage.from("[Warning] Session file is empty. Starting a new session."));
                             return;
                         }
-                        JSONObject sessionData = new JSONObject(content);
+                        var sessionData = new JSONObject(content);
 
-                        JSONArray filesInContextArray = sessionData.optJSONArray("filesInContext");
+                        var filesInContextArray = sessionData.optJSONArray("filesInContext");
                         if (filesInContextArray != null) {
                             filesInContextArray.forEach(f -> model.files.add(model.dir.resolve(f.toString())));
                         }
 
-                        JSONArray chatMemoryArray = sessionData.optJSONArray("chatMemory");
+                        var chatMemoryArray = sessionData.optJSONArray("chatMemory");
                         if (chatMemoryArray != null) {
                            chatMemory.clear(); // Clear existing messages before loading
-                            for (Object m : chatMemoryArray) {
-                                JSONObject msg = (JSONObject) m;
-                                String text = msg.optString("text", ""); // Default to empty string if null
-                                String type = msg.optString("type", "USER"); // Default to USER if type is missing
+                            for (var m : chatMemoryArray) {
+                                var msg = (JSONObject) m;
+                                var text = msg.optString("text", ""); // Default to empty string if null
+                                var type = msg.optString("type", "USER"); // Default to USER if type is missing
                                 if ("USER".equals(type)) {
                                     chatMemory.add(UserMessage.from(text));
                                 } else {

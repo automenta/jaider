@@ -21,7 +21,7 @@ public record RenameOperationInput(String targetName, String newName, int target
     public boolean equals(Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
-        RenameOperationInput that = (RenameOperationInput) o;
+        var that = (RenameOperationInput) o;
         return targetPosition == that.targetPosition &&
                 targetName.equals(that.targetName) &&
                 newName.equals(that.newName);

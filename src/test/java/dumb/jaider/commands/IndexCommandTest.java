@@ -20,7 +20,6 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.io.IOException;
 import java.nio.file.Files;
-import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -91,7 +90,7 @@ class IndexCommandTest {
             List<TextSegment> inputSegments = invocation.getArgument(0);
             List<Embedding> dummyEmbeddings = new ArrayList<>();
             if (inputSegments != null) {
-                for (int i = 0; i < inputSegments.size(); i++) {
+                for (var i = 0; i < inputSegments.size(); i++) {
                     dummyEmbeddings.add(Embedding.from(new float[]{0.1f, 0.2f, (float) (i + 3) / 100f}));
                 }
             }
@@ -133,7 +132,7 @@ class IndexCommandTest {
         indexCommand.execute(null, appContext);
 
         verify(app).setStatePublic(App.State.AGENT_THINKING);
-        ArgumentCaptor<AiMessage> messageCaptor = ArgumentCaptor.forClass(AiMessage.class);
+        var messageCaptor = ArgumentCaptor.forClass(AiMessage.class);
         verify(app, timeout(1000)).finishTurnPublic(messageCaptor.capture());
 
         assertNotNull(messageCaptor.getValue());
@@ -146,8 +145,8 @@ class IndexCommandTest {
     void execute_successfulIndexing_shouldUpdateModelAndFinishTurn() throws IOException {
         when(appContext.app()).thenReturn(app);
         when(appContext.ui()).thenReturn(ui);
-        Path testProjectDir = model.dir;
-        Path dummyFile = testProjectDir.resolve("dummy.txt");
+        var testProjectDir = model.dir;
+        var dummyFile = testProjectDir.resolve("dummy.txt");
         Files.writeString(dummyFile, "Test content for indexing.");
         try {
             model.files.clear(); // Irrelevant for IndexCommand file discovery
@@ -157,7 +156,7 @@ class IndexCommandTest {
             indexCommand.execute(null, appContext);
 
             verify(app).setStatePublic(App.State.AGENT_THINKING);
-            ArgumentCaptor<AiMessage> messageCaptor = ArgumentCaptor.forClass(AiMessage.class);
+            var messageCaptor = ArgumentCaptor.forClass(AiMessage.class);
             verify(app, timeout(1000)).finishTurnPublic(messageCaptor.capture());
 
             assertNotNull(messageCaptor.getValue());
@@ -174,8 +173,8 @@ class IndexCommandTest {
     void execute_exceptionDuringEmbedding_shouldLogErrorAndFinishTurn() throws IOException {
         when(appContext.app()).thenReturn(app);
         when(appContext.ui()).thenReturn(ui);
-        Path testProjectDir = model.dir;
-        Path dummyFile = testProjectDir.resolve("dummyException.txt");
+        var testProjectDir = model.dir;
+        var dummyFile = testProjectDir.resolve("dummyException.txt");
         Files.writeString(dummyFile, "Content for exception test.");
 
         try {
@@ -189,7 +188,7 @@ class IndexCommandTest {
             indexCommand.execute(null, appContext);
 
             verify(app).setStatePublic(App.State.AGENT_THINKING);
-            ArgumentCaptor<AiMessage> messageCaptor = ArgumentCaptor.forClass(AiMessage.class);
+            var messageCaptor = ArgumentCaptor.forClass(AiMessage.class);
             verify(app, timeout(1000)).finishTurnPublic(messageCaptor.capture());
 
             assertNotNull(messageCaptor.getValue());

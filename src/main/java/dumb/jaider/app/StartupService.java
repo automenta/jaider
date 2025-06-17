@@ -11,7 +11,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.nio.file.Files;
-import java.nio.file.Path;
 // Add other necessary java.io or java.nio imports as needed
 
 public class StartupService {
@@ -47,28 +46,28 @@ public class StartupService {
             return true;
         }
 
-        Path jaiderDir = model.dir.resolve(".jaider");
-        Path sentinelFile = jaiderDir.resolve(SENTINEL_FILE_NAME);
+        var jaiderDir = model.dir.resolve(".jaider");
+        var sentinelFile = jaiderDir.resolve(SENTINEL_FILE_NAME);
 
         if (Files.exists(sentinelFile)) {
             model.addLog(AiMessage.from("[StartupService] Pending self-update validation sentinel file found: " + sentinelFile));
             logger.info("Pending self-update validation sentinel file found: {}", sentinelFile);
 
             try {
-                String content = Files.readString(sentinelFile);
-                JSONObject sentinelData = new JSONObject(content);
+                var content = Files.readString(sentinelFile);
+                var sentinelData = new JSONObject(content);
 
-                String filePath = sentinelData.optString("filePath", "Unknown file");
-                String commitMessage = sentinelData.optString("commitMessage", "N/A");
-                long timestamp = sentinelData.optLong("timestamp", 0); // TODO: Use this timestamp for display or logic
-                int attempt = sentinelData.optInt("attempt", 1);
+                var filePath = sentinelData.optString("filePath", "Unknown file");
+                var commitMessage = sentinelData.optString("commitMessage", "N/A");
+                var timestamp = sentinelData.optLong("timestamp", 0); // TODO: Use this timestamp for display or logic
+                var attempt = sentinelData.optInt("attempt", 1);
 
                 model.addLog(AiMessage.from(
                     String.format("[StartupService] Validating update for: %s, Commit: '%s', Attempt: %d", filePath, commitMessage, attempt)
                 ));
                 logger.info("Validating update for: {}, Commit: '{}', Attempt: {}", filePath, commitMessage, attempt);
 
-                String runCommand = config.getRunCommand();
+                var runCommand = config.getRunCommand();
 
                 if (runCommand != null && !runCommand.trim().isEmpty()) {
                     model.addLog(AiMessage.from("[StartupService] Executing validation command: " + runCommand));
@@ -77,7 +76,7 @@ public class StartupService {
                     // Assuming buildManagerService.executeMavenCommand can handle generic commands
                     // or a new method like executeCommand(String[] cmd, File dir) is available.
                     // The command string needs to be split into an array.
-                    BuildManagerService.BuildResult validationResult = this.buildManagerService.executeMavenCommand(runCommand.split("\\s+"), model.dir.toFile()); // Corrected
+                    var validationResult = this.buildManagerService.executeMavenCommand(runCommand.split("\\s+"), model.dir.toFile()); // Corrected
 
                     if (validationResult.success()) {
                         model.addLog(AiMessage.from("[StartupService] Validation command successful for update to: " + filePath));
@@ -94,7 +93,7 @@ public class StartupService {
                         model.addLog(AiMessage.from("[StartupService] VALIDATION FAILED for update to: " + filePath + ". Exit Code: " + validationResult.exitCode() + ". Output:\n" + validationResult.output()));
                         logger.error("VALIDATION FAILED for update to: {}. Exit Code: {}. Output:\n{}", filePath, validationResult.exitCode(), validationResult.output());
 
-                        int newAttempt = attempt + 1;
+                        var newAttempt = attempt + 1;
                         if (newAttempt > MAX_ROLLBACK_ATTEMPTS) {
                             model.addLog(AiMessage.from("[StartupService] CRITICAL: Maximum rollback attempts (" + MAX_ROLLBACK_ATTEMPTS + ") reached for update to: " + filePath + ". Manual intervention required. Sentinel file will be deleted."));
                             logger.error("CRITICAL: Maximum rollback attempts ({}) reached for update to: {}. Manual intervention required. Sentinel file will be deleted.", MAX_ROLLBACK_ATTEMPTS, filePath);
@@ -110,7 +109,7 @@ public class StartupService {
                             model.addLog(AiMessage.from(String.format("[StartupService] Attempting rollback %d of %d for update to: %s", newAttempt, MAX_ROLLBACK_ATTEMPTS, filePath)));
                             logger.info("Attempting rollback {} of {} for update to: {}", newAttempt, MAX_ROLLBACK_ATTEMPTS, filePath);
 
-                            String commitHashFromSentinel = sentinelData.optString("commitHash", null);
+                            var commitHashFromSentinel = sentinelData.optString("commitHash", null);
                             boolean revertSuccess;
                             if (commitHashFromSentinel != null && !commitHashFromSentinel.isBlank()) {
                                 logger.info("Attempting to revert committed update using commit hash: {}", commitHashFromSentinel);
@@ -124,18 +123,18 @@ public class StartupService {
                                 model.addLog(AiMessage.from("[StartupService] Code revert successful for " + filePath + ". Recompiling project."));
                                 logger.info("Code revert successful for {}. Recompiling project.", filePath);
 
-                                BuildManagerService.BuildResult compileResult = this.buildManagerService.compileProject(model);
+                                var compileResult = this.buildManagerService.compileProject(model);
                                 model.addLog(AiMessage.from("[StartupService] Re-compile after revert. Success: " + compileResult.success() + ". Output:\n" + compileResult.output()));
                                 logger.info("Re-compile after revert for {}. Success: {}. Output:\n{}", filePath, compileResult.success(), compileResult.output());
 
                                 if (compileResult.success()) {
-                                    BuildManagerService.BuildResult packageResult = this.buildManagerService.packageProject(model);
+                                    var packageResult = this.buildManagerService.packageProject(model);
                                     model.addLog(AiMessage.from("[StartupService] Re-package after revert. Success: " + packageResult.success() + ". Output:\n" + packageResult.output()));
                                     logger.info("Re-package after revert for {}. Success: {}. Output:\n{}", filePath, packageResult.success(), packageResult.output());
 
                                     // Update Sentinel File for next attempt
                                     try {
-                                        JSONObject newSentinelData = new JSONObject();
+                                        var newSentinelData = new JSONObject();
                                         newSentinelData.put("filePath", filePath);
                                         newSentinelData.put("commitMessage", commitMessage); // Original commit message
                                         newSentinelData.put("timestamp", System.currentTimeMillis());

@@ -1,23 +1,21 @@
 package dumb.jaider.app;
 
-import dumb.jaider.model.JaiderModel; // Corrected package
-import dumb.jaider.suggestion.ProactiveSuggestionService; // Corrected package
-import dumb.jaider.config.Config;
-import dumb.jaider.agents.Agent;
-import dumb.jaider.ui.UI;
-import dumb.jaider.toolmanager.ToolManager;
-import dumb.jaider.suggestion.ActiveSuggestion;
+import dev.langchain4j.agent.tool.ToolExecutionRequest;
 import dev.langchain4j.data.message.AiMessage;
 import dev.langchain4j.data.message.UserMessage;
-import dev.langchain4j.agent.tool.ToolExecutionRequest;
-import dumb.jaider.commands.Command;
 import dumb.jaider.commands.AppContext;
-
-import java.util.Map;
-import java.util.List;
-import java.util.ArrayList;
+import dumb.jaider.commands.Command;
+import dumb.jaider.config.Config;
+import dumb.jaider.model.JaiderModel;
+import dumb.jaider.suggestion.ProactiveSuggestionService;
+import dumb.jaider.toolmanager.ToolManager;
+import dumb.jaider.ui.UI;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 
 /**
  * Handles user input from the UI, parsing it to determine if it's a command
@@ -55,10 +53,6 @@ public class UserInputHandler {
      * @param jaiderModel The application's data model, for logging and state updates.
      * @param config The application configuration.
      * @param ui The user interface instance, for redrawing.
-     * @param agent The current active agent (can be null if no agent is active).
-     *              Note: The direct 'agent' field seems to be from an older version based on tests.
-     *              Modern interaction likely goes through {@code App} or {@code AgentService}.
-     *              This constructor signature might need review against current App/AgentService structure.
      * @param proactiveSuggestionService Service for generating and managing proactive suggestions.
      * @param commands A map of command names to {@link Command} instances.
      */
@@ -121,7 +115,7 @@ public class UserInputHandler {
         jaiderModel.addLog(UserMessage.from(input));
 
         // Handle suggestions: clear them if the input is not an accept command
-        boolean isAcceptCommand = input.trim().equals("/accept") || input.trim().equals("/a");
+        var isAcceptCommand = input.trim().equals("/accept") || input.trim().equals("/a");
         if (!jaiderModel.getActiveSuggestions().isEmpty() && !isAcceptCommand) {
             jaiderModel.clearActiveSuggestions();
             jaiderModel.addLog(AiMessage.from("[Jaider] Suggestions cleared due to new input."));
@@ -155,15 +149,15 @@ public class UserInputHandler {
             }
 
             List<Object> internalToolInstances = new ArrayList<>();
-            Agent currentAgent = agentService.getCurrentAgent(); // Get current agent
+            var currentAgent = agentService.getCurrentAgent(); // Get current agent
             if(currentAgent != null && currentAgent.tools() != null) {
                 internalToolInstances.addAll(currentAgent.tools());
             }
 
-            List<ActiveSuggestion> activeSuggestions = proactiveSuggestionService.generateSuggestions(input, internalToolInstances);
+            var activeSuggestions = proactiveSuggestionService.generateSuggestions(input, internalToolInstances);
             if (!activeSuggestions.isEmpty()) {
                 jaiderModel.setActiveSuggestions(activeSuggestions);
-                for (ActiveSuggestion activeSuggestion : activeSuggestions) {
+                for (var activeSuggestion : activeSuggestions) {
                     jaiderModel.addLog(AiMessage.from("[Jaider Suggests] " + activeSuggestion.originalSuggestion().suggestionText()));
                 }
             }
@@ -173,18 +167,18 @@ public class UserInputHandler {
     }
 
     private void handleDirectToolInvocation(String input) {
-        String[] parts = input.substring(1).split("\\s+", 2);
-        String toolName = parts[0];
-        String toolArgsJson = (parts.length > 1) ? parts[1] : "{}";
+        var parts = input.substring(1).split("\\s+", 2);
+        var toolName = parts[0];
+        var toolArgsJson = (parts.length > 1) ? parts[1] : "{}";
 
-        Agent currentAgent = agentService.getCurrentAgent(); // Get current agent
+        var currentAgent = agentService.getCurrentAgent(); // Get current agent
         if (currentAgent == null || currentAgent.tools() == null || currentAgent.tools().isEmpty()) {
             jaiderModel.addLog(AiMessage.from("[Jaider] No agent active or agent has no tools. Cannot execute: " + toolName));
             app.finishTurnPublic(null);
             return;
         }
         try {
-            ToolExecutionRequest toolExecutionRequest = ToolExecutionRequest.builder()
+            var toolExecutionRequest = ToolExecutionRequest.builder()
                 .name(toolName)
                 .arguments(toolArgsJson)
                 .build();
@@ -195,7 +189,7 @@ public class UserInputHandler {
             jaiderModel.statusBarText = "Executing tool: " + toolName + "...";
             ui.redraw(jaiderModel);
 
-            String result = app.executeToolPublic(toolExecutionRequest);
+            var result = app.executeToolPublic(toolExecutionRequest);
             jaiderModel.addLog(AiMessage.from(String.format("[Tool Result: %s]\n%s", toolName, result)));
             app.finishTurnPublic(null);
         } catch (Exception e) {

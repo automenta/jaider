@@ -41,9 +41,9 @@ public class SuggestionRule {
     }
 
     public boolean matches(String userInput) {
-        String lowerInput = userInput.toLowerCase();
+        var lowerInput = userInput.toLowerCase();
         if (keywords != null) {
-            for (String keyword : keywords) {
+            for (var keyword : keywords) {
                 if (lowerInput.contains(keyword.toLowerCase())) {
                     return true;
                 }

@@ -1,20 +1,16 @@
 package dumb.jaider.commands;
 
-import dumb.jaider.app.App; // Added import
-import dumb.jaider.commands.AppContext;
+import dev.langchain4j.data.message.AiMessage;
+import dumb.jaider.app.App;
 import dumb.jaider.model.JaiderModel;
-import dev.langchain4j.data.message.AiMessage; // Added import
-import dev.langchain4j.data.message.ChatMessage;
-// UserMessage import is not strictly needed if only AiMessage is used for verification now
-// import dev.langchain4j.data.message.UserMessage;
 import org.junit.jupiter.api.BeforeEach;
-import java.util.HashSet; // Added import
-import java.util.Arrays; // Added for Arrays.asList
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+
+import java.util.HashSet;
 
 import static org.mockito.Mockito.*;
 
@@ -47,13 +43,11 @@ public class HelpCommandTest {
         verify(mockJaiderModel).addLog(AiMessage.from(HelpCommand.ANSI_BOLD + "Jaider Commands:" + HelpCommand.ANSI_RESET));
 
         // Verify that addLog is called for each command's help string.
-        HelpCommand.COMMANDS_HELP.forEach((cmd, desc) -> {
-            verify(mockJaiderModel).addLog(AiMessage.from(HelpCommand.ANSI_BOLD + cmd + HelpCommand.ANSI_RESET + " - " + desc));
-        });
+        HelpCommand.COMMANDS_HELP.forEach((cmd, desc) -> verify(mockJaiderModel).addLog(AiMessage.from(HelpCommand.ANSI_BOLD + cmd + HelpCommand.ANSI_RESET + " - " + desc)));
 
         // Verify the "MODES" help block is logged as one AiMessage
-        String availableModes = "architect, ask, coder"; // Based on setUp
-        String modesHelp = String.format("""
+        var availableModes = "architect, ask, coder"; // Based on setUp
+        var modesHelp = String.format("""
 
             %sMODES:%s
             Switch modes with %s/mode <ModeName>%s. Available modes: %s.
@@ -74,12 +68,10 @@ public class HelpCommandTest {
 
         verify(mockJaiderModel).addLog(AiMessage.from(HelpCommand.ANSI_BOLD + "Jaider Commands:" + HelpCommand.ANSI_RESET));
 
-        HelpCommand.COMMANDS_HELP.forEach((cmd, desc) -> {
-            verify(mockJaiderModel).addLog(AiMessage.from(HelpCommand.ANSI_BOLD + cmd + HelpCommand.ANSI_RESET + " - " + desc));
-        });
+        HelpCommand.COMMANDS_HELP.forEach((cmd, desc) -> verify(mockJaiderModel).addLog(AiMessage.from(HelpCommand.ANSI_BOLD + cmd + HelpCommand.ANSI_RESET + " - " + desc)));
 
-        String availableModes = "architect, ask, coder"; // Based on setUp
-        String modesHelp = String.format("""
+        var availableModes = "architect, ask, coder"; // Based on setUp
+        var modesHelp = String.format("""
 
             %sMODES:%s
             Switch modes with %s/mode <ModeName>%s. Available modes: %s.

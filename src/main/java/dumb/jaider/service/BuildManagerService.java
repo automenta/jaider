@@ -28,7 +28,7 @@ public class BuildManagerService {
             logger.error("JaiderModel or its project directory is null. Cannot compile.");
             return new BuildResult(false, "Project directory is not configured.", -1);
         }
-        File projectDir = jaiderModel.dir.toFile(); // Corrected
+        var projectDir = jaiderModel.dir.toFile(); // Corrected
         if (!projectDir.isDirectory()) {
             logger.error("Project directory does not exist or is not a directory: {}", projectDir.getAbsolutePath());
             return new BuildResult(false, "Project directory is invalid: " + projectDir.getAbsolutePath(), -1);
@@ -41,7 +41,7 @@ public class BuildManagerService {
             logger.error("JaiderModel or its project directory is null. Cannot package.");
             return new BuildResult(false, "Project directory is not configured.", -1);
         }
-        File projectDir = jaiderModel.dir.toFile(); // Corrected
+        var projectDir = jaiderModel.dir.toFile(); // Corrected
         if (!projectDir.isDirectory()) {
             logger.error("Project directory does not exist or is not a directory: {}", projectDir.getAbsolutePath());
             return new BuildResult(false, "Project directory is invalid: " + projectDir.getAbsolutePath(), -1);
@@ -51,15 +51,15 @@ public class BuildManagerService {
 
     public BuildResult executeMavenCommand(String[] command, File projectDir) { // Changed to public
         logger.info("Executing Maven command: {} in directory: {}", Arrays.toString(command), projectDir.getAbsolutePath());
-        StringBuilder output = new StringBuilder();
-        ProcessBuilder processBuilder = new ProcessBuilder(command);
+        var output = new StringBuilder();
+        var processBuilder = new ProcessBuilder(command);
         processBuilder.directory(projectDir);
         processBuilder.redirectErrorStream(true); // Merge stderr with stdout
 
         try {
-            Process process = processBuilder.start();
+            var process = processBuilder.start();
 
-            try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
+            try (var reader = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
                 String line;
                 while ((line = reader.readLine()) != null) {
                     output.append(line).append(System.lineSeparator());
@@ -67,7 +67,7 @@ public class BuildManagerService {
                 }
             }
 
-            boolean completed = process.waitFor(MAVEN_TIMEOUT_SECONDS, TimeUnit.SECONDS);
+            var completed = process.waitFor(MAVEN_TIMEOUT_SECONDS, TimeUnit.SECONDS);
             int exitCode;
 
             if (completed) {

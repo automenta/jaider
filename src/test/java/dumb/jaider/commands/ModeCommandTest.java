@@ -30,7 +30,7 @@ class ModeCommandTest {
 
     @Test
     void execute_withValidModeString_shouldCallAppSetAgent() {
-        String mode = "testMode";
+        var mode = "testMode";
         modeCommand.execute(mode, appContext); // Corrected
         verify(app).setAgentInternalPublic(mode);
     }
@@ -49,7 +49,7 @@ class ModeCommandTest {
 
     @Test
     void execute_withModeStringContainingSpaces_shouldTrimAndCallAppSetAgent() {
-        String modeWithSpaces = "  testModeWithSpaces  ";
+        var modeWithSpaces = "  testModeWithSpaces  ";
         modeCommand.execute(modeWithSpaces, appContext); // Corrected
         // Command implementation trims the argument.
         verify(app).setAgentInternalPublic("testModeWithSpaces");

@@ -1,10 +1,8 @@
 package dumb.jaider.app;
 
+import dumb.jaider.ui.TUI;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-// Assuming TUI is the concrete UI implementation for now.
-// If UI interface is used more broadly, then UI import would be needed.
-import dumb.jaider.ui.TUI;
 
 public class Jaider {
 

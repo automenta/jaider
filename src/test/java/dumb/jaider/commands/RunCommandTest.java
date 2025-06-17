@@ -1,13 +1,10 @@
 package dumb.jaider.commands;
 
-import dumb.jaider.commands.AppContext;
+import dev.langchain4j.data.message.AiMessage;
+import dumb.jaider.agents.Agent;
 import dumb.jaider.app.App;
 import dumb.jaider.model.JaiderModel;
-import dev.langchain4j.data.message.AiMessage;
-import dev.langchain4j.data.message.ChatMessage;
-import dev.langchain4j.data.message.UserMessage;
-import dumb.jaider.agents.Agent;
-import dumb.jaider.tools.StandardTools; // Assuming StandardTools is the correct class
+import dumb.jaider.tools.StandardTools;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -69,7 +66,7 @@ public class RunCommandTest {
     @Test
     void testExecute_agentHasOtherToolsButNotStandardTools_logsError() {
         when(mockApp.getCurrentAgent()).thenReturn(mockAgent);
-        Object otherTool = new Object(); // A dummy tool instance
+        var otherTool = new Object(); // A dummy tool instance
         Set<Object> tools = new HashSet<>();
         tools.add(otherTool);
         when(mockAgent.tools()).thenReturn(tools);
@@ -87,10 +84,10 @@ public class RunCommandTest {
         Set<Object> tools = new HashSet<>();
         tools.add(mockStandardTools); // Add the mocked StandardTools
         when(mockAgent.tools()).thenReturn(tools);
-        String result = "Validation OK";
+        var result = "Validation OK";
         when(mockStandardTools.runValidationCommand(anyString())).thenReturn(result);
 
-        String commandArgs = "test_command_args";
+        var commandArgs = "test_command_args";
         runCommand.execute(commandArgs, mockAppContext);
 
         verify(mockJaiderModel).addLog(AiMessage.from("[RunCommand] Executing run command with args: '" + commandArgs + "'"));
@@ -104,7 +101,7 @@ public class RunCommandTest {
         Set<Object> tools = new HashSet<>();
         tools.add(mockStandardTools);
         when(mockAgent.tools()).thenReturn(tools);
-        String result = "Validation with empty args OK";
+        var result = "Validation with empty args OK";
         when(mockStandardTools.runValidationCommand(eq(""))).thenReturn(result);
 
         runCommand.execute(null, mockAppContext); // Null args
@@ -122,8 +119,8 @@ public class RunCommandTest {
         tools.add(mockStandardTools);
         when(mockAgent.tools()).thenReturn(tools);
 
-        String commandArgs = "test_args_for_exception";
-        String exceptionMessage = "Command execution failed badly!";
+        var commandArgs = "test_args_for_exception";
+        var exceptionMessage = "Command execution failed badly!";
         doThrow(new RuntimeException(exceptionMessage)).when(mockStandardTools).runValidationCommand(commandArgs);
         // when(mockStandardTools.runValidationCommand(commandArgs)).thenThrow(new RuntimeException(exceptionMessage));
 

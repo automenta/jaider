@@ -1,11 +1,7 @@
 package dumb.jaider.commands;
 
 import dev.langchain4j.data.message.AiMessage;
-import dumb.jaider.model.JaiderModel;
 import dumb.jaider.suggestion.ActiveSuggestion;
-import dumb.jaider.ui.UI;
-
-import java.util.List;
 
 public class AcceptSuggestionCommand implements Command {
 
@@ -21,8 +17,8 @@ public class AcceptSuggestionCommand implements Command {
 
     // @Override // Commented out
     public void execute(String args, AppContext context) {
-        JaiderModel model = context.model(); // Corrected accessor
-        UI ui = context.ui(); // Corrected accessor
+        var model = context.model(); // Corrected accessor
+        var ui = context.ui(); // Corrected accessor
 
         if (args == null || args.isBlank()) {
             model.addLog(AiMessage.from("[Jaider] Please provide the number of the suggestion to accept. Usage: /accept <number>"));
@@ -31,8 +27,8 @@ public class AcceptSuggestionCommand implements Command {
         }
 
         try {
-            int suggestionNumber = Integer.parseInt(args.trim());
-            List<ActiveSuggestion> activeSuggestions = model.getActiveSuggestions();
+            var suggestionNumber = Integer.parseInt(args.trim());
+            var activeSuggestions = model.getActiveSuggestions();
 
             if (activeSuggestions == null || activeSuggestions.isEmpty()) {
                 model.addLog(AiMessage.from("[Jaider] No active suggestions to accept."));
@@ -41,7 +37,7 @@ public class AcceptSuggestionCommand implements Command {
             }
 
             ActiveSuggestion foundSuggestion = null;
-            for (ActiveSuggestion activeSuggestion : activeSuggestions) {
+            for (var activeSuggestion : activeSuggestions) {
                 if (activeSuggestion.displayNumber() == suggestionNumber) {
                     foundSuggestion = activeSuggestion;
                     break;
@@ -49,7 +45,7 @@ public class AcceptSuggestionCommand implements Command {
             }
 
             if (foundSuggestion != null) {
-                String prefillCommand = foundSuggestion.prefillCommand();
+                var prefillCommand = foundSuggestion.prefillCommand();
                 ui.setInputText(prefillCommand); // This method needs to be added to UI and TUI
                 model.addLog(AiMessage.from(String.format("[Jaider] Prefilled input with suggestion %d: %s",
                         suggestionNumber, prefillCommand)));

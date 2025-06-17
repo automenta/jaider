@@ -14,7 +14,6 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.util.*;
-import java.util.stream.Collectors;
 
 /**
  * Manages the instantiation and retrieval of components (services, tools, etc.)
@@ -76,7 +75,7 @@ public class DependencyInjector {
         // If a component is registered programmatically, and no JSON definition exists,
         // create a minimal one so it can be referenced by other components if needed.
         if (!componentDefinitions.containsKey(id) && instance != null) {
-            JSONObject definition = new JSONObject();
+            var definition = new JSONObject();
             definition.put("class", instance.getClass().getName());
             // Note: This minimal definition doesn't include constructor/factory args.
             // It's primarily useful if this manually registered instance is a simple bean
@@ -135,7 +134,7 @@ public class DependencyInjector {
             throw new CircularDependencyException(id, new LinkedHashSet<>(path)); // Use LinkedHashSet to preserve order
         }
 
-        JSONObject definition = componentDefinitions.get(id);
+        var definition = componentDefinitions.get(id);
         if (definition == null) {
             throw new ComponentNotFoundException(id, "Available definitions: " + componentDefinitions.keySet());
         }
@@ -144,7 +143,7 @@ public class DependencyInjector {
         logger.debug("Starting creation of component: {}", id);
 
         try {
-            Object instance = createComponentInstance(id, definition);
+            var instance = createComponentInstance(id, definition);
             if (!singletonInstances.containsKey(id)) { // Could have been added by a recursive call if it's a singleton
                 singletonInstances.put(id, instance);
                 logger.debug("Cached new singleton instance for id: {}", id);
@@ -185,16 +184,16 @@ public class DependencyInjector {
     }
 
     private Object createWithConstructor(String id, JSONObject definition) throws ClassNotFoundException, InvocationTargetException, InstantiationException, IllegalAccessException {
-        String className = definition.optString("class", null);
+        var className = definition.optString("class", null);
         if (className == null) {
              throw new InvalidComponentDefinitionException(id, "Definition must contain a 'class' if not using a factory method.");
         }
         logger.debug("Attempting constructor injection for component '{}', class '{}'", id, className);
-        Class<?> clazz = Class.forName(className);
-        JSONArray argsArray = definition.optJSONArray("constructorArgs");
-        Object[] args = resolveArguments(argsArray, id, "constructor");
-        Class<?>[] argTypes = getArgumentTypes(args, argsArray, id, "constructor");
-        Constructor<?> constructor = findConstructor(clazz, argTypes);
+        var clazz = Class.forName(className);
+        var argsArray = definition.optJSONArray("constructorArgs");
+        var args = resolveArguments(argsArray, id, "constructor");
+        var argTypes = getArgumentTypes(args, argsArray, id, "constructor");
+        var constructor = findConstructor(clazz, argTypes);
         if (constructor == null) {
             throw new ComponentInstantiationException(id, "Suitable constructor not found for class " + clazz.getName() + " with argument types " + Arrays.toString(argTypes));
         }
@@ -203,17 +202,17 @@ public class DependencyInjector {
     }
 
     private Object createWithStaticFactory(String id, JSONObject definition) throws ClassNotFoundException, InvocationTargetException, IllegalAccessException {
-        String className = definition.optString("class", null);
+        var className = definition.optString("class", null);
         if (className == null) {
             throw new InvalidComponentDefinitionException(id, "Definition with staticFactoryMethod must also specify a 'class'.");
         }
-        String staticFactoryMethodName = definition.getString("staticFactoryMethod");
+        var staticFactoryMethodName = definition.getString("staticFactoryMethod");
         logger.debug("Attempting static factory method injection for component '{}', class '{}', method '{}'", id, className, staticFactoryMethodName);
-        Class<?> clazz = Class.forName(className);
-        JSONArray argsArray = definition.optJSONArray("staticFactoryArgs");
-        Object[] args = resolveArguments(argsArray, id, "static factory");
-        Class<?>[] argTypes = getArgumentTypes(args, argsArray, id, "static factory");
-        Method factoryMethod = findMethod(clazz, staticFactoryMethodName, argTypes);
+        var clazz = Class.forName(className);
+        var argsArray = definition.optJSONArray("staticFactoryArgs");
+        var args = resolveArguments(argsArray, id, "static factory");
+        var argTypes = getArgumentTypes(args, argsArray, id, "static factory");
+        var factoryMethod = findMethod(clazz, staticFactoryMethodName, argTypes);
         if (factoryMethod == null) {
             throw new ComponentInstantiationException(id, "Static factory method '" + staticFactoryMethodName + "' with matching arguments not found in class " + clazz.getName() + ". Argument types searched: " + Arrays.toString(argTypes));
         }
@@ -225,15 +224,15 @@ public class DependencyInjector {
     }
 
     private Object createWithInstanceFactory(String id, JSONObject definition) throws InvocationTargetException, IllegalAccessException {
-        String factoryBeanId = definition.getString("factoryBean");
-        String factoryMethodName = definition.getString("factoryMethod");
+        var factoryBeanId = definition.getString("factoryBean");
+        var factoryMethodName = definition.getString("factoryMethod");
         logger.debug("Attempting instance factory method injection for component '{}', factoryBean '{}', method '{}'", id, factoryBeanId, factoryMethodName);
-        Object factoryBeanInstance = getComponent(factoryBeanId); // Resolve factory bean dependency
-        Class<?> factoryBeanClass = factoryBeanInstance.getClass();
-        JSONArray argsArray = definition.optJSONArray("factoryArgs");
-        Object[] args = resolveArguments(argsArray, id, "instance factory");
-        Class<?>[] argTypes = getArgumentTypes(args, argsArray, id, "instance factory");
-        Method factoryMethod = findMethod(factoryBeanClass, factoryMethodName, argTypes);
+        var factoryBeanInstance = getComponent(factoryBeanId); // Resolve factory bean dependency
+        var factoryBeanClass = factoryBeanInstance.getClass();
+        var argsArray = definition.optJSONArray("factoryArgs");
+        var args = resolveArguments(argsArray, id, "instance factory");
+        var argTypes = getArgumentTypes(args, argsArray, id, "instance factory");
+        var factoryMethod = findMethod(factoryBeanClass, factoryMethodName, argTypes);
         if (factoryMethod == null) {
             throw new ComponentInstantiationException(id, "Instance factory method '" + factoryMethodName + "' with matching arguments not found in class " + factoryBeanClass.getName() + ".");
         }
@@ -247,15 +246,15 @@ public class DependencyInjector {
         }
         logger.debug("Resolving arguments for component '{}' ({} creation)", componentId, creationType);
         List<Object> resolvedArgs = new ArrayList<>();
-        for (int i = 0; i < argsArray.length(); i++) {
-            JSONObject argDef = argsArray.getJSONObject(i);
+        for (var i = 0; i < argsArray.length(); i++) {
+            var argDef = argsArray.getJSONObject(i);
             if (argDef.has("ref")) {
-                String refId = argDef.getString("ref");
+                var refId = argDef.getString("ref");
                 logger.debug("Resolving 'ref' argument: {}", refId);
                 resolvedArgs.add(getComponent(refId));
             } else if (argDef.has("value")) {
-                Object value = argDef.get("value");
-                String type = argDef.optString("type", "String").toLowerCase();
+                var value = argDef.get("value");
+                var type = argDef.optString("type", "String").toLowerCase();
                 logger.debug("Resolving 'value' argument: type '{}', value '{}'", type, value);
                 try {
                     resolvedArgs.add(convertLiteralValue(value, type));
@@ -263,21 +262,20 @@ public class DependencyInjector {
                     throw new InvalidComponentDefinitionException(componentId, "Failed to parse value '" + value + "' to type '" + type + "' for argument " + i + " during " + creationType + " creation.");
                 }
             } else if (argDef.has("list")) {
-                JSONArray listArray = argDef.getJSONArray("list");
-                String listType = argDef.optString("listType", "String").toLowerCase(); // Type of elements in the list
+                var listArray = argDef.getJSONArray("list");
+                var listType = argDef.optString("listType", "String").toLowerCase(); // Type of elements in the list
                 logger.debug("Resolving 'list' argument: element type '{}', size '{}'", listType, listArray.length());
                 List<Object> listValues = new ArrayList<>();
-                for (int j = 0; j < listArray.length(); j++) {
-                    Object listItem = listArray.get(j);
-                    if (listItem instanceof JSONObject) {
-                        JSONObject listItemJson = (JSONObject) listItem;
+                for (var j = 0; j < listArray.length(); j++) {
+                    var listItem = listArray.get(j);
+                    if (listItem instanceof JSONObject listItemJson) {
                         if (listItemJson.has("ref")) {
-                            String refId = listItemJson.getString("ref");
+                            var refId = listItemJson.getString("ref");
                             logger.debug("Resolving 'ref' list element: {}", refId);
                             listValues.add(getComponent(refId));
                         } else if (listItemJson.has("value")) {
-                            Object value = listItemJson.get("value");
-                            String itemType = listItemJson.optString("type", listType); // Use element's type if specified, else listType
+                            var value = listItemJson.get("value");
+                            var itemType = listItemJson.optString("type", listType); // Use element's type if specified, else listType
                             logger.debug("Resolving 'value' list element: type '{}', value '{}'", itemType, value);
                             listValues.add(convertLiteralValue(value, itemType));
                         } else {
@@ -311,23 +309,19 @@ public class DependencyInjector {
     }
 
     private Object convertLiteralValue(Object value, String type) {
-        switch (type) {
-            case "int": case "java.lang.integer":
-                return value instanceof Integer ? value : Integer.parseInt(value.toString());
-            case "string": case "java.lang.string":
-                return value.toString();
-            case "boolean": case "java.lang.boolean":
-                return value instanceof Boolean ? value : Boolean.parseBoolean(value.toString());
-            case "float": case "java.lang.float":
-                return value instanceof Float ? value : Float.parseFloat(value.toString());
-            case "double": case "java.lang.double":
-                return value instanceof Double ? value : Double.parseDouble(value.toString());
-            case "long": case "java.lang.long":
-                return value instanceof Long ? value : Long.parseLong(value.toString());
-            default:
+        return switch (type) {
+            case "int", "java.lang.integer" -> value instanceof Integer ? value : Integer.parseInt(value.toString());
+            case "string", "java.lang.string" -> value.toString();
+            case "boolean", "java.lang.boolean" ->
+                    value instanceof Boolean ? value : Boolean.parseBoolean(value.toString());
+            case "float", "java.lang.float" -> value instanceof Float ? value : Float.parseFloat(value.toString());
+            case "double", "java.lang.double" -> value instanceof Double ? value : Double.parseDouble(value.toString());
+            case "long", "java.lang.long" -> value instanceof Long ? value : Long.parseLong(value.toString());
+            default -> {
                 logger.warn("Unsupported literal type '{}', treating as String.", type);
-                return value.toString();
-        }
+                yield value.toString();
+            }
+        };
     }
 
     private Class<?>[] getArgumentTypes(Object[] args, JSONArray argsArray, String componentId, String creationType) {
@@ -336,13 +330,13 @@ public class DependencyInjector {
             throw new ComponentInstantiationException(componentId, "Mismatch between resolved args count and definition count for " + creationType + " creation.");
         }
 
-        Class<?>[] argTypes = new Class<?>[args.length];
-        for (int i = 0; i < args.length; i++) {
-            JSONObject argDef = argsArray.getJSONObject(i);
+        var argTypes = new Class<?>[args.length];
+        for (var i = 0; i < args.length; i++) {
+            var argDef = argsArray.getJSONObject(i);
             if (argDef.has("ref")) {
                 if (args[i] == null) {
-                    String refId = argDef.getString("ref");
-                    JSONObject refDefinition = componentDefinitions.get(refId);
+                    var refId = argDef.getString("ref");
+                    var refDefinition = componentDefinitions.get(refId);
                     if (refDefinition == null || !refDefinition.has("class")) {
                         throw new InvalidComponentDefinitionException(componentId, "Cannot determine type of null argument for ref '" + refId + "' as its definition or class is missing.");
                     }
@@ -355,7 +349,7 @@ public class DependencyInjector {
                     argTypes[i] = args[i].getClass();
                 }
             } else if (argDef.has("value")) {
-                String type = argDef.optString("type", "String").toLowerCase();
+                var type = argDef.optString("type", "String").toLowerCase();
                 argTypes[i] = getClassForLiteralType(type);
             } else if (argDef.has("list")) {
                  argTypes[i] = List.class; // The parameter type must be List or Collection
@@ -367,24 +361,25 @@ public class DependencyInjector {
     }
 
     private Class<?> getClassForLiteralType(String typeName) {
-        switch (typeName.toLowerCase()) {
-            case "int": case "java.lang.integer": return int.class;
-            case "string": case "java.lang.string": return String.class;
-            case "boolean": case "java.lang.boolean": return boolean.class;
-            case "float": case "java.lang.float": return float.class;
-            case "double": case "java.lang.double": return double.class;
-            case "long": case "java.lang.long": return long.class;
-            default:
+        return switch (typeName.toLowerCase()) {
+            case "int", "java.lang.integer" -> int.class;
+            case "string", "java.lang.string" -> String.class;
+            case "boolean", "java.lang.boolean" -> boolean.class;
+            case "float", "java.lang.float" -> float.class;
+            case "double", "java.lang.double" -> double.class;
+            case "long", "java.lang.long" -> long.class;
+            default -> {
                 logger.warn("Unknown literal type '{}' specified, defaulting to String.class for type resolution.", typeName);
-                return String.class;
-        }
+                yield String.class;
+            }
+        };
     }
 
     private Constructor<?> findConstructor(Class<?> clazz, Class<?>[] argTypes) {
         try {
             return clazz.getConstructor(argTypes);
         } catch (NoSuchMethodException e) {
-            for (Constructor<?> ctor : clazz.getConstructors()) {
+            for (var ctor : clazz.getConstructors()) {
                 if (areTypesAssignable(argTypes, ctor.getParameterTypes())) {
                     return ctor;
                 }
@@ -397,7 +392,7 @@ public class DependencyInjector {
         try {
             return clazz.getMethod(methodName, argTypes);
         } catch (NoSuchMethodException e) {
-            for (Method method : clazz.getMethods()) {
+            for (var method : clazz.getMethods()) {
                 if (method.getName().equals(methodName) && areTypesAssignable(argTypes, method.getParameterTypes())) {
                     return method;
                 }
@@ -410,9 +405,9 @@ public class DependencyInjector {
         if (fromTypes.length != toTypes.length) {
             return false;
         }
-        for (int i = 0; i < fromTypes.length; i++) {
-            Class<?> targetType = toTypes[i];
-            Class<?> sourceType = fromTypes[i];
+        for (var i = 0; i < fromTypes.length; i++) {
+            var targetType = toTypes[i];
+            var sourceType = fromTypes[i];
 
             if (sourceType == null) { // A null argument can be assigned to any non-primitive reference type
                 if (targetType.isPrimitive()) return false;

@@ -22,9 +22,9 @@ public class NoOpEmbeddingModel implements EmbeddingModel {
 
     @Override
     public Response<List<Embedding>> embedAll(List<TextSegment> textSegments) {
-        List<Embedding> embeddings = textSegments.stream()
+        var embeddings = textSegments.stream()
                 .map(segment -> {
-                    float[] vector = new float[dimension]; // Array of zeros
+                    var vector = new float[dimension]; // Array of zeros
                     return new Embedding(vector);
                 })
                 .collect(Collectors.toList());

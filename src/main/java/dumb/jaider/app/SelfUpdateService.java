@@ -1,14 +1,12 @@
 package dumb.jaider.app;
 
+import dev.langchain4j.data.message.AiMessage;
 import dumb.jaider.config.Config;
 import dumb.jaider.model.JaiderModel;
 import dumb.jaider.service.BuildManagerService;
 import dumb.jaider.service.GitService;
 import dumb.jaider.service.RestartService;
 import dumb.jaider.service.SelfUpdateOrchestratorService;
-import dumb.jaider.ui.UI; // Potentially needed for SelfUpdateOrchestratorService's user confirmation
-import dev.langchain4j.data.message.AiMessage;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -33,7 +31,7 @@ public class SelfUpdateService {
     }
 
     private void initializeServices() {
-        DependencyInjector injector = config.getInjector();
+        var injector = config.getInjector();
         if (injector == null) {
             logger.error("DependencyInjector not available. Self-update services cannot be initialized.");
             model.addLog(AiMessage.from("[Jaider] CRITICAL ERROR: DI not available for SelfUpdateService. Self-update features disabled."));
@@ -67,14 +65,15 @@ public class SelfUpdateService {
             // For now, this matches how it was fetched in App.java.
 
         } catch (Exception e) {
-            logger.error("Error initializing self-update related services via DI: " + e.getMessage(), e);
+            logger.error("Error initializing self-update related services via DI: {}", e.getMessage(), e);
             model.addLog(AiMessage.from("[Jaider] CRITICAL ERROR: Failed to initialize self-update services. Features may be unavailable. " + e.getClass().getSimpleName() + ": " + e.getMessage()));
         }
     }
 
     public boolean performStartupValidation() {
+        // Proceed, but with logged error
         if (this.startupService != null) {
-            boolean proceedNormalStartup = this.startupService.performStartupValidationChecks();
+            var proceedNormalStartup = this.startupService.performStartupValidationChecks();
             if (!proceedNormalStartup) {
                 logger.error("CRITICAL: StartupService indicated a restart was (or should have been) triggered, but execution continued. Forcing exit.");
                 this.model.addLog(AiMessage.from("[SelfUpdateService] CRITICAL: Post-validation restart did not terminate instance. Forcing exit."));
@@ -83,12 +82,11 @@ public class SelfUpdateService {
                 System.exit(1); // Force exit
                 return false; // Should be unreachable
             }
-            return true; // Proceed with normal startup
         } else {
             logger.error("CRITICAL: StartupService is not initialized. Self-update validation checks will be skipped.");
             this.model.addLog(AiMessage.from("[SelfUpdateService] CRITICAL: StartupService not initialized. Validation skipped."));
-            return true; // Proceed, but with logged error
         }
+        return true; // Proceed with normal startup
     }
 
     public void checkAndTriggerSelfUpdateConfirmation() {

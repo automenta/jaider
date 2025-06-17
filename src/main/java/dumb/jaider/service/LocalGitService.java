@@ -8,7 +8,6 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.nio.file.Files;
-import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -23,18 +22,18 @@ public class LocalGitService implements GitService {
     private CommandResult executeGitCommand(File workingDirectory, List<String> commandParts) {
         logger.info("Executing Git command: {} in directory: {}", String.join(" ", commandParts), workingDirectory.getAbsolutePath());
 
-        ProcessBuilder pb = new ProcessBuilder(commandParts);
+        var pb = new ProcessBuilder(commandParts);
         pb.directory(workingDirectory);
 
-        StringBuilder stdOutput = new StringBuilder();
-        StringBuilder stdError = new StringBuilder();
-        int exitCode = -1;
+        var stdOutput = new StringBuilder();
+        var stdError = new StringBuilder();
+        var exitCode = -1;
 
         try {
-            Process process = pb.start();
+            var process = pb.start();
 
-            try (BufferedReader outReader = new BufferedReader(new InputStreamReader(process.getInputStream()));
-                 BufferedReader errReader = new BufferedReader(new InputStreamReader(process.getErrorStream()))) {
+            try (var outReader = new BufferedReader(new InputStreamReader(process.getInputStream()));
+                 var errReader = new BufferedReader(new InputStreamReader(process.getErrorStream()))) {
 
                 String line;
                 while ((line = outReader.readLine()) != null) {
@@ -72,13 +71,13 @@ public class LocalGitService implements GitService {
         try {
             // 1. Create a temporary file for the diff content
             tempDiffFile = File.createTempFile("jaider_diff_", ".patch", projectRoot); // Create in project root for simpler paths if git requires
-            Path tempDiffPath = tempDiffFile.toPath();
+            var tempDiffPath = tempDiffFile.toPath();
             Files.writeString(tempDiffPath, diffContent, StandardOpenOption.WRITE);
             logger.debug("Diff content written to temporary file: {}", tempDiffPath);
 
             // 2. Check if the diff applies cleanly (optional but good practice)
             List<String> checkCommand = new ArrayList<>(Arrays.asList("git", "apply", "--check", "--verbose", tempDiffPath.toString()));
-            CommandResult checkResult = executeGitCommand(projectRoot, checkCommand);
+            var checkResult = executeGitCommand(projectRoot, checkCommand);
             if (!checkResult.isSuccess()) {
                 logger.error("Git apply --check failed for diff on {}. Exit code: {}. Error: {}. Output: {}", filePath, checkResult.exitCode, checkResult.error, checkResult.output);
                 return false;
@@ -87,7 +86,7 @@ public class LocalGitService implements GitService {
 
             // 3. Apply the diff
             List<String> applyCommand = new ArrayList<>(Arrays.asList("git", "apply", "--verbose", tempDiffPath.toString()));
-            CommandResult applyResult = executeGitCommand(projectRoot, applyCommand);
+            var applyResult = executeGitCommand(projectRoot, applyCommand);
 
             if (!applyResult.isSuccess()) {
                 logger.error("Git apply failed for diff on {}. Exit code: {}. Error: {}. Output: {}", filePath, applyResult.exitCode, applyResult.error, applyResult.output);
@@ -119,7 +118,7 @@ public class LocalGitService implements GitService {
 
         // 1. Checkout the file from the commit before HEAD
         List<String> checkoutCommand = new ArrayList<>(Arrays.asList("git", "checkout", "HEAD~1", "--", filePath));
-        CommandResult checkoutResult = executeGitCommand(projectRoot, checkoutCommand);
+        var checkoutResult = executeGitCommand(projectRoot, checkoutCommand);
 
         if (!checkoutResult.isSuccess()) {
             logger.error("Failed to checkout {} from HEAD~1. Exit code: {}. Error: {}. Output: {}", filePath, checkoutResult.exitCode, checkoutResult.error, checkoutResult.output);
@@ -129,7 +128,7 @@ public class LocalGitService implements GitService {
 
         // 2. Stage the reverted file
         List<String> addCommand = new ArrayList<>(Arrays.asList("git", "add", filePath));
-        CommandResult addResult = executeGitCommand(projectRoot, addCommand);
+        var addResult = executeGitCommand(projectRoot, addCommand);
         if (!addResult.isSuccess()) {
             logger.error("Failed to stage reverted file {}. Exit code: {}. Error: {}. Output: {}", filePath, addResult.exitCode, addResult.error, addResult.output);
             return false;
@@ -137,9 +136,9 @@ public class LocalGitService implements GitService {
         logger.info("Successfully staged reverted file {}.", filePath);
 
         // 3. Commit the revert
-        String commitMessage = "Rollback: Reverted changes to " + filePath + " due to failed validation";
+        var commitMessage = "Rollback: Reverted changes to " + filePath + " due to failed validation";
         List<String> commitCommand = new ArrayList<>(Arrays.asList("git", "commit", "-m", commitMessage));
-        CommandResult commitResult = executeGitCommand(projectRoot, commitCommand);
+        var commitResult = executeGitCommand(projectRoot, commitCommand);
 
         if (!commitResult.isSuccess()) {
             logger.error("Failed to commit reverted file {}. Exit code: {}. Error: {}. Output: {}", filePath, commitResult.exitCode, commitResult.error, commitResult.output);
@@ -155,7 +154,7 @@ public class LocalGitService implements GitService {
 
         // 1. Stage the file: `git add <filePath>`
         List<String> addCommand = new ArrayList<>(Arrays.asList("git", "add", filePath));
-        CommandResult addResult = executeGitCommand(projectRoot, addCommand);
+        var addResult = executeGitCommand(projectRoot, addCommand);
         if (!addResult.isSuccess()) {
             logger.error("Failed to stage file {} for commit. Exit code: {}. Error: {}. Output: {}", filePath, addResult.exitCode, addResult.error, addResult.output);
             return null;
@@ -164,7 +163,7 @@ public class LocalGitService implements GitService {
 
         // 2. Commit the staged changes: `git commit -m "<commitMessage>"`
         List<String> commitCommand = new ArrayList<>(Arrays.asList("git", "commit", "-m", commitMessage));
-        CommandResult commitResult = executeGitCommand(projectRoot, commitCommand);
+        var commitResult = executeGitCommand(projectRoot, commitCommand);
 
         if (!commitResult.isSuccess()) {
             logger.error("Failed to commit changes for {} with message '{}'. Exit code: {}. Error: {}. Output: {}", filePath, commitMessage, commitResult.exitCode, commitResult.error, commitResult.output);
@@ -174,9 +173,9 @@ public class LocalGitService implements GitService {
 
         // 3. Get the commit hash
         List<String> revParseCommand = new ArrayList<>(Arrays.asList("git", "rev-parse", "HEAD"));
-        CommandResult revParseResult = executeGitCommand(projectRoot, revParseCommand);
+        var revParseResult = executeGitCommand(projectRoot, revParseCommand);
         if (revParseResult.isSuccess() && revParseResult.output != null && !revParseResult.output.trim().isEmpty()) {
-            String commitHash = revParseResult.output.trim();
+            var commitHash = revParseResult.output.trim();
             logger.info("Successfully committed changes for {} with message '{}'. Commit hash: {}", filePath, commitMessage, commitHash);
             return commitHash; // Return the commit hash
         } else {
@@ -189,7 +188,7 @@ public class LocalGitService implements GitService {
     public boolean isWorkingDirectoryClean(File projectRoot) {
         logger.info("Checking if working directory is clean in: {}", projectRoot.getAbsolutePath());
         List<String> command = new ArrayList<>(Arrays.asList("git", "status", "--porcelain"));
-        CommandResult result = executeGitCommand(projectRoot, command);
+        var result = executeGitCommand(projectRoot, command);
 
         if (!result.isSuccess()) {
             logger.error("Failed to execute 'git status --porcelain'. Exit code: {}. Error: {}. Output: {}",
@@ -220,7 +219,7 @@ public class LocalGitService implements GitService {
         // For now, proceed directly with revert.
 
         List<String> revertCommand = new ArrayList<>(Arrays.asList("git", "revert", commitHashToRevert, "--no-edit"));
-        CommandResult result = executeGitCommand(projectRoot, revertCommand);
+        var result = executeGitCommand(projectRoot, revertCommand);
 
         if (!result.isSuccess()) {
             logger.error("Failed to revert commit {}. Exit code: {}. Error: {}. Output: {}",

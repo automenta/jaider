@@ -42,37 +42,6 @@ class IndexCommandIntegrationTest {
     @Mock
     UI mockUi;
 
-    // Inner class for testing
-    static class DummyEmbeddingModel implements EmbeddingModel {
-        public final List<TextSegment> segmentsPassedToEmbedAll = new ArrayList<>(); // Made public for easier access in tests
-
-        @Override
-        public Response<Embedding> embed(String text) {
-            // For simplicity, IndexCommand uses embedAll. This method can be basic.
-            return Response.from(Embedding.from(List.of(0.1f, 0.2f, 0.3f)));
-        }
-
-        @Override
-        public Response<Embedding> embed(TextSegment textSegment) {
-            return embed(textSegment.text());
-        }
-
-        @Override
-        public Response<List<Embedding>> embedAll(List<TextSegment> segments) {
-            this.segmentsPassedToEmbedAll.addAll(segments);
-            List<Embedding> dummyEmbeddings = segments.stream()
-                    .map(segment -> Embedding.from(List.of(0.1f, 0.2f, 0.3f, (float) segment.text().length()))) // Add some variation
-                    .collect(Collectors.toList());
-            return Response.from(dummyEmbeddings);
-        }
-
-        public List<TextSegment> getSegmentsPassedToEmbedAll() {
-            return segmentsPassedToEmbedAll;
-        }
-    }
-
-    // setUp and test methods will be implemented in the next steps.
-
     @BeforeEach
     void setUp() throws IOException {
         testJaiderModel = new JaiderModel(tempProjectDir);
@@ -88,7 +57,7 @@ class IndexCommandIntegrationTest {
 
         // Debug file listing
         System.out.println("--- Test setUp: Listing files in " + tempProjectDir + " ---");
-        try (java.util.stream.Stream<Path> stream = Files.walk(tempProjectDir)) {
+        try (var stream = Files.walk(tempProjectDir)) {
             stream.forEach(System.out::println);
         }
         System.out.println("--- End of file listing ---");
@@ -117,19 +86,21 @@ class IndexCommandIntegrationTest {
         indexCommand = new IndexCommand();
     }
 
+    // setUp and test methods will be implemented in the next steps.
+
     @Test
     void execute_shouldIndexFilesInModel() {
         // Debugging blocks removed as the main test now passes, indicating the fix in IndexCommand.java was successful.
 
         // Create AppContext with the test model and spied App
-        AppContext appContext = new AppContext(testJaiderModel, testConfig, mockUi, testApp);
+        var appContext = new AppContext(testJaiderModel, testConfig, mockUi, testApp);
 
         // Execute the command
         indexCommand.execute(null, appContext);
 
         // Wait for the asynchronous indexing to complete by verifying finishTurnPublic is called
         // Adjust timeout if necessary (e.g., for slower CI environments)
-        ArgumentCaptor<AiMessage> messageCaptor = ArgumentCaptor.forClass(AiMessage.class);
+        var messageCaptor = ArgumentCaptor.forClass(AiMessage.class);
         verify(testApp, timeout(3000)).finishTurnPublic(messageCaptor.capture()); // Increased timeout slightly
 
         // Assertions
@@ -137,22 +108,22 @@ class IndexCommandIntegrationTest {
         assertNotNull(testJaiderModel.embeddings, "Embedding store should be initialized in the model.");
 
         // Verify the message logged by finishTurnPublic
-        AiMessage loggedMessage = messageCaptor.getValue();
+        var loggedMessage = messageCaptor.getValue();
         assertNotNull(loggedMessage);
         assertTrue(loggedMessage.text().contains("Project successfully indexed with 2 segments."),
                    "Logged message should indicate 2 segments were indexed. Actual: " + loggedMessage.text());
 
 
         // Check segments passed to the dummy embedding model
-        List<TextSegment> embeddedSegments = dummyEmbeddingModel.getSegmentsPassedToEmbedAll();
+        var embeddedSegments = dummyEmbeddingModel.getSegmentsPassedToEmbedAll();
         assertEquals(2, embeddedSegments.size(), "Should have embedded 2 segments (one for each non-empty file).");
 
         // Verify content of the embedded segments
-        String contentFile1 = "This is content of file1.";
-        String contentFile2 = "Content for file2 is here.";
+        var contentFile1 = "This is content of file1.";
+        var contentFile2 = "Content for file2 is here.";
 
-        boolean foundFile1Content = embeddedSegments.stream().anyMatch(s -> s.text().equals(contentFile1));
-        boolean foundFile2Content = embeddedSegments.stream().anyMatch(s -> s.text().equals(contentFile2));
+        var foundFile1Content = embeddedSegments.stream().anyMatch(s -> s.text().equals(contentFile1));
+        var foundFile2Content = embeddedSegments.stream().anyMatch(s -> s.text().equals(contentFile2));
 
         assertTrue(foundFile1Content, "Content of file1.txt should be among the embedded segments.");
         assertTrue(foundFile2Content, "Content of file2.txt should be among the embedded segments.");
@@ -162,5 +133,34 @@ class IndexCommandIntegrationTest {
         // We could try adding a known embedding and segment then searching, but verifying
         // the segments passed to embedAll is a strong indicator.
         // For now, let's rely on the segments passed to the dummy model and the success message.
+    }
+
+    // Inner class for testing
+    static class DummyEmbeddingModel implements EmbeddingModel {
+        public final List<TextSegment> segmentsPassedToEmbedAll = new ArrayList<>(); // Made public for easier access in tests
+
+        @Override
+        public Response<Embedding> embed(String text) {
+            // For simplicity, IndexCommand uses embedAll. This method can be basic.
+            return Response.from(Embedding.from(List.of(0.1f, 0.2f, 0.3f)));
+        }
+
+        @Override
+        public Response<Embedding> embed(TextSegment textSegment) {
+            return embed(textSegment.text());
+        }
+
+        @Override
+        public Response<List<Embedding>> embedAll(List<TextSegment> segments) {
+            this.segmentsPassedToEmbedAll.addAll(segments);
+            var dummyEmbeddings = segments.stream()
+                    .map(segment -> Embedding.from(List.of(0.1f, 0.2f, 0.3f, (float) segment.text().length()))) // Add some variation
+                    .collect(Collectors.toList());
+            return Response.from(dummyEmbeddings);
+        }
+
+        public List<TextSegment> getSegmentsPassedToEmbedAll() {
+            return segmentsPassedToEmbedAll;
+        }
     }
 }

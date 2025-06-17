@@ -1,14 +1,12 @@
 package dumb.jaider.agents;
 
 import dev.langchain4j.memory.ChatMemory;
-import dev.langchain4j.model.chat.ChatLanguageModel;
+import dev.langchain4j.model.chat.ChatModel;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-
-import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -20,7 +18,7 @@ import static org.mockito.Mockito.when;
 class AskAgentTest {
 
     @Mock
-    ChatLanguageModel chatLanguageModel; // Still needed for AbstractAgent constructor
+    ChatModel ChatModel; // Still needed for AbstractAgent constructor
     @Mock
     ChatMemory chatMemory; // Still needed for AbstractAgent constructor
     @Mock
@@ -31,7 +29,7 @@ class AskAgentTest {
     @BeforeEach
     void setUp() {
         // Use the new constructor to inject the mocked JaiderAiService
-        askAgent = new AskAgent(chatLanguageModel, chatMemory, jaiderAiServiceMock);
+        askAgent = new AskAgent(ChatModel, chatMemory, jaiderAiServiceMock);
     }
 
     @Test
@@ -41,20 +39,20 @@ class AskAgentTest {
 
     @Test
     void tools_shouldReturnEmptySet() {
-        Set<Object> actualTools = askAgent.tools(); // From AbstractAgent
+        var actualTools = askAgent.tools(); // From AbstractAgent
         assertTrue(actualTools.isEmpty(), "AskAgent should have no tools by default.");
     }
 
     @Test
     void act_shouldCallAiServiceChat() {
-        String testQuery = "Hello, who are you?";
-        String expectedResponse = "I am AskAgent, powered by JaiderAiService.";
+        var testQuery = "Hello, who are you?";
+        var expectedResponse = "I am AskAgent, powered by JaiderAiService.";
 
         // Set up the mock behavior for the JaiderAiService
         when(jaiderAiServiceMock.chat(anyString())).thenReturn(expectedResponse);
 
         // Execute the act method
-        String actualResponse = askAgent.act(testQuery);
+        var actualResponse = askAgent.act(testQuery);
 
         // Verify the response
         assertEquals(expectedResponse, actualResponse);

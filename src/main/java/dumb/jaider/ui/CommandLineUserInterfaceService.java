@@ -1,8 +1,8 @@
 package dumb.jaider.ui;
 
-import dumb.jaider.app.App; // Added import
-import dumb.jaider.model.JaiderModel; // Added import
-import dev.langchain4j.data.message.AiMessage; // Added import
+import dev.langchain4j.data.message.AiMessage;
+import dumb.jaider.app.App;
+import dumb.jaider.model.JaiderModel;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -10,7 +10,7 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintStream;
-import java.util.concurrent.CompletableFuture; // Added import
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 // Removed Consumer import as askYesNoQuestion is being adapted
@@ -31,7 +31,7 @@ public class CommandLineUserInterfaceService implements UI { // Changed interfac
         // For now, direct use is acceptable for this basic implementation.
         this.inReader = new BufferedReader(new InputStreamReader(System.in));
         this.executorService = Executors.newSingleThreadExecutor(r -> {
-            Thread t = new Thread(r, "cli-input-thread");
+            var t = new Thread(r, "cli-input-thread");
             t.setDaemon(true); // So it doesn't prevent JVM shutdown
             return t;
         });
@@ -42,7 +42,7 @@ public class CommandLineUserInterfaceService implements UI { // Changed interfac
         this.out = out;
         this.inReader = new BufferedReader(inReader); // Wrap in BufferedReader
         this.executorService = Executors.newSingleThreadExecutor(r -> {
-            Thread t = new Thread(r, "cli-input-thread-test");
+            var t = new Thread(r, "cli-input-thread-test");
             t.setDaemon(true);
             return t;
         });
@@ -63,7 +63,7 @@ public class CommandLineUserInterfaceService implements UI { // Changed interfac
     // --- Implementation of UI interface ---
 
     @Override
-    public void init(App app) throws IOException {
+    public void init(App app) {
         logger.info("CommandLineUserInterfaceService.init called (no-op for CLI).");
         // For a real CLI app, this might set up console, etc.
     }
@@ -77,17 +77,17 @@ public class CommandLineUserInterfaceService implements UI { // Changed interfac
 
     @Override
     public CompletableFuture<Boolean> confirm(String title, String text) {
-        CompletableFuture<Boolean> future = new CompletableFuture<>();
+        var future = new CompletableFuture<Boolean>();
         out.println("\n[CONFIRMATION] " + title);
         out.println(text);
         out.print(" (yes/no): ");
 
         executorService.submit(() -> {
             try {
-                String line = inReader.readLine();
+                var line = inReader.readLine();
                 if (line != null) {
                     line = line.trim().toLowerCase();
-                    boolean response = line.equals("yes") || line.equals("y");
+                    var response = line.equals("yes") || line.equals("y");
                     future.complete(response);
                 } else {
                     logger.warn("No input received for confirm (null line). Defaulting to 'false'.");
@@ -119,12 +119,12 @@ public class CommandLineUserInterfaceService implements UI { // Changed interfac
         out.println("\n[CONFIG EDIT]");
         out.println("Current config:\n" + currentConfig);
         out.println("Enter new config (or press Enter to keep current, type 'cancel' to abort):");
-        CompletableFuture<String> future = new CompletableFuture<>();
+        var future = new CompletableFuture<String>();
         executorService.submit(() -> {
             try {
                 // This simple implementation reads a single line.
                 // A real editor would be multi-line.
-                String line = inReader.readLine();
+                var line = inReader.readLine();
                 if (line == null || line.equalsIgnoreCase("cancel")) {
                     future.complete(null); // Abort
                 } else if (line.isEmpty()) {
@@ -153,7 +153,7 @@ public class CommandLineUserInterfaceService implements UI { // Changed interfac
     }
 
     @Override
-    public void close() throws IOException {
+    public void close() {
         logger.info("Shutting down CommandLineUserInterfaceService.");
         if (inReader != null) {
             // Only close if not System.in, but here it is System.in.

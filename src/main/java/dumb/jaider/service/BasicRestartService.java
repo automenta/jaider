@@ -20,7 +20,7 @@ public class BasicRestartService implements RestartService {
 
         try {
             // Get the path to the currently running Java executable
-            String javaBin = System.getProperty("java.home") + File.separator + "bin" + File.separator + "java";
+            var javaBin = System.getProperty("java.home") + File.separator + "bin" + File.separator + "java";
             logger.debug("Java executable found at: {}", javaBin);
 
             // Get the path to the currently running JAR file or main class
@@ -44,13 +44,13 @@ public class BasicRestartService implements RestartService {
             } else {
                 logger.info("Application appears to be running from compiled classes (e.g., IDE). Attempting main class restart.");
                 // Attempting to use classpath and main class - this is more fragile.
-                String mainClass = System.getProperty("sun.java.command"); // This can be "MainClass arg1 arg2" or just "MainClass" or "path/to/jar.jar"
+                var mainClass = System.getProperty("sun.java.command"); // This can be "MainClass arg1 arg2" or just "MainClass" or "path/to/jar.jar"
                 if (mainClass == null || mainClass.trim().isEmpty()) {
                      logger.error("Cannot determine main class (sun.java.command is empty). Cannot restart from compiled classes.");
                      return false;
                 }
                 // Attempt to parse the main class from sun.java.command
-                String[] commandParts = mainClass.split("\\s+");
+                var commandParts = mainClass.split("\\s+");
                 // Main class
                 if (commandParts[0].toLowerCase().endsWith(".jar")) { // It was actually a jar
                      logger.info("sun.java.command indicates JAR: {}. Switching to JAR restart.", commandParts[0]);
@@ -73,7 +73,7 @@ public class BasicRestartService implements RestartService {
 
             logger.info("Restart command: {}", String.join(" ", command));
 
-            ProcessBuilder processBuilder = new ProcessBuilder(command);
+            var processBuilder = new ProcessBuilder(command);
             // Optionally, redirect output/error streams of the new process
             // processBuilder.inheritIO(); // Or redirect to files
 

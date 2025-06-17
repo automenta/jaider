@@ -5,13 +5,13 @@ import dev.langchain4j.data.document.splitter.DocumentSplitters;
 import dev.langchain4j.data.message.AiMessage;
 import dev.langchain4j.store.embedding.inmemory.InMemoryEmbeddingStore;
 import dumb.jaider.app.App;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.concurrent.CompletableFuture;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 public class IndexCommand implements Command {
     private static final Logger logger = LoggerFactory.getLogger(IndexCommand.class);
@@ -34,13 +34,13 @@ public class IndexCommand implements Command {
 
         CompletableFuture.runAsync(() -> {
             try {
-                Path rootDir = m.dir; // Store rootDir
+                var rootDir = m.dir; // Store rootDir
                 var documents = FileSystemDocumentLoader.loadDocuments(
                     rootDir, // Use rootDir here
                     (Path relativePath) -> {
                         // Path objects from FileSystemDocumentLoader's pathMatcher might be relative to the rootDir.
                         // Resolve them to ensure Files.isRegularFile and Files.size work correctly.
-                        Path absolutePath = rootDir.resolve(relativePath);
+                        var absolutePath = rootDir.resolve(relativePath);
                         try {
                             // It's good practice to log which path is being evaluated by the matcher if issues persist.
                             // System.out.println("Predicate evaluating: " + absolutePath);
@@ -83,7 +83,7 @@ public class IndexCommand implements Command {
                 // Log the full stack trace for better debugging on the server/log file
                 // Consider also sending a more user-friendly part of the message to the UI
                 e.printStackTrace(); // Good for server logs
-                String userFriendlyMessage = e.getMessage();
+                var userFriendlyMessage = e.getMessage();
                 if (userFriendlyMessage == null || userFriendlyMessage.isBlank()) {
                     userFriendlyMessage = e.getClass().getSimpleName();
                 }

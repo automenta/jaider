@@ -1,7 +1,8 @@
 package dumb.jaider.commands;
 
+import dev.langchain4j.data.message.AiMessage;
+
 import java.util.Arrays;
-import dev.langchain4j.data.message.AiMessage; // Assuming this is the correct AiMessage class
 
 /**
  * Handles the "/add" command, allowing users to add one or more files
@@ -31,13 +32,13 @@ public class AddCommand implements Command {
             return;
         }
         // Trim leading/trailing whitespace from the overall args string before splitting
-        String trimmedArgs = args.trim();
+        var trimmedArgs = args.trim();
         if (trimmedArgs.isEmpty()) { // Check again after trim, in case args was just whitespace
             context.model().addLog(AiMessage.from("Usage: /add <file1> [file2] ..."));
             return;
         }
 
-        String[] filesToAdd = trimmedArgs.split("\\s+");
+        var filesToAdd = trimmedArgs.split("\\s+");
 
         // It's good practice to log which files are actually being added.
         // The current implementation resolves paths but doesn't check for existence here.
@@ -51,7 +52,7 @@ public class AddCommand implements Command {
 
         // Provide feedback on what was added. String.join is good.
         // Consider if filesToAdd itself should be filtered for blank strings before joining for the log.
-        String addedFilesMessage = String.join(", ", Arrays.stream(filesToAdd)
+        var addedFilesMessage = String.join(", ", Arrays.stream(filesToAdd)
                                                             .map(String::trim)
                                                             .filter(s -> !s.isEmpty())
                                                             .toArray(String[]::new));

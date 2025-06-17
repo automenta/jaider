@@ -1,10 +1,8 @@
 package dumb.jaider.suggestion;
 
 import dev.langchain4j.agent.tool.Tool;
-import dumb.jaider.toolmanager.ToolDescriptor;
 import dumb.jaider.toolmanager.ToolManager;
 
-import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -54,18 +52,18 @@ public class ProactiveSuggestionService {
     // generateSuggestions now uses the class field this.toolManager
     public List<ActiveSuggestion> generateSuggestions(String userInput, List<Object> internalToolInstances) {
         List<ActiveSuggestion> activeSuggestions = new ArrayList<>();
-        String lowerUserInput = userInput.toLowerCase();
-        int displayNumber = 1;
+        var lowerUserInput = userInput.toLowerCase();
+        var displayNumber = 1;
 
-        for (SuggestionRule rule : rules) {
+        for (var rule : rules) {
             if (rule.matches(lowerUserInput)) {
-                String toolName = rule.getTargetToolName();
-                String toolDescription = "No description found."; // Default
-                boolean foundTool = false;
+                var toolName = rule.getTargetToolName();
+                var toolDescription = "No description found."; // Default
+                var foundTool = false;
 
                 // 1. Check external tools via ToolManager (using the class field)
                 if (this.toolManager != null) {
-                    ToolDescriptor descriptor = this.toolManager.getToolDescriptor(toolName);
+                    var descriptor = this.toolManager.getToolDescriptor(toolName);
                     if (descriptor != null) {
                         toolDescription = descriptor.getDescription();
                         foundTool = true;
@@ -91,11 +89,11 @@ public class ProactiveSuggestionService {
                 // or we need to be absolutely sure about method scanning.
                 // This is more complex and might be redundant if ToolSpecifications.toolSpecificationsFrom works as expected.
                 if (!foundTool && internalToolInstances != null) {
-                    for (Object toolInstance : internalToolInstances) {
-                        for (Method method : toolInstance.getClass().getDeclaredMethods()) {
-                            Tool toolAnnotation = method.getAnnotation(Tool.class);
+                    for (var toolInstance : internalToolInstances) {
+                        for (var method : toolInstance.getClass().getDeclaredMethods()) {
+                            var toolAnnotation = method.getAnnotation(Tool.class);
                             if (toolAnnotation != null) {
-                                String currentToolName = toolAnnotation.name() != null && !toolAnnotation.name().isEmpty() ?
+                                var currentToolName = toolAnnotation.name() != null && !toolAnnotation.name().isEmpty() ?
                                                          toolAnnotation.name() : method.getName();
                                 if (currentToolName.equals(toolName)) {
                                     toolDescription = String.join("\n", toolAnnotation.value()); // Join if description is multi-line
@@ -113,12 +111,12 @@ public class ProactiveSuggestionService {
 
 
                 if (foundTool) {
-                    String suggestionText = rule.getSuggestionFormat()
+                    var suggestionText = rule.getSuggestionFormat()
                             .replace("{toolName}", toolName)
                             .replace("{toolDescription}", toolDescription);
 
-                    Suggestion originalSuggestion = new Suggestion(toolName, suggestionText, toolDescription, 1.0);
-                    String prefillCommand = String.format("!%s ", toolName); // Basic prefill
+                    var originalSuggestion = new Suggestion(toolName, suggestionText, toolDescription, 1.0);
+                    var prefillCommand = String.format("!%s ", toolName); // Basic prefill
 
                     activeSuggestions.add(new ActiveSuggestion(displayNumber++, originalSuggestion, prefillCommand));
                 } else {

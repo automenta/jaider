@@ -1,26 +1,20 @@
 package dumb.jaider.commands;
 
-import dumb.jaider.commands.AppContext;
+import dev.langchain4j.data.message.AiMessage;
 import dumb.jaider.app.App;
 import dumb.jaider.model.JaiderModel;
-import dev.langchain4j.data.message.AiMessage; // Added import
-import dev.langchain4j.data.message.ChatMessage;
-import dev.langchain4j.data.message.UserMessage;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
-import org.mockito.Spy; // Added import
+import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.HashSet;
-import java.util.Set;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.*;
-import static org.junit.jupiter.api.Assertions.*;
 
 @ExtendWith(MockitoExtension.class)
 public class AddCommandTest {
@@ -28,7 +22,7 @@ public class AddCommandTest {
     @Mock
     private AppContext mockAppContext; // Removed duplicate
     @Spy
-    private JaiderModel mockJaiderModel = new JaiderModel();
+    private final JaiderModel mockJaiderModel = new JaiderModel();
     @Mock
     private App mockApp;
 
@@ -60,13 +54,13 @@ public class AddCommandTest {
 
     @Test
     void testExecute_withValidArgs_addsFilesToModelAndUpdatesTokenCount() {
-        Path projectRoot = Paths.get("/test/project");
+        var projectRoot = Paths.get("/test/project");
         // Use doReturn().when() for spy, or ensure getDir() is not final if it's a real method call on spy
         doReturn(projectRoot).when(mockJaiderModel).getDir();
         when(mockAppContext.app()).thenReturn(mockApp); // Stubbing moved here
 
 
-        String args = "fileOne.txt subdir/fileTwo.java";
+        var args = "fileOne.txt subdir/fileTwo.java";
         addCommand.execute(args, mockAppContext);
 
         assertTrue(mockJaiderModel.files.contains(projectRoot.resolve("fileOne.txt")));
@@ -79,8 +73,8 @@ public class AddCommandTest {
 
     @Test
     void testExecute_withAlreadyAddedFile_doesNotAddDuplicatesAndLogsAppropriately() {
-        Path projectRoot = Paths.get("/test/project");
-        Path file1Path = projectRoot.resolve("file1.txt");
+        var projectRoot = Paths.get("/test/project");
+        var file1Path = projectRoot.resolve("file1.txt");
 
         // mockJaiderModel.files is already cleared in setUp
         mockJaiderModel.files.add(file1Path); // Pre-add file1.txt
@@ -88,7 +82,7 @@ public class AddCommandTest {
         doReturn(projectRoot).when(mockJaiderModel).getDir();
         when(mockAppContext.app()).thenReturn(mockApp); // Stubbing moved here
 
-        String args = "file1.txt newFile.css"; // file1.txt is a duplicate
+        var args = "file1.txt newFile.css"; // file1.txt is a duplicate
         addCommand.execute(args, mockAppContext);
 
         assertTrue(mockJaiderModel.files.contains(file1Path));

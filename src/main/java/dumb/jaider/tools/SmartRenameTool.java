@@ -3,7 +3,6 @@ package dumb.jaider.tools;
 import dev.langchain4j.agent.tool.Tool;
 import dumb.jaider.refactoring.RefactoringService;
 
-import java.nio.file.Path;
 import java.nio.file.Paths;
 
 public class SmartRenameTool {
@@ -29,8 +28,8 @@ public class SmartRenameTool {
             return "Error: newName cannot be null or blank for smartRename.";
         }
 
-        Path path = Paths.get(filePath);
-        int actualPosition = (position == null) ? -1 : position;
+        var path = Paths.get(filePath);
+        var actualPosition = (position == null) ? -1 : position;
 
         try {
             return refactoringService.smartRename(path, originalName, actualPosition, newName);

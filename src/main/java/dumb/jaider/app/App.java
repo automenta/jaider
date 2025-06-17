@@ -3,14 +3,11 @@ package dumb.jaider.app;
 import dev.langchain4j.agent.tool.ToolExecutionRequest;
 import dev.langchain4j.data.message.AiMessage;
 import dev.langchain4j.data.message.ChatMessage;
-import dev.langchain4j.data.message.ToolExecutionResultMessage;
-import dev.langchain4j.data.message.UserMessage;
 import dev.langchain4j.memory.ChatMemory;
 import dev.langchain4j.memory.chat.MessageWindowChatMemory;
-import dev.langchain4j.model.Tokenizer; // Reverted to model package
 import dev.langchain4j.model.embedding.EmbeddingModel;
-import dev.langchain4j.model.chat.ChatModel; // Changed from ChatLanguageModel
 import dumb.jaider.agents.Agent;
+import dumb.jaider.app.exceptions.*;
 import dumb.jaider.commands.*;
 import dumb.jaider.config.Config;
 import dumb.jaider.llm.LlmProviderFactory;
@@ -18,24 +15,15 @@ import dumb.jaider.model.JaiderModel;
 import dumb.jaider.suggestion.ProactiveSuggestionService;
 import dumb.jaider.toolmanager.ToolManager;
 import dumb.jaider.ui.UI;
-import dumb.jaider.app.exceptions.ChatModelInitializationException;
-import dumb.jaider.app.exceptions.TokenizerInitializationException;
-import dumb.jaider.app.exceptions.ComponentNotFoundException;
-import dumb.jaider.app.exceptions.ComponentInstantiationException;
-import dumb.jaider.app.exceptions.CircularDependencyException;
-import dumb.jaider.app.exceptions.InvalidComponentDefinitionException;
-
-
-import org.json.JSONArray;
-import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.*;
-import java.util.stream.Collectors;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Set;
 
 public class App {
     private static final Logger logger = LoggerFactory.getLogger(App.class);
@@ -46,12 +34,11 @@ public class App {
     private ChatMemory memory; // Will be DI-injected or default
     private EmbeddingModel embedding; // Will be created by LlmProviderFactory
     private State state = State.IDLE;
-    private Tokenizer tokenizer; // Will be created by LlmProviderFactory
 
     // Services to be DI-injected
     private AgentService agentService;
     private ToolLifecycleManager toolLifecycleManager;
-    private SessionManager sessionManager;
+    private final SessionManager sessionManager;
     private SelfUpdateService selfUpdateService;
     private ProactiveSuggestionService proactiveSuggestionService;
     private UserInputHandler userInputHandler;
@@ -72,7 +59,7 @@ public class App {
             this.memory = config.getComponent("chatMemory", ChatMemory.class);
         } catch (ComponentNotFoundException | ComponentInstantiationException e) {
             logger.warn("ChatMemory not found via DI or failed to instantiate, falling back to default: {}", e.getMessage());
-            DependencyInjector injector = config.getInjector(); // Get injector for fallback registration
+            var injector = config.getInjector(); // Get injector for fallback registration
             if (injector != null) { // Should not be null due to Config constructor guarantees
                  this.memory = MessageWindowChatMemory.withMaxMessages(20);
                  injector.registerSingleton("chatMemory", this.memory);
@@ -94,7 +81,7 @@ public class App {
         } catch (RuntimeException e) {
             logger.error("CRITICAL FAILURE DURING APP INITIALIZATION (from update call in constructor): {}", e.getMessage(), e);
             model.addLog(AiMessage.from("[Jaider] CRITICAL STARTUP ERROR: " + e.getMessage() + ". Application cannot continue."));
-            if(this.ui != null && this.model != null) this.ui.redraw(this.model);
+            if (this.ui != null) this.ui.redraw(this.model);
             throw e;
         }
     }
@@ -115,9 +102,9 @@ public class App {
     }
 
     public synchronized void update() {
-        DependencyInjector injector = config.getInjector();
+        var injector = config.getInjector();
         if (injector == null) { // Should be prevented by Config constructor
-            String fatalMsg = "DependencyInjector is null in update(). Critical configuration error.";
+            var fatalMsg = "DependencyInjector is null in update(). Critical configuration error.";
             logger.error(fatalMsg);
             model.addLog(AiMessage.from("[Jaider] " + fatalMsg));
             throw new IllegalStateException(fatalMsg);
@@ -138,18 +125,18 @@ public class App {
             llmFactory = config.getComponent("llmProviderFactory", LlmProviderFactory.class);
             toolManager = config.getComponent("toolManager", ToolManager.class);
 
-            ChatModel localChatModel = llmFactory.createChatModel(); // Changed from ChatLanguageModel
-            this.tokenizer = llmFactory.createTokenizer();
+            var localChatModel = llmFactory.createChatModel(); // Changed from ChatModel
+            //this.tokenizer = llmFactory.createTokenizer();
             this.embedding = llmFactory.createEmbeddingModel(); // Fallbacks to NoOpEmbeddingModel
 
             if (localChatModel != null) {
-                injector.registerSingleton("appChatLanguageModel", localChatModel);
+                injector.registerSingleton("appChatModel", localChatModel);
             } else {
                 throw new ChatModelInitializationException("Chat model resolved to null from factory.");
             }
-            if (this.tokenizer == null) {
-                throw new TokenizerInitializationException("Tokenizer resolved to null from factory.");
-            }
+
+            //if (this.tokenizer == null) throw new TokenizerInitializationException("Tokenizer resolved to null from factory.");
+
             if (this.embedding != null) {
                 injector.registerSingleton("appEmbeddingModel", this.embedding);
             } else {
@@ -160,12 +147,12 @@ public class App {
                    ComponentNotFoundException | ComponentInstantiationException |
                    CircularDependencyException | InvalidComponentDefinitionException |
                    IllegalArgumentException e) { // Catch specific DI and critical LLM exceptions
-            String errorMsg = "CRITICAL: Core LLM/DI components could not be initialized. Application cannot function. Error: " + e.getMessage();
+            var errorMsg = "CRITICAL: Core LLM/DI components could not be initialized. Application cannot function. Error: " + e.getMessage();
             logger.error(errorMsg, e);
             model.addLog(AiMessage.from("[Jaider] " + errorMsg));
             throw new RuntimeException(errorMsg, e);
         } catch (Exception e) { // Catch any other unexpected errors during this critical phase
-            String errorMsg = "CRITICAL: Unexpected error during core component initialization. Application cannot function. Error: " + e.getMessage();
+            var errorMsg = "CRITICAL: Unexpected error during core component initialization. Application cannot function. Error: " + e.getMessage();
             logger.error(errorMsg, e);
             model.addLog(AiMessage.from("[Jaider] " + errorMsg));
             throw new RuntimeException(errorMsg, e);
@@ -187,7 +174,7 @@ public class App {
             this.userInputHandler = config.getComponent("userInputHandler", UserInputHandler.class);
 
         } catch (ComponentNotFoundException | ComponentInstantiationException | CircularDependencyException | InvalidComponentDefinitionException e) {
-            String errorMsg = "CRITICAL: Essential application service initialization failed via DI. Application cannot function. Error: " + e.getMessage();
+            var errorMsg = "CRITICAL: Essential application service initialization failed via DI. Application cannot function. Error: " + e.getMessage();
             logger.error(errorMsg, e);
             model.addLog(AiMessage.from("[Jaider] " + errorMsg));
             throw new RuntimeException(errorMsg, e);
@@ -196,9 +183,9 @@ public class App {
         logger.info("App services updated/initialized using DI.");
         if (toolManager != null) {
             // Logging for toolManager remains same
-             Map<String, dumb.jaider.toolmanager.ToolDescriptor> descriptors = toolManager.getToolDescriptors();
+            var descriptors = toolManager.getToolDescriptors();
             if (descriptors != null && !descriptors.isEmpty()) {
-                logger.info("ToolManager loaded descriptors: " + String.join(", ", descriptors.keySet()));
+                logger.info("ToolManager loaded descriptors: {}", String.join(", ", descriptors.keySet()));
             } else {
                 logger.info("ToolManager loaded 0 external tool descriptors.");
             }
@@ -218,7 +205,7 @@ public class App {
     public Boolean getLastValidationPreferencePublic() { return this.lastValidationPreference; }
     public void setLastValidationPreferencePublic(Boolean preference) { this.lastValidationPreference = preference; }
     public EmbeddingModel getEmbeddingModel() { return this.embedding; }
-    public Tokenizer getTokenizer() { return this.tokenizer; }
+
     public Path getProjectDir() { return model.dir; }
     public Set<String> getAvailableAgentNames() {
         return this.agentService != null ? this.agentService.getAvailableAgentNames() : Collections.emptySet();
@@ -302,7 +289,7 @@ public class App {
             this.userInputHandler.handleUserInput(input);
         } else {
             logger.error("UserInputHandler not initialized. Cannot handle input.");
-            if(this.model != null && this.ui != null) { // Ensure model and ui are available
+            if (this.ui != null) { // Ensure model and ui are available
                 this.model.addLog(AiMessage.from("[Error] UserInputHandler not available. Cannot process input."));
                 this.ui.redraw(this.model);
             }
@@ -311,7 +298,7 @@ public class App {
 
     public void run() throws IOException {
         if (this.selfUpdateService != null) {
-            boolean proceedNormalStartup = this.selfUpdateService.performStartupValidation();
+            var proceedNormalStartup = this.selfUpdateService.performStartupValidation();
             if (!proceedNormalStartup) {
                 return;
             }
@@ -326,17 +313,17 @@ public class App {
     }
 
     public void updateTokenCountPublic() {
-        if (tokenizer == null) {
-            model.addLog(AiMessage.from("[Jaider] ALERT: Tokenizer is not initialized. Token count cannot be updated."));
-            model.currentTokenCount = -1;
-            return;
-        }
-        try {
-            model.currentTokenCount = tokenizer.estimateTokenCountInMessages(memory.messages());
-        } catch (Exception e) {
-            model.addLog(AiMessage.from("[Jaider] ERROR: Failed to estimate token count: " + e.getMessage()));
-            model.currentTokenCount = -1;
-        }
+//        if (tokenizer == null) {
+//            model.addLog(AiMessage.from("[Jaider] ALERT: Tokenizer is not initialized. Token count cannot be updated."));
+//            model.currentTokenCount = -1;
+//            return;
+//        }
+//        try {
+//            model.currentTokenCount = tokenizer.estimateTokenCountInMessages(memory.messages());
+//        } catch (Exception e) {
+//            model.addLog(AiMessage.from("[Jaider] ERROR: Failed to estimate token count: " + e.getMessage()));
+//            model.currentTokenCount = -1;
+//        }
     }
 
     private boolean isGitRepoClean() {

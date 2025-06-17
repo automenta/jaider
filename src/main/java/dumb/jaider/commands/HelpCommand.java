@@ -2,9 +2,9 @@ package dumb.jaider.commands;
 
 import dev.langchain4j.data.message.AiMessage;
 
-import java.util.stream.Collectors;
+import java.util.LinkedHashMap;
 import java.util.Map;
-import java.util.LinkedHashMap; // To maintain order for help display
+import java.util.stream.Collectors;
 
 /**
  * Handles the "/help" command, displaying a list of available commands
@@ -47,17 +47,17 @@ public class HelpCommand implements Command {
      */
     @Override
     public void execute(String args, AppContext context) {
-        String availableModes = context.app().getAvailableAgentNames().stream()
+        var availableModes = context.app().getAvailableAgentNames().stream()
                                      .sorted()
                                      .collect(Collectors.joining(", "));
         if (availableModes.isEmpty()) {
             availableModes = "No modes available (this is unexpected).";
         }
 
-        StringBuilder helpTextBuilder = new StringBuilder();
+        var helpTextBuilder = new StringBuilder();
         helpTextBuilder.append(ANSI_BOLD).append("Jaider Commands:").append(ANSI_RESET).append("\n");
 
-        for (Map.Entry<String, String> entry : COMMANDS_HELP.entrySet()) {
+        for (var entry : COMMANDS_HELP.entrySet()) {
             helpTextBuilder.append(ANSI_BOLD).append(entry.getKey()).append(ANSI_RESET)
                            .append(" - ").append(entry.getValue()).append("\n");
         }
@@ -78,11 +78,9 @@ public class HelpCommand implements Command {
         // Let's log title, then each command, then modes block.
 
         context.model().addLog(AiMessage.from(ANSI_BOLD + "Jaider Commands:" + ANSI_RESET));
-        COMMANDS_HELP.forEach((cmd, desc) -> {
-            context.model().addLog(AiMessage.from(ANSI_BOLD + cmd + ANSI_RESET + " - " + desc));
-        });
+        COMMANDS_HELP.forEach((cmd, desc) -> context.model().addLog(AiMessage.from(ANSI_BOLD + cmd + ANSI_RESET + " - " + desc)));
 
-        String modesHelp = String.format("""
+        var modesHelp = String.format("""
 
             %sMODES:%s
             Switch modes with %s/mode <ModeName>%s. Available modes: %s.

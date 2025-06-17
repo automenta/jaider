@@ -171,7 +171,7 @@
       "class": "dumb.jaider.agents.CoderAgent",
       "constructorArgs": [
         {
-          "ref": "appChatLanguageModel"
+          "ref": "appChatModel"
         },
         {
           "ref": "chatMemory"
@@ -198,7 +198,7 @@
       "class": "dumb.jaider.agents.ArchitectAgent",
       "constructorArgs": [
         {
-          "ref": "appChatLanguageModel"
+          "ref": "appChatModel"
         },
         {
           "ref": "chatMemory"
@@ -213,7 +213,7 @@
       "class": "dumb.jaider.agents.AskAgent",
       "constructorArgs": [
         {
-          "ref": "appChatLanguageModel"
+          "ref": "appChatModel"
         },
         {
           "ref": "chatMemory"

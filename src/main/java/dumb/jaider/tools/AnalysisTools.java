@@ -5,7 +5,6 @@ import dumb.jaider.model.JaiderModel;
 import dumb.jaider.staticanalysis.StaticAnalysisIssue;
 import dumb.jaider.staticanalysis.StaticAnalysisService;
 
-import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Collections;
 import java.util.List;
@@ -30,14 +29,14 @@ public class AnalysisTools {
         }
 
         // Resolve targetPathStr relative to the project root from JaiderModel
-        Path projectDir = jaiderModel.dir; // Corrected
+        var projectDir = jaiderModel.dir; // Corrected
         if (projectDir == null) {
             // This case should ideally not happen if JaiderModel is always initialized with a dir.
             // Fallback to current working directory, or throw error.
             System.err.println("Warning: JaiderModel projectDir is null. Resolving targetPath from current working directory.");
             projectDir = Paths.get("").toAbsolutePath();
         }
-        Path targetPath = projectDir.resolve(targetPathStr).normalize();
+        var targetPath = projectDir.resolve(targetPathStr).normalize();
 
         try {
             return staticAnalysisService.runAnalysis(toolName, targetPath, Collections.emptyMap());

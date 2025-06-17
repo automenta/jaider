@@ -1,32 +1,22 @@
 package dumb.jaider.app;
 
-import dumb.jaider.commands.AppContext;
-import dumb.jaider.commands.Command;
-// Import specific command mocks if needed for type safety, or use general Command mock.
-import dumb.jaider.commands.AddCommand;
-import dumb.jaider.commands.HelpCommand;
-import dumb.jaider.commands.AcceptSuggestionCommand;
 import dev.langchain4j.data.message.AiMessage;
-import dev.langchain4j.data.message.ChatMessage;
 import dev.langchain4j.data.message.UserMessage;
+import dumb.jaider.commands.*;
 import dumb.jaider.config.Config;
 import dumb.jaider.model.JaiderModel;
+import dumb.jaider.suggestion.ActiveSuggestion;
 import dumb.jaider.suggestion.ProactiveSuggestionService;
-import dumb.jaider.suggestion.ActiveSuggestion; // Assuming this class exists
 import dumb.jaider.ui.UI;
-
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
-import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Collections;
 
 import static org.mockito.Mockito.*;
 
@@ -130,7 +120,7 @@ public class UserInputHandlerTest {
     @Test
     void testHandleUserInput_nonCommandInput_delegatesToAgentInteractionService() {
         when(mockApp.getState()).thenReturn(App.State.IDLE);
-        String agentMessage = "This is a message for the agent.";
+        var agentMessage = "This is a message for the agent.";
         // Ensure the input does not start with '/' so it's not treated as a command
         userInputHandler.handleUserInput(agentMessage);
 
@@ -141,7 +131,7 @@ public class UserInputHandlerTest {
 
     @Test
     void testHandleUserInput_emptyInput_isIgnored() {
-        String input = "";
+        var input = "";
         userInputHandler.handleUserInput(input);
         // UserInputHandler should now return early for blank input before logging.
         verifyNoInteractions(mockJaiderModel);
@@ -152,7 +142,7 @@ public class UserInputHandlerTest {
 
     @Test
     void testHandleUserInput_whitespaceOnlyInput_isIgnored() {
-        String input = "   \t   ";
+        var input = "   \t   ";
         userInputHandler.handleUserInput(input);
         // UserInputHandler should now return early for blank input before logging.
         verifyNoInteractions(mockJaiderModel);
@@ -166,7 +156,7 @@ public class UserInputHandlerTest {
     @Test
     void testHandleUserInput_whenWaitingForConfirmation_yes_routesToConfirmPlanContinuation() {
         when(mockApp.getState()).thenReturn(App.State.WAITING_USER_CONFIRMATION);
-        String input = "yes";
+        var input = "yes";
         userInputHandler.handleUserInput(input);
         verify(mockJaiderModel).addLog(UserMessage.from(input));
         verify(mockApp).processAgentTurnPublic(true);
@@ -180,7 +170,7 @@ public class UserInputHandlerTest {
     @Test
     void testHandleUserInput_whenWaitingForConfirmation_no_routesToConfirmPlanContinuation() {
         when(mockApp.getState()).thenReturn(App.State.WAITING_USER_CONFIRMATION);
-        String input = "no";
+        var input = "no";
         userInputHandler.handleUserInput(input);
         verify(mockJaiderModel).addLog(UserMessage.from(input));
         verify(mockApp).processAgentTurnPublic(true);
@@ -195,7 +185,7 @@ public class UserInputHandlerTest {
     void testHandleUserInput_whenWaitingForConfirmation_otherInput_routesToConfirmPlanContinuationWithFalse() {
         // UserInputHandler passes the input to the app, it doesn't interpret "maybe" as "false" directly for confirmPlanContinuation
         when(mockApp.getState()).thenReturn(App.State.WAITING_USER_CONFIRMATION);
-        String input = "maybe";
+        var input = "maybe";
         userInputHandler.handleUserInput(input);
         verify(mockJaiderModel).addLog(UserMessage.from(input));
         verify(mockApp).processAgentTurnPublic(true);
@@ -215,7 +205,7 @@ public class UserInputHandlerTest {
         // It does NOT call app.processAgentTurnPublic(true) in the command execution path.
         when(mockApp.getState()).thenReturn(App.State.WAITING_USER_CONFIRMATION);
         when(commandsMap.get("/help")).thenReturn(mockHelpCommand);
-        String input = "/help";
+        var input = "/help";
 
         userInputHandler.handleUserInput(input);
 
@@ -335,7 +325,7 @@ public class UserInputHandlerTest {
     void testHandleUserInput_nonAcceptNonCommandMessage_whenSuggestionActive_cancelsSuggestionAndProcessesMessage() {
         when(mockApp.getState()).thenReturn(App.State.IDLE);
         when(mockJaiderModel.getActiveSuggestions()).thenReturn(List.of(mockActiveSuggestion));
-        String agentMessage = "This is a normal message.";
+        var agentMessage = "This is a normal message.";
 
         userInputHandler.handleUserInput(agentMessage);
 
@@ -364,7 +354,7 @@ public class UserInputHandlerTest {
     void testHandleUserInput_nonCommandMessage_whenNoSuggestionActive_processesMessageNormally() {
         when(mockApp.getState()).thenReturn(App.State.IDLE);
         when(mockJaiderModel.getActiveSuggestions()).thenReturn(java.util.Collections.emptyList()); // No active suggestion
-        String agentMessage = "Another normal message.";
+        var agentMessage = "Another normal message.";
 
         userInputHandler.handleUserInput(agentMessage);
 

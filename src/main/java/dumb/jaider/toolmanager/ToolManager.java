@@ -9,10 +9,12 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Optional;
 
 
 /**
@@ -42,12 +44,12 @@ public class ToolManager {
             return;
         }
 
-        ObjectMapper mapper = new ObjectMapper();
-        try (DirectoryStream<Path> stream = Files.newDirectoryStream(toolManifestsDir, "*.json")) {
-            for (Path jsonFile : stream) {
+        var mapper = new ObjectMapper();
+        try (var stream = Files.newDirectoryStream(toolManifestsDir, "*.json")) {
+            for (var jsonFile : stream) {
                 LOGGER.info("Found tool descriptor file: {}", jsonFile.toString());
-                try (InputStream descriptorStream = Files.newInputStream(jsonFile)) {
-                    ToolDescriptor descriptor = mapper.readValue(descriptorStream, ToolDescriptor.class);
+                try (var descriptorStream = Files.newInputStream(jsonFile)) {
+                    var descriptor = mapper.readValue(descriptorStream, ToolDescriptor.class);
                     if (descriptor != null && descriptor.getToolName() != null && !descriptor.getToolName().isEmpty()) {
                         toolDescriptors.put(descriptor.getToolName(), descriptor);
                         LOGGER.info("Successfully loaded and registered tool descriptor: {}", descriptor.getToolName());
@@ -67,7 +69,7 @@ public class ToolManager {
     // but kept if direct stream loading is needed elsewhere, though its direct usage here is removed.
     private void loadDescriptorFromStream(InputStream descriptorStream, String descriptorName, ObjectMapper mapper) {
         try {
-            ToolDescriptor descriptor = mapper.readValue(descriptorStream, ToolDescriptor.class);
+            var descriptor = mapper.readValue(descriptorStream, ToolDescriptor.class);
              if (descriptor != null && descriptor.getToolName() != null && !descriptor.getToolName().isEmpty()) {
                 toolDescriptors.put(descriptor.getToolName(), descriptor);
                 LOGGER.info("Loaded tool descriptor: {} from {}", descriptor.getToolName(), descriptorName);
@@ -99,7 +101,7 @@ public class ToolManager {
      * @return True if the tool is ready, false otherwise.
      */
     public boolean provisionTool(String toolName) {
-        ToolDescriptor descriptor = toolDescriptors.get(toolName);
+        var descriptor = toolDescriptors.get(toolName);
         if (descriptor == null) {
             LOGGER.warn("No descriptor found for tool: {}", toolName);
             return false;
@@ -121,8 +123,8 @@ public class ToolManager {
             return false;
         }
         try {
-            ProcessBuilder pb = new ProcessBuilder(descriptor.getAvailabilityCheckCommand().split("\\s+"));
-            Process process = pb.start();
+            var pb = new ProcessBuilder(descriptor.getAvailabilityCheckCommand().split("\\s+"));
+            var process = pb.start();
             return process.waitFor() == descriptor.getAvailabilityCheckExitCode();
         } catch (Exception e) {
             LOGGER.warn("Availability check failed for {}", descriptor.getToolName(), e);
@@ -131,7 +133,7 @@ public class ToolManager {
     }
 
     private String getCurrentPlatform() {
-        String osName = System.getProperty("os.name").toLowerCase();
+        var osName = System.getProperty("os.name").toLowerCase();
         if (osName.contains("win")) return "windows";
         if (osName.contains("mac")) return "macos";
         if (osName.contains("nix") || osName.contains("nux") || osName.contains("aix")) return "linux";
@@ -145,13 +147,13 @@ public class ToolManager {
         // 2. If not present, use llmInstallationQueries with LlmService to get commands.
         // 3. Execute commands.
 
-        String platform = getCurrentPlatform();
-        List<String> commands = Optional.ofNullable(descriptor.getInstallationCommands())
+        var platform = getCurrentPlatform();
+        var commands = Optional.ofNullable(descriptor.getInstallationCommands())
                                         .map(p -> p.get(platform))
                                         .orElse(new ArrayList<>());
 
         if (commands.isEmpty()) {
-             List<String> anyPlatformCommands = Optional.ofNullable(descriptor.getInstallationCommands())
+            var anyPlatformCommands = Optional.ofNullable(descriptor.getInstallationCommands())
                                         .map(p -> p.get("any"))
                                         .orElse(new ArrayList<>());
             if(!anyPlatformCommands.isEmpty()){
@@ -165,15 +167,15 @@ public class ToolManager {
         }
 
         LOGGER.info("Attempting to install {} using commands: {}", descriptor.getToolName(), commands);
-        for (String command : commands) {
+        for (var command : commands) {
             try {
-                String[] commandParts = command.split("\\s+");
-                ProcessBuilder pb = new ProcessBuilder(commandParts);
-                Process process = pb.start();
+                var commandParts = command.split("\\s+");
+                var pb = new ProcessBuilder(commandParts);
+                var process = pb.start();
 
                 // Capture stdout
-                StringBuilder stdout = new StringBuilder();
-                try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
+                var stdout = new StringBuilder();
+                try (var reader = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
                     String line;
                     while ((line = reader.readLine()) != null) {
                         stdout.append(line).append(System.lineSeparator());
@@ -181,15 +183,15 @@ public class ToolManager {
                 }
 
                 // Capture stderr
-                StringBuilder stderr = new StringBuilder();
-                try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getErrorStream()))) {
+                var stderr = new StringBuilder();
+                try (var reader = new BufferedReader(new InputStreamReader(process.getErrorStream()))) {
                     String line;
                     while ((line = reader.readLine()) != null) {
                         stderr.append(line).append(System.lineSeparator());
                     }
                 }
 
-                int exitCode = process.waitFor();
+                var exitCode = process.waitFor();
 
                 if (!stdout.isEmpty()) {
                     LOGGER.info("Stdout for command '{}':\n{}", command, stdout);

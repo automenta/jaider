@@ -6,10 +6,8 @@ import dev.langchain4j.data.message.ChatMessage;
 import dev.langchain4j.data.message.ToolExecutionResultMessage;
 import dev.langchain4j.data.message.UserMessage;
 import dev.langchain4j.memory.ChatMemory;
-import dumb.jaider.agents.Agent;
 import dumb.jaider.model.JaiderModel;
 import dumb.jaider.ui.UI;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -48,7 +46,7 @@ public class AgentInteractionService {
         app.updateTokenCountPublic(); // Call method on App
         ui.redraw(model);
 
-        Agent currentAgent = agentService.getCurrentAgent();
+        var currentAgent = agentService.getCurrentAgent();
         if (currentAgent == null) {
             finishTurn(AiMessage.from("[Error] No active agent to process the turn."));
             return;
@@ -63,8 +61,8 @@ public class AgentInteractionService {
                 if (expectPlan) {
                     this.agentMessageWithPlan = aiMessage;
                     app.setStatePublic(App.State.WAITING_USER_PLAN_APPROVAL);
-                    String fullMessageText = aiMessage.text();
-                    String planText = extractPlan(fullMessageText);
+                    var fullMessageText = aiMessage.text();
+                    var planText = extractPlan(fullMessageText);
                     String logMessage;
 
                     if (planText.equals(fullMessageText)) {
@@ -147,19 +145,19 @@ public class AgentInteractionService {
         }
 
 
-        String[] planMarkers = {
-            "Here's my plan:",
-            "My plan is:",
-            "Here is my plan:"
+        var planMarkers = new String[]{
+                "Here's my plan:",
+                "My plan is:",
+                "Here is my plan:"
         };
 
-        String lowerCaseMessageText = messageText.toLowerCase();
+        var lowerCaseMessageText = messageText.toLowerCase();
 
-        for (String marker : planMarkers) {
-            int markerIndex = lowerCaseMessageText.indexOf(marker.toLowerCase());
+        for (var marker : planMarkers) {
+            var markerIndex = lowerCaseMessageText.indexOf(marker.toLowerCase());
             if (markerIndex != -1) {
-                String fromMarker = messageText.substring(markerIndex + marker.length()).trim();
-                int endOfPlanIndex = fromMarker.indexOf("END_OF_PLAN");
+                var fromMarker = messageText.substring(markerIndex + marker.length()).trim();
+                var endOfPlanIndex = fromMarker.indexOf("END_OF_PLAN");
                 if (endOfPlanIndex != -1) {
                     return fromMarker.substring(0, endOfPlanIndex).trim();
                 }
@@ -167,12 +165,12 @@ public class AgentInteractionService {
             }
         }
 
-        String[] lines = messageText.split("\\r?\\n");
-        StringBuilder planBuilder = new StringBuilder();
-        boolean inPlanList = false;
-        int planLines = 0;
-        for (String line : lines) {
-            String trimmedLine = line.trim();
+        var lines = messageText.split("\\r?\\n");
+        var planBuilder = new StringBuilder();
+        var inPlanList = false;
+        var planLines = 0;
+        for (var line : lines) {
+            var trimmedLine = line.trim();
             if (trimmedLine.matches("^\\d+\\.\\s+.*") ||
                 trimmedLine.matches("^\\*\\s+.*") ||
                 trimmedLine.matches("^-\\s+.*")) {
@@ -194,8 +192,8 @@ public class AgentInteractionService {
         }
 
         if (inPlanList && planLines >= 2) {
-             String extracted = planBuilder.toString().trim();
-             int endOfPlanIndex = extracted.indexOf("END_OF_PLAN");
+            var extracted = planBuilder.toString().trim();
+            var endOfPlanIndex = extracted.indexOf("END_OF_PLAN");
              if (endOfPlanIndex != -1) {
                  return extracted.substring(0, endOfPlanIndex).trim();
              }

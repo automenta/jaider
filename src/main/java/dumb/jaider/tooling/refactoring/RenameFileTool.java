@@ -3,12 +3,10 @@ package dumb.jaider.tooling.refactoring;
 import dumb.jaider.tooling.Tool;
 import dumb.jaider.tooling.ToolContext;
 import org.eclipse.jgit.api.Git;
-import org.eclipse.jgit.lib.Repository;
 import org.eclipse.jgit.storage.file.FileRepositoryBuilder;
 
 import java.io.File;
 import java.nio.file.Files;
-import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 
 public class RenameFileTool implements Tool {
@@ -38,16 +36,16 @@ public class RenameFileTool implements Tool {
 
     @Override
     public String execute(ToolContext context) throws Exception {
-        Path projectRoot = context.getProjectRoot()
+        var projectRoot = context.getProjectRoot()
                                 .orElseThrow(() -> new IllegalArgumentException("Project root must be provided for RenameFileTool."));
 
-        String oldFilePathStr = context.getParameter("oldFilePath", String.class)
+        var oldFilePathStr = context.getParameter("oldFilePath", String.class)
                                     .orElseThrow(() -> new IllegalArgumentException("Missing 'oldFilePath' in ToolContext for RenameFile."));
-        String newFilePathStr = context.getParameter("newFilePath", String.class)
+        var newFilePathStr = context.getParameter("newFilePath", String.class)
                                     .orElseThrow(() -> new IllegalArgumentException("Missing 'newFilePath' in ToolContext for RenameFile."));
 
-        Path oldFilePath = projectRoot.resolve(oldFilePathStr).normalize();
-        Path newFilePath = projectRoot.resolve(newFilePathStr).normalize();
+        var oldFilePath = projectRoot.resolve(oldFilePathStr).normalize();
+        var newFilePath = projectRoot.resolve(newFilePathStr).normalize();
 
         if (!Files.exists(oldFilePath)) {
             throw new java.io.FileNotFoundException("Old file path does not exist: " + oldFilePath);
@@ -60,7 +58,7 @@ public class RenameFileTool implements Tool {
         }
 
         // Ensure parent directory for new file path exists
-        Path newFileParentDir = newFilePath.getParent();
+        var newFileParentDir = newFilePath.getParent();
         if (newFileParentDir != null && !Files.exists(newFileParentDir)) {
             Files.createDirectories(newFileParentDir);
         }
@@ -69,8 +67,8 @@ public class RenameFileTool implements Tool {
         Files.move(oldFilePath, newFilePath, StandardCopyOption.ATOMIC_MOVE);
 
         // Stage the changes using JGit
-        try (Repository repository = FileRepositoryBuilder.create(projectRoot.resolve(".git").toFile());
-             Git git = new Git(repository)) {
+        try (var repository = FileRepositoryBuilder.create(projectRoot.resolve(".git").toFile());
+             var git = new Git(repository)) {
 
             // `git add <newFilePath>` (for the renamed file)
             // `git rm <oldFilePath>` (if it was tracked)
@@ -79,8 +77,8 @@ public class RenameFileTool implements Tool {
             // However, JGit's `mv` is not directly available.
             // We can `rm` the old path and `add` the new path.
 
-            String oldRepoPath = projectRoot.relativize(oldFilePath).toString().replace('\\', '/');
-            String newRepoPath = projectRoot.relativize(newFilePath).toString().replace('\\', '/');
+            var oldRepoPath = projectRoot.relativize(oldFilePath).toString().replace('\\', '/');
+            var newRepoPath = projectRoot.relativize(newFilePath).toString().replace('\\', '/');
 
             // Remove the old file path from index if it was tracked
             // This check is important because `git.rm()` will fail if the file is not tracked.

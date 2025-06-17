@@ -29,7 +29,7 @@ public class ToolContext {
 
     @SuppressWarnings("unchecked")
     public <T> Optional<T> getParameter(String key, Class<T> type) {
-        Object value = parameters.get(key);
+        var value = parameters.get(key);
         if (type.isInstance(value)) {
             return Optional.of(type.cast(value));
         }

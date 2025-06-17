@@ -1,16 +1,14 @@
 package dumb.jaider.config;
 
 import dumb.jaider.app.DependencyInjector;
-import dumb.jaider.app.exceptions.ComponentNotFoundException;
 import dumb.jaider.app.exceptions.ComponentInstantiationException;
-import org.json.JSONArray;
+import dumb.jaider.app.exceptions.ComponentNotFoundException;
 import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -123,7 +121,7 @@ public class Config {
         load(); // Populates fields and componentDefinitions from file or defaults
 
         if (this.componentDefinitions.isEmpty()) {
-            String errorMsg = "CRITICAL: No component definitions found after attempting to load from file and apply defaults. getDefaultConfigAsJsonObject() might be incomplete or malformed.";
+            var errorMsg = "CRITICAL: No component definitions found after attempting to load from file and apply defaults. getDefaultConfigAsJsonObject() might be incomplete or malformed.";
             logger.error(errorMsg);
             throw new IllegalStateException(errorMsg);
         }
@@ -135,12 +133,12 @@ public class Config {
     }
 
     void load() {
-        boolean loadedSuccessfully = false;
+        var loadedSuccessfully = false;
         if (Files.exists(file)) {
             try {
-                String content = Files.readString(file);
+                var content = Files.readString(file);
                 logger.info("Loading configuration from file: {}", file);
-                JSONObject userJson = new JSONObject(content);
+                var userJson = new JSONObject(content);
                 // populateFieldsFromJson will handle merging with defaults
                 populateFieldsFromJson(userJson);
                 loadedSuccessfully = true;
@@ -161,7 +159,7 @@ public class Config {
             try {
                 // Write the fully resolved config (which would be defaults if no user file)
                 // to .jaider.json
-                Path parentDir = file.getParent();
+                var parentDir = file.getParent();
                 if (parentDir != null && !Files.exists(parentDir)) {
                     Files.createDirectories(parentDir);
                 }
@@ -175,21 +173,21 @@ public class Config {
     }
 
     private void populateFieldsFromJson(JSONObject userJsonInput) {
-        JSONObject defaultConfigJson = getDefaultConfigAsJsonObject();
-        JSONObject mergedJson = new JSONObject(defaultConfigJson.toString()); // Start with a deep copy of defaults
+        var defaultConfigJson = getDefaultConfigAsJsonObject();
+        var mergedJson = new JSONObject(defaultConfigJson.toString()); // Start with a deep copy of defaults
 
         // Overlay userJsonInput onto mergedJson
         if (userJsonInput != null) {
-            for (String key : userJsonInput.keySet()) {
-                if (COMPONENTS_KEY.equals(key) && userJsonInput.optJSONArray(COMPONENTS_KEY) != null && userJsonInput.getJSONArray(COMPONENTS_KEY).length() > 0) {
+            for (var key : userJsonInput.keySet()) {
+                if (COMPONENTS_KEY.equals(key) && userJsonInput.optJSONArray(COMPONENTS_KEY) != null && !userJsonInput.getJSONArray(COMPONENTS_KEY).isEmpty()) {
                     mergedJson.put(COMPONENTS_KEY, userJsonInput.getJSONArray(COMPONENTS_KEY)); // Replace components array
                 } else if ("apiKeys".equals(key) && userJsonInput.optJSONObject("apiKeys") != null) {
                     // Deep merge for apiKeys: start with default apiKeys (already in mergedJson), then overlay user's
-                    JSONObject userApiKeys = userJsonInput.getJSONObject("apiKeys");
-                    JSONObject mergedApiKeys = mergedJson.optJSONObject("apiKeys"); // Should be the one from defaults
+                    var userApiKeys = userJsonInput.getJSONObject("apiKeys");
+                    var mergedApiKeys = mergedJson.optJSONObject("apiKeys"); // Should be the one from defaults
                     if (mergedApiKeys == null) mergedApiKeys = new JSONObject(); // Should not happen if defaults are sound
 
-                    for (String k : userApiKeys.keySet()) {
+                    for (var k : userApiKeys.keySet()) {
                         mergedApiKeys.put(k, userApiKeys.get(k)); // User's key overrides default's key
                     }
                     mergedJson.put("apiKeys", mergedApiKeys); // Put the updated map back
@@ -201,25 +199,25 @@ public class Config {
         this.loadedJsonConfig = mergedJson; // Store the fully merged configuration
 
         // Populate all other fields from the merged JSON
-        String llmVal = mergedJson.optString("llmProvider", this.llm); // Fallback to initial hardcoded if key missing (should not happen with defaults)
-        String ollamaBaseUrlVal = mergedJson.optString("ollamaBaseUrl", this.ollamaBaseUrl);
-        String ollamaModelNameVal = mergedJson.optString("ollamaModelName", this.ollamaModelName); // Added this line
-        String genericOpenaiBaseUrlVal = mergedJson.optString("genericOpenaiBaseUrl", this.genericOpenaiBaseUrl);
-        String genericOpenaiModelNameVal = mergedJson.optString("genericOpenaiModelName", this.genericOpenaiModelName);
-        String genericOpenaiEmbeddingModelNameVal = mergedJson.optString("genericOpenaiEmbeddingModelName", this.genericOpenaiEmbeddingModelName);
-        String genericOpenaiApiKeyVal = mergedJson.optString("genericOpenaiApiKey", this.genericOpenaiApiKey);
-        String openaiModelNameVal = mergedJson.optString("openaiModelName", this.openaiModelName);
-        String openaiApiKeyVal = mergedJson.optString("openaiApiKey", this.openaiApiKey); // Load openaiApiKey
-        String geminiApiKeyVal = mergedJson.optString("geminiApiKey", this.geminiApiKey);
-        String geminiModelNameVal = mergedJson.optString("geminiModelName", this.geminiModelName);
-        String geminiEmbeddingModelNameVal = mergedJson.optString("geminiEmbeddingModelName", this.geminiEmbeddingModelName);
-        String tavilyApiKeyVal = mergedJson.optString("tavilyApiKey", this.tavilyApiKey);
-        String toolManifestsDirVal = mergedJson.optString("toolManifestsDir", this.toolManifestsDir);
+        var llmVal = mergedJson.optString("llmProvider", this.llm); // Fallback to initial hardcoded if key missing (should not happen with defaults)
+        var ollamaBaseUrlVal = mergedJson.optString("ollamaBaseUrl", this.ollamaBaseUrl);
+        var ollamaModelNameVal = mergedJson.optString("ollamaModelName", this.ollamaModelName); // Added this line
+        var genericOpenaiBaseUrlVal = mergedJson.optString("genericOpenaiBaseUrl", this.genericOpenaiBaseUrl);
+        var genericOpenaiModelNameVal = mergedJson.optString("genericOpenaiModelName", this.genericOpenaiModelName);
+        var genericOpenaiEmbeddingModelNameVal = mergedJson.optString("genericOpenaiEmbeddingModelName", this.genericOpenaiEmbeddingModelName);
+        var genericOpenaiApiKeyVal = mergedJson.optString("genericOpenaiApiKey", this.genericOpenaiApiKey);
+        var openaiModelNameVal = mergedJson.optString("openaiModelName", this.openaiModelName);
+        var openaiApiKeyVal = mergedJson.optString("openaiApiKey", this.openaiApiKey); // Load openaiApiKey
+        var geminiApiKeyVal = mergedJson.optString("geminiApiKey", this.geminiApiKey);
+        var geminiModelNameVal = mergedJson.optString("geminiModelName", this.geminiModelName);
+        var geminiEmbeddingModelNameVal = mergedJson.optString("geminiEmbeddingModelName", this.geminiEmbeddingModelName);
+        var tavilyApiKeyVal = mergedJson.optString("tavilyApiKey", this.tavilyApiKey);
+        var toolManifestsDirVal = mergedJson.optString("toolManifestsDir", this.toolManifestsDir);
 
-        String runCommandVal = mergedJson.optString("runCommand", this.runCommand);
+        var runCommandVal = mergedJson.optString("runCommand", this.runCommand);
         // Handle legacy "testCommand"
         if (mergedJson.has("testCommand")) {
-            String testCommandVal = mergedJson.optString("testCommand");
+            var testCommandVal = mergedJson.optString("testCommand");
             // If testCommand has a value AND (runCommand is empty OR runCommand was not explicitly set by the user)
             // then use testCommand's value for runCommand.
             if (!testCommandVal.isEmpty() && (runCommandVal.isEmpty() || !userJsonInput.has("runCommand"))) {
@@ -298,17 +296,17 @@ public class Config {
         }
 
         this.apiKeys.clear();
-        JSONObject keys = mergedJson.optJSONObject("apiKeys"); // Use mergedJson
+        var keys = mergedJson.optJSONObject("apiKeys"); // Use mergedJson
         if (keys != null) {
             keys.keySet().forEach(key -> this.apiKeys.put(key, keys.getString(key)));
         }
 
         this.componentDefinitions.clear(); // Clear before populating
         if (mergedJson.has(COMPONENTS_KEY)) { // Use mergedJson
-            JSONArray componentDefsArray = mergedJson.getJSONArray(COMPONENTS_KEY);
+            var componentDefsArray = mergedJson.getJSONArray(COMPONENTS_KEY);
             logger.info("Attempting to load {} component definitions from merged JSON.", componentDefsArray.length());
-            for (int i = 0; i < componentDefsArray.length(); i++) {
-                JSONObject componentDef = componentDefsArray.getJSONObject(i);
+            for (var i = 0; i < componentDefsArray.length(); i++) {
+                var componentDef = componentDefsArray.getJSONObject(i);
                 if (componentDef.has("id") && componentDef.has("class")) {
                     this.componentDefinitions.put(componentDef.getString("id"), componentDef);
                 } else {
@@ -323,17 +321,17 @@ public class Config {
     }
 
     private JSONObject getDefaultConfigAsJsonObject() {
-        try (InputStream inputStream = Config.class.getResourceAsStream(DEFAULT_CONFIG_PATH)) {
+        try (var inputStream = Config.class.getResourceAsStream(DEFAULT_CONFIG_PATH)) {
             if (inputStream == null) {
-                String errorMsg = "CRITICAL: Default configuration file not found in resources: " + DEFAULT_CONFIG_PATH;
+                var errorMsg = "CRITICAL: Default configuration file not found in resources: " + DEFAULT_CONFIG_PATH;
                 logger.error(errorMsg);
                 throw new IOException(errorMsg); // Or a more specific runtime exception
             }
-            String jsonText = new BufferedReader(
+            var jsonText = new BufferedReader(
                 new InputStreamReader(inputStream, StandardCharsets.UTF_8))
                 .lines()
                 .collect(Collectors.joining("\n"));
-            JSONObject defaultConfig = new JSONObject(jsonText);
+            var defaultConfig = new JSONObject(jsonText);
             logger.info("Successfully loaded default configuration from {}", DEFAULT_CONFIG_PATH);
             // Ensure toolManifestsDir is correctly set if it needs to be dynamic (though static path is fine)
             // For now, we assume the value in default-config.json is correct.
@@ -342,11 +340,11 @@ public class Config {
             // Example: defaultConfig.put("toolManifestsDir", "some_dynamic_path_logic_here");
             return defaultConfig;
         } catch (IOException e) {
-            String errorMsg = "CRITICAL: IOException while reading default config from " + DEFAULT_CONFIG_PATH;
+            var errorMsg = "CRITICAL: IOException while reading default config from " + DEFAULT_CONFIG_PATH;
             logger.error(errorMsg, e);
             throw new RuntimeException(errorMsg, e); // This is a fatal error for the application
         } catch (org.json.JSONException e) {
-            String errorMsg = "CRITICAL: JSONException while parsing default config from " + DEFAULT_CONFIG_PATH;
+            var errorMsg = "CRITICAL: JSONException while parsing default config from " + DEFAULT_CONFIG_PATH;
             logger.error(errorMsg, e);
             throw new RuntimeException(errorMsg, e); // This is also fatal
         }
@@ -363,7 +361,7 @@ public class Config {
      * @throws IllegalStateException if component definitions become empty after reload.
      */
     public void save(String newConfig) throws IOException {
-        Path parentDir = file.getParent();
+        var parentDir = file.getParent();
         if (parentDir != null && !Files.exists(parentDir)) {
             Files.createDirectories(parentDir);
         }
@@ -387,7 +385,7 @@ public class Config {
     }
 
     private String getKeyValue(String envVarName, String specificJsonKey, String genericApiKeyMapKey) {
-        String value = System.getenv(envVarName);
+        var value = System.getenv(envVarName);
         if (value != null && !value.isEmpty()) {
             return value;
         }
@@ -453,30 +451,23 @@ public class Config {
      * @return The API key if found, otherwise null.
      */
     public String getApiKey(String providerKeyInMap) {
-        String envVarName = providerKeyInMap.toUpperCase() + "_API_KEY";
-        String value = System.getenv(envVarName);
+        var envVarName = providerKeyInMap.toUpperCase() + "_API_KEY";
+        var value = System.getenv(envVarName);
         if (value != null && !value.isEmpty()) return value;
 
         // Fallback to deprecated top-level keys if not in apiKeys map and env var not set.
         // This is to maintain a degree of backward compatibility for users who haven't migrated.
         // However, the primary and recommended way is env var or apiKeys map.
-        String fallbackValue = null;
-        switch (providerKeyInMap.toLowerCase()) {
-            case "openai":
-                fallbackValue = this.openaiApiKey; // Access the deprecated field directly
-                break;
-            case "google": // Assuming "google" is used for Gemini in apiKeys
-                fallbackValue = this.geminiApiKey;
-                break;
-            case "tavily":
-                fallbackValue = this.tavilyApiKey;
-                break;
-            case "genericopenai":
-                fallbackValue = this.genericOpenaiApiKey;
-                break;
-        }
+        var fallbackValue = switch (providerKeyInMap.toLowerCase()) {
+            case "openai" -> this.openaiApiKey; // Access the deprecated field directly
+            case "google" -> // Assuming "google" is used for Gemini in apiKeys
+                    this.geminiApiKey;
+            case "tavily" -> this.tavilyApiKey;
+            case "genericopenai" -> this.genericOpenaiApiKey;
+            default -> null;
+        };
 
-        String apiKeyFromMap = this.apiKeys.get(providerKeyInMap);
+        var apiKeyFromMap = this.apiKeys.get(providerKeyInMap);
         if (apiKeyFromMap != null && !apiKeyFromMap.isEmpty()) {
             return apiKeyFromMap;
         }
@@ -503,12 +494,12 @@ public class Config {
             configToEdit = getDefaultConfigAsJsonObject(); // Load from new resource method
         }
 
-        JSONObject baseConfig = getDefaultConfigAsJsonObject(); // Base is now from resource
+        var baseConfig = getDefaultConfigAsJsonObject(); // Base is now from resource
         // Overlay user's settings from .jaider.json onto the defaults from resource
-        for (String key : configToEdit.keySet()) {
+        for (var key : configToEdit.keySet()) {
             // Overlay user's settings from .jaider.json onto the defaults from resource
             // For simple fields, directly put from configToEdit if they exist
-            for (String k : JSONObject.getNames(configToEdit)) {
+            for (var k : JSONObject.getNames(configToEdit)) {
                 if (!COMPONENTS_KEY.equals(k) && !"apiKeys".equals(k) && !"testCommand".equals(k)) {
                     baseConfig.put(k, configToEdit.get(k));
                 }
@@ -523,7 +514,7 @@ public class Config {
             }
 
             // If user's config has "components" and it's not empty, it replaces default "components"
-            if (configToEdit.has(COMPONENTS_KEY) && configToEdit.getJSONArray(COMPONENTS_KEY).length() > 0) {
+            if (configToEdit.has(COMPONENTS_KEY) && !configToEdit.getJSONArray(COMPONENTS_KEY).isEmpty()) {
                 baseConfig.put(COMPONENTS_KEY, configToEdit.getJSONArray(COMPONENTS_KEY));
                 logger.debug("Using component definitions from user file for editing.");
             } else {
@@ -569,13 +560,13 @@ public class Config {
      */
     public String getRunCommand() { return runCommand; }
 
-    /** @return The base URL for the Ollama service (e.g., "http://localhost:11434"). */
+    /** @return The base URL for the Ollama service (e.g., "<a href="http://localhost:11434">...</a>"). */
     public String getOllamaBaseUrl() { return ollamaBaseUrl; }
 
     /** @return The model name for Ollama (e.g., "llamablit"). */
     public String getOllamaModelName() { return ollamaModelName; }
 
-    /** @return The base URL for a generic OpenAI-compatible service (e.g., "http://localhost:8080/v1"). */
+    /** @return The base URL for a generic OpenAI-compatible service (e.g., "<a href="http://localhost:8080/v1">...</a>"). */
     public String getGenericOpenaiBaseUrl() { return genericOpenaiBaseUrl; }
 
     /** @return The model name for the generic OpenAI-compatible service (e.g., "local-model"). */
@@ -604,7 +595,7 @@ public class Config {
         if (this.injector == null) {
             throw new IllegalStateException("DependencyInjector is not initialized.");
         }
-        Object componentInstance = this.injector.getComponent(id);
+        var componentInstance = this.injector.getComponent(id);
         if (componentInstance == null) {
             // ComponentNotFoundException would be thrown by injector.getComponent(id) itself.
             // This is a fallback or can be removed if injector's exception is sufficient.

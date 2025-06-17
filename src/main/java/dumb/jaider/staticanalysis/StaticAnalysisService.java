@@ -33,7 +33,7 @@ public class StaticAnalysisService {
     public List<StaticAnalysisIssue> runAnalysis(String toolName, Path targetPath, Map<String, String> runtimeOptions)
             throws Exception { // Broad exception for now
 
-        ToolDescriptor descriptor = toolManager.getToolDescriptor(toolName);
+        var descriptor = toolManager.getToolDescriptor(toolName);
         if (descriptor == null) {
             throw new IllegalArgumentException("No descriptor found for tool: " + toolName);
         }
@@ -45,20 +45,20 @@ public class StaticAnalysisService {
             throw new RuntimeException("Tool " + toolName + " is not available or could not be installed.");
         }
 
-        String commandPattern = descriptor.getAnalysisCommandPattern();
+        var commandPattern = descriptor.getAnalysisCommandPattern();
         if (commandPattern == null || commandPattern.isBlank()) {
             throw new IllegalStateException("Analysis command pattern is not defined for tool: " + toolName);
         }
 
         // Replace placeholders
-        String commandToExecute = commandPattern.replace("{targetPath}", targetPath.toString());
+        var commandToExecute = commandPattern.replace("{targetPath}", targetPath.toString());
 
         // Handle other placeholders from defaultConfig or runtimeOptions
         Map<String, Object> defaultConfig = descriptor.getDefaultConfig() != null ? descriptor.getDefaultConfig() : Map.of();
 
         // Prioritize runtimeOptions over defaultConfig for substitutions
         // Example for {semgrepConfig}
-        String semgrepConfigValue = runtimeOptions.getOrDefault("semgrepConfig",
+        var semgrepConfigValue = runtimeOptions.getOrDefault("semgrepConfig",
                                     (String) defaultConfig.getOrDefault("semgrepConfig", "auto"));
         commandToExecute = commandToExecute.replace("{semgrepConfig}", semgrepConfigValue);
 
@@ -67,34 +67,34 @@ public class StaticAnalysisService {
         LOGGER.info("Executing static analysis command: {}", commandToExecute);
         // Simple space splitting. This might not be robust for arguments containing spaces.
         // A more sophisticated parser or quoting strategy would be needed for such cases.
-        ProcessBuilder pb = new ProcessBuilder(commandToExecute.split("\\s+"));
+        var pb = new ProcessBuilder(commandToExecute.split("\\s+"));
 
 
         // Determine working directory: Use targetPath's parent, or project root if available and appropriate
         // For now, let's assume project root (if available from a context) or targetPath.getParent()
         // This part might need refinement based on where JaiderModel/project root is accessed.
         // For a generic service, targetPath.getParent() is a safe bet for tools analyzing specific files/dirs.
-        File workingDirectory = targetPath.getParent() != null ? targetPath.getParent().toFile() : new File(".");
+        var workingDirectory = targetPath.getParent() != null ? targetPath.getParent().toFile() : new File(".");
         pb.directory(workingDirectory);
 
-        Process process = pb.start();
-        StringBuilder rawOutput = new StringBuilder();
-        try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
+        var process = pb.start();
+        var rawOutput = new StringBuilder();
+        try (var reader = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
             String line;
             while ((line = reader.readLine()) != null) {
                 rawOutput.append(line).append(System.lineSeparator());
             }
         }
 
-        StringBuilder errorOutput = new StringBuilder();
-        try (BufferedReader errorReader = new BufferedReader(new InputStreamReader(process.getErrorStream()))) {
+        var errorOutput = new StringBuilder();
+        try (var errorReader = new BufferedReader(new InputStreamReader(process.getErrorStream()))) {
             String line;
             while ((line = errorReader.readLine()) != null) {
                 errorOutput.append(line).append(System.lineSeparator());
             }
         }
 
-        int exitCode = process.waitFor();
+        var exitCode = process.waitFor();
         // Some tools (like Semgrep) might return non-0 exit code if issues are found.
         // This needs to be configurable per tool descriptor, or handled by the parser if it expects such behavior.
         // For now, we proceed to parsing even if exitCode is non-zero, as output might still contain results.
@@ -104,7 +104,7 @@ public class StaticAnalysisService {
         }
 
 
-        String parserClassName = descriptor.getResultsParserClass();
+        var parserClassName = descriptor.getResultsParserClass();
         if (parserClassName == null || parserClassName.isBlank()) {
             LOGGER.warn("No results parser class defined for tool: {}. Returning raw output if any.", toolName);
             // Depending on desired behavior, could throw exception or return a single issue with raw output.
@@ -115,8 +115,8 @@ public class StaticAnalysisService {
         }
 
         try {
-            Class<?> parserClass = Class.forName(parserClassName);
-            StaticAnalysisResultsParser parser = (StaticAnalysisResultsParser) parserClass.getDeclaredConstructor().newInstance();
+            var parserClass = Class.forName(parserClassName);
+            var parser = (StaticAnalysisResultsParser) parserClass.getDeclaredConstructor().newInstance();
             return parser.parse(rawOutput.toString(), descriptor.getDefaultConfig());
         } catch (ClassNotFoundException | NoSuchMethodException | InstantiationException | IllegalAccessException | InvocationTargetException e) {
             LOGGER.error("Failed to instantiate or use results parser {} for tool {}", parserClassName, toolName, e);

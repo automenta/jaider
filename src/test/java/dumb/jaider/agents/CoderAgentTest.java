@@ -3,7 +3,7 @@ package dumb.jaider.agents;
 // import dev.langchain4j.agent.tool.Tool; // No longer needed for these direct changes
 
 import dev.langchain4j.memory.ChatMemory;
-import dev.langchain4j.model.chat.ChatLanguageModel;
+import dev.langchain4j.model.chat.ChatModel;
 import dumb.jaider.tools.StandardTools;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -20,7 +20,7 @@ import static org.mockito.Mockito.*;
 class CoderAgentTest {
 
     @Mock
-    ChatLanguageModel chatLanguageModel; // Still needed for AbstractAgent constructor
+    ChatModel ChatModel; // Still needed for AbstractAgent constructor
     @Mock
     ChatMemory chatMemory; // Still needed for AbstractAgent constructor
     @Mock
@@ -48,7 +48,7 @@ class CoderAgentTest {
         when(standardTools.getReadOnlyTools()).thenReturn(Set.of(standardTools));
 
         // Use the new constructor to inject the mocked JaiderAiService
-        coderAgent = new CoderAgent(chatLanguageModel, chatMemory, standardTools.getReadOnlyTools(), jaiderAiServiceMock);
+        coderAgent = new CoderAgent(ChatModel, chatMemory, standardTools.getReadOnlyTools(), jaiderAiServiceMock);
     }
 
     @Test
@@ -61,7 +61,7 @@ class CoderAgentTest {
         // CoderAgent's constructor passes Set.of(availableTools) to AbstractAgent.
         // AbstractAgent.getTools() returns this set.
         Set<Object> expectedTools = Set.of(standardTools);
-        Set<Object> actualTools = coderAgent.tools();
+        var actualTools = coderAgent.tools();
 
         assertEquals(expectedTools, actualTools, "CoderAgent should be configured with the provided StandardTools instance.");
     }
@@ -70,14 +70,14 @@ class CoderAgentTest {
 
     @Test
     void act_shouldCallAiServiceChat() {
-        String testQuery = "Write a python script for me.";
-        String expectedResponse = "Okay, I will write that script.";
+        var testQuery = "Write a python script for me.";
+        var expectedResponse = "Okay, I will write that script.";
 
         // Set up the mock behavior for the JaiderAiService
         when(jaiderAiServiceMock.chat(anyString())).thenReturn(expectedResponse);
 
         // Execute the act method
-        String actualResponse = coderAgent.act(testQuery);
+        var actualResponse = coderAgent.act(testQuery);
 
         // Verify the response
         assertEquals(expectedResponse, actualResponse);

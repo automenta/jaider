@@ -56,13 +56,13 @@ public class JaiderTools {
         //     return "Error: Invalid diff format. Ensure the content includes '<<<<<<< SEARCH', '=======', and '>>>>>>> REPLACE' markers in the correct order.";
         // }
 
-        String effectiveCommitMessage = (commitMessage == null || commitMessage.trim().isEmpty())
+        var effectiveCommitMessage = (commitMessage == null || commitMessage.trim().isEmpty())
                                         ? "Jaider proposed self-update for " + filePath
                                         : commitMessage;
 
-        StagedUpdate update = new StagedUpdate(filePath, diffContent, effectiveCommitMessage);
+        var update = new StagedUpdate(filePath, diffContent, effectiveCommitMessage);
 
-        boolean stagedSuccessfully = selfUpdateOrchestratorService.stageUpdate(update);
+        var stagedSuccessfully = selfUpdateOrchestratorService.stageUpdate(update);
 
         if (stagedSuccessfully) {
             selfUpdateOrchestratorService.triggerUserConfirmationProcess();

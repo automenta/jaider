@@ -1,7 +1,7 @@
 package dumb.jaider.commands;
 
 import dev.langchain4j.data.message.AiMessage;
-import dev.langchain4j.model.chat.ChatModel; // Changed from ChatLanguageModel
+import dev.langchain4j.model.chat.ChatModel;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -42,13 +42,13 @@ public class SummarizeCommand implements Command {
         }
 
         try {
-            ChatModel chatModel = appContext.app().getConfig().getComponent("appChatLanguageModel", ChatModel.class); // Changed from ChatLanguageModel
+            var chatModel = appContext.app().getConfig().getComponent("appChatModel", ChatModel.class); // Changed from ChatModel
             if (chatModel == null) {
-                appContext.model().addLog(AiMessage.from("[SummarizeCommand] Error: ChatLanguageModel is not available.")); // Corrected
+                appContext.model().addLog(AiMessage.from("[SummarizeCommand] Error: ChatModel is not available.")); // Corrected
                 return;
             }
 
-            String prompt = "Summarize the following Java code snippet:\n\n```java\n" + contentToSummarize + "\n```";
+            var prompt = "Summarize the following Java code snippet:\n\n```java\n" + contentToSummarize + "\n```";
             // String summary = chatModel.generate(prompt); // Commented out
 
             // appContext.model().addLog(AiMessage.from("[Summary]\n" + summary)); // Commented out

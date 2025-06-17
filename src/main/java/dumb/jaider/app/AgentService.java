@@ -1,19 +1,18 @@
 package dumb.jaider.app;
 
+import dev.langchain4j.data.message.AiMessage;
+import dev.langchain4j.memory.ChatMemory;
 import dumb.jaider.agents.Agent;
 import dumb.jaider.config.Config;
+import dumb.jaider.llm.LlmProviderFactory;
 import dumb.jaider.model.JaiderModel;
-import dumb.jaider.llm.LlmProviderFactory; // Needed for agent creation
-import dev.langchain4j.memory.ChatMemory;
-import dev.langchain4j.data.message.AiMessage; // For logging mode changes
-
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Set;
-import java.util.HashSet; // For fallback CoderAgent tools
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
 
 public class AgentService {
     private static final Logger logger = LoggerFactory.getLogger(AgentService.class);
@@ -46,7 +45,7 @@ public class AgentService {
     }
 
     public void switchAgent(String mode) {
-        Agent newAgent = agents.values().stream()
+        var newAgent = agents.values().stream()
                                .filter(a -> a.name().equalsIgnoreCase(mode))
                                .findFirst()
                                .orElse(null);
@@ -64,7 +63,7 @@ public class AgentService {
     public void updateAgents() {
         // This method will contain the agent initialization logic previously in App.update()
         agents.clear();
-        DependencyInjector injector = config.getInjector();
+        var injector = config.getInjector();
 
         if (injector == null) {
             logger.error("DI not initialized in AgentService.updateAgents(). Cannot fetch components. Reverting to manual agent creation (limited functionality).");

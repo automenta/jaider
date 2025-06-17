@@ -21,12 +21,12 @@ public class ParserRegistry {
         if (filePath == null) {
             return Optional.empty();
         }
-        String fileName = filePath.getFileName().toString();
-        int lastDot = fileName.lastIndexOf('.');
+        var fileName = filePath.getFileName().toString();
+        var lastDot = fileName.lastIndexOf('.');
         if (lastDot == -1 || lastDot == fileName.length() - 1) {
             return Optional.empty(); // No extension or empty extension
         }
-        String extension = fileName.substring(lastDot + 1).toLowerCase();
+        var extension = fileName.substring(lastDot + 1).toLowerCase();
         // Simple extension to language ID mapping. This could be more sophisticated.
         // For example, .js -> javascript, .py -> python, .java -> java
         // This mapping might need to be configurable or more robust.

@@ -15,6 +15,7 @@ import dumb.jaider.model.JaiderModel;
 
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
 public class TUI implements UI {
@@ -193,7 +194,7 @@ public class TUI implements UI {
         var future = new CompletableFuture<Boolean>();
         gui.getGUIThread().invokeLater(() -> {
             var dialog = new BasicWindow(title);
-            dialog.setHints(Arrays.asList(Window.Hint.CENTERED)); // Center the dialog
+            dialog.setHints(List.of(Window.Hint.CENTERED)); // Center the dialog
 
             var contentPanel = new Panel(new LinearLayout(Direction.VERTICAL));
             contentPanel.addComponent(new Label("Agent's Proposed Plan:")); // General instruction or use title if more specific

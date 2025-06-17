@@ -1,11 +1,9 @@
 package dumb.jaider.tools;
 
-import com.github.difflib.patch.Patch;
 import dev.langchain4j.agent.tool.Tool;
 import dev.langchain4j.model.embedding.EmbeddingModel;
 import dev.langchain4j.store.embedding.EmbeddingSearchRequest;
 import dev.langchain4j.web.search.WebSearchEngine;
-import dev.langchain4j.web.search.WebSearchResults;
 import dev.langchain4j.web.search.tavily.TavilyWebSearchEngine;
 import dumb.jaider.config.Config;
 import dumb.jaider.model.JaiderModel;
@@ -18,10 +16,8 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.nio.file.Files;
-import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.util.*;
-import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
@@ -48,7 +44,7 @@ public class StandardTools {
 
     @Tool("Searches the web for the given query using Tavily.")
     public String searchWeb(String query) {
-        String tavilyApiKey = config.getTavilyApiKey();
+        var tavilyApiKey = config.getTavilyApiKey();
         if (tavilyApiKey == null || tavilyApiKey.isBlank() || tavilyApiKey.contains("YOUR_")) {
             return "Error: Tavily API key not configured. Please set TAVILY_API_KEY environment variable or tavilyApiKey in .jaider.json.";
         }
@@ -56,7 +52,7 @@ public class StandardTools {
             WebSearchEngine tavilySearchEngine = TavilyWebSearchEngine.builder()
                     .apiKey(tavilyApiKey)
                     .build();
-            WebSearchResults results = tavilySearchEngine.search(query);
+            var results = tavilySearchEngine.search(query);
             if (results == null || results.results() == null || results.results().isEmpty()) {
                 return "No results found for: " + query;
             }
@@ -73,12 +69,12 @@ public class StandardTools {
         // return "Error: Diff functionality is temporarily disabled due to library issues.";
 
         try {
-            Patch<String> patch = Util.diffReader(diff); // Step 1: Read the diff, now returns Patch<String>
+            var patch = Util.diffReader(diff); // Step 1: Read the diff, now returns Patch<String>
 
             // Step 2: Parse original and revised filenames from the diff string
             String originalFileName = null;
             String revisedFileName = null;
-            for (String line : diff.split("\n")) {
+            for (var line : diff.split("\n")) {
                 if (line.startsWith("--- a/")) {
                     originalFileName = line.substring("--- a/".length());
                 } else if (line.startsWith("+++ b/")) {
@@ -93,7 +89,7 @@ public class StandardTools {
                 // If there are deltas, we expect filenames.
                 // However, an empty diff (no deltas) might not have filenames, which is fine.
                 // Check if patch is empty. If not, then it's an error.
-                boolean isEmptyPatch = patch.getDeltas().stream().allMatch(delta -> delta.getSource().getLines().isEmpty() && delta.getTarget().getLines().isEmpty());
+                var isEmptyPatch = patch.getDeltas().stream().allMatch(delta -> delta.getSource().getLines().isEmpty() && delta.getTarget().getLines().isEmpty());
                 if (!isEmptyPatch) {
                    return "Error: Could not parse filenames from diff header.";
                 }
@@ -102,9 +98,9 @@ public class StandardTools {
             }
 
 
-            DiffApplier diffApplier = new DiffApplier(); // Step 3: Instantiate DiffApplier
+            var diffApplier = new DiffApplier(); // Step 3: Instantiate DiffApplier
             // Step 4: Apply diff, passing parsed filenames
-            String applyResult = diffApplier.apply(this.model, patch, originalFileName, revisedFileName);
+            var applyResult = diffApplier.apply(this.model, patch, originalFileName, revisedFileName);
 
             // Step 5: Handle result and set lastAppliedDiff
             // Adjusted condition to check for specific success message from DiffApplier
@@ -136,7 +132,7 @@ public class StandardTools {
 
     @Tool("Runs the project's configured validation command (e.g., tests, linter, build). Usage: runValidationCommand <optional_arguments_for_command>")
     public String runValidationCommand(String commandArgs) {
-        JSONObject resultJson = new JSONObject();
+        var resultJson = new JSONObject();
         if (config.getRunCommand() == null || config.getRunCommand().isBlank()) {
             resultJson.put("error", "No validation command configured in .jaider.json (key: runCommand).");
             resultJson.put("success", false);
@@ -144,7 +140,7 @@ public class StandardTools {
             return resultJson.toString();
         }
 
-        String baseCommand = config.getRunCommand();
+        var baseCommand = config.getRunCommand();
         String commandToExecute;
 
         if (commandArgs == null || commandArgs.trim().isEmpty()) {
@@ -155,43 +151,43 @@ public class StandardTools {
 
         try {
             // Ensure ProcessBuilder splits the commandToExecute correctly
-            ProcessBuilder pb = new ProcessBuilder(commandToExecute.trim().split("\\s+"))
+            var pb = new ProcessBuilder(commandToExecute.trim().split("\\s+"))
                     .directory(model.dir.toFile())
                     .redirectErrorStream(true);
-            Process process = pb.start();
+            var process = pb.start();
 
-            StringBuilder output = new StringBuilder();
-            try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
+            var output = new StringBuilder();
+            try (var reader = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
                 String line;
                 while ((line = reader.readLine()) != null) {
                     output.append(line).append("\n");
                 }
             }
 
-            int exitCode = process.waitFor();
+            var exitCode = process.waitFor();
 
             resultJson.put("exitCode", exitCode);
             resultJson.put("success", exitCode == 0);
-            String outputString = output.toString().trim();
+            var outputString = output.toString().trim();
             resultJson.put("output", outputString);
 
             // --- Jaider AI Agent: Added test report generation ---
             if (config.getRunCommand() != null && config.getRunCommand().contains("mvn test")) {
                 List<Map<String, String>> testReportList = new ArrayList<>();
-                String[] lines = outputString.split("\n");
-                final String[] currentTestClassHolder = new String[1]; // Holder for effectively final variable
-                final String[] currentTestMethodHolder = new String[1]; // Holder for effectively final variable
+                var lines = outputString.split("\n");
+                final var currentTestClassHolder = new String[1]; // Holder for effectively final variable
+                final var currentTestMethodHolder = new String[1]; // Holder for effectively final variable
 
-                for (int i = 0; i < lines.length; i++) {
-                    String line = lines[i].trim();
+                for (var i = 0; i < lines.length; i++) {
+                    var line = lines[i].trim();
 
                     // Try to capture class and method from Surefire/Failsafe error lines
                     if (line.startsWith("[ERROR]") && line.contains("<<< FAILURE!") && line.contains(".")) {
                         // Example: [ERROR]   TestClassName.testMethodName  Time elapsed: 0.001 s  <<< FAILURE!
-                        String testIdPart = line.substring("[ERROR]".length()).trim();
+                        var testIdPart = line.substring("[ERROR]".length()).trim();
                         testIdPart = testIdPart.substring(0, testIdPart.indexOf("Time elapsed:")).trim(); // Remove time part
                         if (testIdPart.contains(".")) {
-                            int lastDot = testIdPart.lastIndexOf('.');
+                            var lastDot = testIdPart.lastIndexOf('.');
                             currentTestClassHolder[0] = testIdPart.substring(0, lastDot);
                             currentTestMethodHolder[0] = testIdPart.substring(lastDot + 1);
                         } else {
@@ -200,7 +196,7 @@ public class StandardTools {
                         }
                     } else if (line.startsWith("Running ") && line.contains(".")) {
                          // Example: Running some.package.ClassName
-                        String runningClass = line.substring("Running ".length()).trim();
+                        var runningClass = line.substring("Running ".length()).trim();
                         // If we don't have a specific failing method yet, use this as the class
                         if (currentTestClassHolder[0] == null || !currentTestClassHolder[0].equals(runningClass)) {
                            // currentTestClassHolder[0] = runningClass; // Prefer the one from FAILURE line if available
@@ -213,9 +209,9 @@ public class StandardTools {
                     // This is a simplified approach: takes the next line that looks like an error message.
                     if ((line.startsWith("java.") || line.startsWith("org.junit.") || line.startsWith("org.opentest4j.")) && currentTestClassHolder[0] != null) {
                         // Heuristic: if the previous line indicated a failure, or we are in a stack trace context
-                        boolean isFailureContext = false;
+                        var isFailureContext = false;
                         if (i > 0) {
-                            String prevLine = lines[i-1].trim();
+                            var prevLine = lines[i - 1].trim();
                             if (prevLine.contains("<<< FAILURE!") || prevLine.contains("<<< ERROR!")) {
                                 isFailureContext = true;
                             }
@@ -228,7 +224,7 @@ public class StandardTools {
                             failureDetails.put("errorMessage", line);
 
                             // Avoid adding duplicate error messages for the same test method if error spans multiple lines
-                            boolean alreadyExists = testReportList.stream().anyMatch(entry ->
+                            var alreadyExists = testReportList.stream().anyMatch(entry ->
                                 entry.get("testClass").equals(currentTestClassHolder[0]) &&
                                 entry.get("testMethod").equals(currentTestMethodHolder[0]) &&
                                 entry.get("errorMessage").startsWith(line.substring(0, Math.min(line.length(), 50))) // check start of message
@@ -244,12 +240,12 @@ public class StandardTools {
                     } else if (line.startsWith("[ERROR] Failed tests:") || line.startsWith("[ERROR] Errors:")) {
                         // Example: [ERROR] Failed tests:   testSomething(com.example.MyTest): expected:<true> but was:<false>
                         // Example: [ERROR] Errors:   initializationError(com.example.MyTest): java.lang.RuntimeException
-                        String failedTestInfo = line.substring(line.indexOf(":") + 1).trim();
-                        String errorMessage = failedTestInfo; // Default error message to the whole info
+                        var failedTestInfo = line.substring(line.indexOf(":") + 1).trim();
+                        var errorMessage = failedTestInfo; // Default error message to the whole info
 
                         if (failedTestInfo.contains("(")) { // Format: methodName(className)
-                            String methodName = failedTestInfo.substring(0, failedTestInfo.indexOf("("));
-                            String className = failedTestInfo.substring(failedTestInfo.indexOf("(") + 1, failedTestInfo.indexOf(")"));
+                            var methodName = failedTestInfo.substring(0, failedTestInfo.indexOf("("));
+                            var className = failedTestInfo.substring(failedTestInfo.indexOf("(") + 1, failedTestInfo.indexOf(")"));
                              if (failedTestInfo.contains(":")) { // If there's a message after class/method
                                 errorMessage = failedTestInfo.substring(failedTestInfo.indexOf("):") + 2).trim();
                             }
@@ -292,24 +288,24 @@ public class StandardTools {
 
     @Tool("Provides an overview of the project: type (e.g., Maven), key dependencies from pom.xml (if applicable), and main source directories.")
     public String getProjectOverview() {
-        StringBuilder report = new StringBuilder();
+        var report = new StringBuilder();
 
         // Project Type and Dependencies (Maven)
-        Path pomPath = model.dir.resolve("pom.xml");
+        var pomPath = model.dir.resolve("pom.xml");
         if (Files.exists(pomPath)) {
             report.append("Project Type: Maven\n");
             report.append("Main Dependencies (from pom.xml):\n");
             try {
-                String pomContent = Files.readString(pomPath);
+                var pomContent = Files.readString(pomPath);
                 // Basic regex to find <dependency> blocks
-                Pattern dependencyPattern = Pattern.compile("<dependency>(.*?)</dependency>", Pattern.DOTALL);
-                Matcher dependencyMatcher = dependencyPattern.matcher(pomContent);
-                int count = 0;
+                var dependencyPattern = Pattern.compile("<dependency>(.*?)</dependency>", Pattern.DOTALL);
+                var dependencyMatcher = dependencyPattern.matcher(pomContent);
+                var count = 0;
                 while (dependencyMatcher.find() && count < 10) { // Limit to first 10 dependencies
-                    String depBlock = dependencyMatcher.group(1);
-                    String groupId = extractTagValue(depBlock, "groupId");
-                    String artifactId = extractTagValue(depBlock, "artifactId");
-                    String version = extractTagValue(depBlock, "version");
+                    var depBlock = dependencyMatcher.group(1);
+                    var groupId = extractTagValue(depBlock, "groupId");
+                    var artifactId = extractTagValue(depBlock, "artifactId");
+                    var version = extractTagValue(depBlock, "version");
 
                     if (groupId != null && artifactId != null) {
                         report.append("  - ").append(groupId).append(":").append(artifactId);
@@ -319,7 +315,7 @@ public class StandardTools {
                         report.append("\n");
                         count++;
                     } else if (!depBlock.trim().isEmpty()){ // Fallback for complex/malformed blocks
-                        String simplifiedBlock = depBlock.replaceAll("\\s*\\n\\s*", " ").trim();
+                        var simplifiedBlock = depBlock.replaceAll("\\s*\\n\\s*", " ").trim();
                         if (simplifiedBlock.length() > 100) simplifiedBlock = simplifiedBlock.substring(0, 97) + "...";
                         report.append("  - (Partial/Raw) ").append(simplifiedBlock).append("\n");
                         count++;
@@ -337,14 +333,14 @@ public class StandardTools {
 
         // Source Directories
         report.append("Common Source Directories Found:\n");
-        String[] commonDirs = {
-            "src/main/java", "src/test/java",
-            "src/main/kotlin", "src/test/kotlin",
-            "src/main/scala", "src/test/scala",
-            "src/main/resources", "src/test/resources"
+        var commonDirs = new String[]{
+                "src/main/java", "src/test/java",
+                "src/main/kotlin", "src/test/kotlin",
+                "src/main/scala", "src/test/scala",
+                "src/main/resources", "src/test/resources"
         };
-        boolean foundSrcDir = false;
-        for (String dirPath : commonDirs) {
+        var foundSrcDir = false;
+        for (var dirPath : commonDirs) {
             if (Files.exists(model.dir.resolve(dirPath))) {
                 report.append("  - ").append(dirPath).append("\n");
                 foundSrcDir = true;
@@ -359,8 +355,8 @@ public class StandardTools {
 
     // Helper method to extract tag value, can be placed within the class or as a static utility
     private String extractTagValue(String xmlBlock, String tagName) {
-        Pattern pattern = Pattern.compile("<" + tagName + ">(.*?)</" + tagName + ">", Pattern.DOTALL);
-        Matcher matcher = pattern.matcher(xmlBlock);
+        var pattern = Pattern.compile("<" + tagName + ">(.*?)</" + tagName + ">", Pattern.DOTALL);
+        var matcher = pattern.matcher(xmlBlock);
         if (matcher.find()) {
             return matcher.group(1).trim();
         }
@@ -369,7 +365,7 @@ public class StandardTools {
 
     @Tool("Commits all staged changes with a given message.")
     public String commitChanges(String message) {
-        GitService gitService = new GitService(this.model.dir);
+        var gitService = new GitService(this.model.dir);
         return gitService.commitChanges(message);
     }
 
@@ -402,17 +398,17 @@ public class StandardTools {
     @Tool("Lists files and directories in a given path, respecting .gitignore. Path is relative to project root. If no path is given, lists project root.")
     public String listFiles(String directoryPath) {
         try {
-            GitService gitService = new GitService(this.model.dir);
-            String pathToScan = (directoryPath == null || directoryPath.isBlank()) ? "" : directoryPath;
-            List<String> files = gitService.listFiles(pathToScan); // Assuming GitService has such a method
+            var gitService = new GitService(this.model.dir);
+            var pathToScan = (directoryPath == null || directoryPath.isBlank()) ? "" : directoryPath;
+            var files = gitService.listFiles(pathToScan); // Assuming GitService has such a method
 
             if (files.isEmpty()) {
                 return "No files found in " + (pathToScan.isEmpty() ? "project root" : pathToScan);
             }
 
-            StringBuilder result = new StringBuilder();
-            for (String filePath : files) {
-                java.io.File file = this.model.dir.resolve(filePath).toFile();
+            var result = new StringBuilder();
+            for (var filePath : files) {
+                var file = this.model.dir.resolve(filePath).toFile();
                 if (file.isDirectory()) {
                     result.append("[DIR] ").append(filePath).append("\n");
                 } else {
@@ -436,10 +432,10 @@ public class StandardTools {
         }
 
         try {
-            Path targetPath = this.model.dir.resolve(filePath);
+            var targetPath = this.model.dir.resolve(filePath);
 
             // Ensure parent directories exist
-            Path parentDir = targetPath.getParent();
+            var parentDir = targetPath.getParent();
             if (parentDir != null) {
                 if (!Files.exists(parentDir)) {
                     Files.createDirectories(parentDir);
@@ -448,7 +444,7 @@ public class StandardTools {
                 }
             }
 
-            boolean existed = Files.exists(targetPath);
+            var existed = Files.exists(targetPath);
             Files.writeString(targetPath, content, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING, StandardOpenOption.WRITE);
 
             if (existed) {

@@ -1,7 +1,7 @@
 package dumb.jaider.agents;
 
 import dev.langchain4j.memory.ChatMemory;
-import dev.langchain4j.model.chat.ChatModel; // Changed from ChatLanguageModel
+import dev.langchain4j.model.chat.ChatModel;
 import dumb.jaider.tools.JaiderTools;
 import dumb.jaider.tools.StandardTools;
 
@@ -12,12 +12,12 @@ public class CoderAgent extends AbstractAgent {
 
     // This constructor is likely for testing or fallback.
     // It should ideally also have a proper system prompt if used.
-    public CoderAgent(ChatModel model, ChatMemory memory, Set<Object> tools, JaiderAiService aiService) { // Changed from ChatLanguageModel
+    public CoderAgent(ChatModel model, ChatMemory memory, Set<Object> tools, JaiderAiService aiService) { // Changed from ChatModel
         super(model, memory, tools, aiService, "You are an expert software developer. Your primary goal is to write and modify code based on user requests. Use the available tools to interact with the file system, apply diffs, run validation commands, and analyze code. Propose self-updates if you identify improvements to your own Jaider codebase. Always ask for plan approval before making changes.");
     }
 
     // Constructor intended for Dependency Injection
-    public CoderAgent(ChatModel model, ChatMemory memory, // Changed from ChatLanguageModel
+    public CoderAgent(ChatModel model, ChatMemory memory, // Changed from ChatModel
                       StandardTools standardTools, JaiderTools jaiderTools,
                       Object smartRenameTool, Object analysisTools, Object listContextFilesTool) {
         super(model, memory,
@@ -28,7 +28,7 @@ public class CoderAgent extends AbstractAgent {
 
     private static Set<Object> createToolSet(Object... tools) {
         Set<Object> toolSet = new HashSet<>();
-        for (Object tool : tools) {
+        for (var tool : tools) {
             if (tool != null) {
                 toolSet.add(tool);
             }

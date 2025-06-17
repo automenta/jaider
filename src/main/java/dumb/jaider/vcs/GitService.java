@@ -3,8 +3,6 @@ package dumb.jaider.vcs;
 import org.eclipse.jgit.api.Git;
 import org.eclipse.jgit.api.errors.GitAPIException;
 import org.eclipse.jgit.lib.FileMode;
-import org.eclipse.jgit.lib.ObjectId;
-import org.eclipse.jgit.lib.Repository;
 import org.eclipse.jgit.treewalk.TreeWalk;
 import org.eclipse.jgit.treewalk.filter.PathFilter;
 import org.slf4j.Logger;
@@ -89,7 +87,7 @@ public class GitService {
     public List<String> listFiles(String relativePath) throws IOException {
         Set<String> results = new HashSet<>();
         // Normalize relativePath: null or empty means root, ensure no leading/trailing slashes for directory logic later
-        String normalizedPath = relativePath == null ? "" : relativePath.trim();
+        var normalizedPath = relativePath == null ? "" : relativePath.trim();
         if (normalizedPath.startsWith("/")) {
             normalizedPath = normalizedPath.substring(1);
         }
@@ -97,10 +95,10 @@ public class GitService {
             normalizedPath = normalizedPath.substring(0, normalizedPath.length() - 1);
         }
 
-        try (Repository repository = Git.open(dir.toFile()).getRepository();
-             TreeWalk treeWalk = new TreeWalk(repository)) {
+        try (var repository = Git.open(dir.toFile()).getRepository();
+             var treeWalk = new TreeWalk(repository)) {
 
-            ObjectId head = repository.resolve("HEAD^{tree}");
+            var head = repository.resolve("HEAD^{tree}");
             if (head == null) {
                 logger.warn("No HEAD commit found in repository at {}. Cannot list files.", dir);
                 return new ArrayList<>(); // Empty repository or no commits
@@ -111,12 +109,12 @@ public class GitService {
             if (!normalizedPath.isEmpty()) {
                 // Filter by the given path. If normalizedPath is a directory, this will enter it.
                 // If it's a file, it will position on that file.
-                PathFilter pathFilter = PathFilter.create(normalizedPath);
+                var pathFilter = PathFilter.create(normalizedPath);
                 treeWalk.setFilter(pathFilter);
 
                 // Need to advance treewalk to the first match of the pathfilter.
                 // If the path doesn't exist, treeWalk.next() after setFilter might return false immediately or after a few calls.
-                boolean foundPath = false;
+                var foundPath = false;
                 while (treeWalk.next()) {
                     if (treeWalk.getPathString().equals(normalizedPath) || treeWalk.getPathString().startsWith(normalizedPath + "/")) {
                         foundPath = true;
@@ -138,7 +136,7 @@ public class GitService {
 
             // Now, treeWalk is either at the root or inside the specified directory (normalizedPath)
             while (treeWalk.next()) {
-                String pathString = treeWalk.getPathString();
+                var pathString = treeWalk.getPathString();
                 if (treeWalk.getFileMode(0) == FileMode.TREE) {
                     results.add(pathString + "/");
                 } else {

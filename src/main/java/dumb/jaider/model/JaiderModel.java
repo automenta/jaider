@@ -55,7 +55,7 @@ public class JaiderModel {
              if (t == null || t.isBlank()) return;
         }
 
-        String textContent = "";
+        var textContent = "";
         if (message instanceof AiMessage) {
             textContent = ((AiMessage) message).text();
         } else if (message instanceof UserMessage) {

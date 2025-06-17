@@ -1,9 +1,8 @@
 package dumb.jaider.commands;
 
-import dumb.jaider.agents.Agent;
-import dumb.jaider.tools.StandardTools;
-import dumb.jaider.model.JaiderModel; // Required for addLog via AppContext
 import dev.langchain4j.data.message.AiMessage;
+import dumb.jaider.model.JaiderModel;
+import dumb.jaider.tools.StandardTools;
 
 /**
  * Handles the "/run" command, which typically executes a validation or test command
@@ -28,8 +27,8 @@ public class RunCommand implements Command {
      */
     @Override
     public void execute(String args, AppContext context) {
-        JaiderModel model = context.model(); // Using getter from AppContext
-        Agent currentAgent = context.app().getCurrentAgent();
+        var model = context.model(); // Using getter from AppContext
+        var currentAgent = context.app().getCurrentAgent();
 
         if (currentAgent == null) {
             model.addLog(AiMessage.from("[RunCommand] Error: No active agent found."));
@@ -38,7 +37,7 @@ public class RunCommand implements Command {
 
         StandardTools standardTools = null;
         if (currentAgent.tools() != null) { // Check if tools set is null before iterating
-            for (Object tool : currentAgent.tools()) {
+            for (var tool : currentAgent.tools()) {
                 if (tool instanceof StandardTools) {
                     standardTools = (StandardTools) tool;
                     break;
@@ -51,11 +50,11 @@ public class RunCommand implements Command {
             return;
         }
 
-        String commandToExecute = (args == null) ? "" : args.trim();
+        var commandToExecute = (args == null) ? "" : args.trim();
 
         model.addLog(AiMessage.from("[RunCommand] Executing run command with args: '" + commandToExecute + "'"));
         try {
-            String result = standardTools.runValidationCommand(commandToExecute);
+            var result = standardTools.runValidationCommand(commandToExecute);
             // The result from runValidationCommand might be multi-line or JSON.
             // Logging it directly.
             model.addLog(AiMessage.from("[RunCommand Result]\n" + result)); // Added newline for better formatting if result is multi-line

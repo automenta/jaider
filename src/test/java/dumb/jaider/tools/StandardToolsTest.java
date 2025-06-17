@@ -14,7 +14,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.when;
 
 public class StandardToolsTest {
 
@@ -53,7 +52,7 @@ public class StandardToolsTest {
         // For simplicity in this step, I will create a real JaiderModel instance for testing StandardTools,
         // and ensure its `dir` field points to `tempDir`.
 
-        JaiderModel realModel = new JaiderModel(tempDir);
+        var realModel = new JaiderModel(tempDir);
         standardTools = new StandardTools(realModel, config, embeddingModel);
 
         // Initialize a Git repository in the tempDir for relevant tests
@@ -69,7 +68,7 @@ public class StandardToolsTest {
         Files.createFile(tempDir.resolve("dir1/file2.txt"));
         commitAll();
 
-        String output = standardTools.listFiles("");
+        var output = standardTools.listFiles("");
         assertTrue(output.contains("[FILE] file1.txt\n"));
         assertTrue(output.contains("[DIR] dir1/\n"));
         assertFalse(output.contains("file2.txt")); // Should not list nested files
@@ -83,7 +82,7 @@ public class StandardToolsTest {
         Files.createFile(tempDir.resolve("subdir/nesteddir/deepfile.txt"));
         commitAll();
 
-        String output = standardTools.listFiles("subdir");
+        var output = standardTools.listFiles("subdir");
         // GitService.listFiles might return "subdir/subfile.txt" and "subdir/nesteddir/"
         // StandardTools then checks isDirectory on these resolved paths.
         assertTrue(output.contains("[FILE] subdir/subfile.txt\n"));
@@ -96,7 +95,7 @@ public class StandardToolsTest {
         Files.createDirectory(tempDir.resolve("emptyDir"));
         commitAll();
 
-        String output = standardTools.listFiles("emptyDir");
+        var output = standardTools.listFiles("emptyDir");
         assertEquals("No files found in emptyDir", output.trim());
     }
 
@@ -105,14 +104,14 @@ public class StandardToolsTest {
         Files.createFile(tempDir.resolve("myFile.txt"));
         commitAll();
 
-        String output = standardTools.listFiles("myFile.txt");
+        var output = standardTools.listFiles("myFile.txt");
         assertTrue(output.contains("[FILE] myFile.txt\n"));
     }
 
     @Test
     void listFiles_nonExistentPath() throws Exception {
         commitAll(); // Commit just in case, though no files exist
-        String output = standardTools.listFiles("nonexistent");
+        var output = standardTools.listFiles("nonexistent");
         assertEquals("No files found in nonexistent", output.trim());
     }
 
@@ -120,11 +119,11 @@ public class StandardToolsTest {
     void listFiles_gitIgnoredFile() throws Exception {
         Files.createFile(tempDir.resolve("ignored.txt"));
         Files.createFile(tempDir.resolve("regular.txt"));
-        Path gitignore = tempDir.resolve(".gitignore");
+        var gitignore = tempDir.resolve(".gitignore");
         Files.writeString(gitignore, "ignored.txt\n");
         commitAll(); // This will commit .gitignore and regular.txt
 
-        String output = standardTools.listFiles("");
+        var output = standardTools.listFiles("");
         assertFalse(output.contains("ignored.txt"));
         assertTrue(output.contains("[FILE] regular.txt\n"));
         assertTrue(output.contains("[FILE] .gitignore\n")); // .gitignore itself is usually tracked
@@ -134,9 +133,9 @@ public class StandardToolsTest {
 
     @Test
     void writeFile_createNewFile() throws Exception {
-        String filePath = "newFile.txt";
-        String content = "Hello, world!";
-        String result = standardTools.writeFile(filePath, content);
+        var filePath = "newFile.txt";
+        var content = "Hello, world!";
+        var result = standardTools.writeFile(filePath, content);
 
         assertEquals("File created successfully: " + filePath, result);
         assertTrue(Files.exists(tempDir.resolve(filePath)));
@@ -145,23 +144,23 @@ public class StandardToolsTest {
 
     @Test
     void writeFile_overwriteExistingFile() throws Exception {
-        String filePath = "existingFile.txt";
-        String initialContent = "Initial content";
-        String newContent = "New content";
+        var filePath = "existingFile.txt";
+        var initialContent = "Initial content";
+        var newContent = "New content";
 
         Files.writeString(tempDir.resolve(filePath), initialContent);
         commitAll(); // So it exists for overwrite
 
-        String result = standardTools.writeFile(filePath, newContent);
+        var result = standardTools.writeFile(filePath, newContent);
         assertEquals("File overwritten successfully: " + filePath, result);
         assertEquals(newContent, Files.readString(tempDir.resolve(filePath)));
     }
 
     @Test
     void writeFile_createInNewSubdirectory() throws Exception {
-        String filePath = "newDir/newSubDir/file.txt";
-        String content = "Deep content";
-        String result = standardTools.writeFile(filePath, content);
+        var filePath = "newDir/newSubDir/file.txt";
+        var content = "Deep content";
+        var result = standardTools.writeFile(filePath, content);
 
         assertEquals("File created successfully: " + filePath, result);
         assertTrue(Files.exists(tempDir.resolve(filePath)));
@@ -172,11 +171,11 @@ public class StandardToolsTest {
 
     @Test
     void writeFile_pathIsExistingDirectory() throws Exception {
-        String dirPath = "existingDir";
+        var dirPath = "existingDir";
         Files.createDirectory(tempDir.resolve(dirPath));
         commitAll();
 
-        String result = standardTools.writeFile(dirPath, "Trying to write to a dir");
+        var result = standardTools.writeFile(dirPath, "Trying to write to a dir");
         // This should fail because Files.writeString cannot write to a directory.
         // The exact error message might depend on the OS/NIO implementation.
         assertTrue(result.startsWith("Error writing file '" + dirPath + "':"), "Expected an error message, but got: " + result);
@@ -184,12 +183,12 @@ public class StandardToolsTest {
 
     @Test
     void writeFile_parentPathComponentIsFile() throws Exception {
-        String filePathParent = "fileAsParent";
+        var filePathParent = "fileAsParent";
         Files.createFile(tempDir.resolve(filePathParent)); // Create a file
         commitAll();
 
-        String filePathChild = "fileAsParent/childFile.txt";
-        String result = standardTools.writeFile(filePathChild, "Content");
+        var filePathChild = "fileAsParent/childFile.txt";
+        var result = standardTools.writeFile(filePathChild, "Content");
 
         // The StandardTools.writeFile has a check:
         // else if (!Files.isDirectory(parentDir)) { return "Error: Cannot create parent directory..."
@@ -199,10 +198,10 @@ public class StandardToolsTest {
 
     // Helper to commit all changes in the temp git repo
     private void commitAll() throws Exception {
-        try (org.eclipse.jgit.api.Git git = org.eclipse.jgit.api.Git.open(tempDir.toFile())) {
+        try (var git = org.eclipse.jgit.api.Git.open(tempDir.toFile())) {
             git.add().addFilepattern(".").call();
             // Check if there's anything to commit (e.g. status is not clean)
-            org.eclipse.jgit.api.Status status = git.status().call();
+            var status = git.status().call();
             if (!status.isClean() || !status.getUntracked().isEmpty()) {
                  git.commit().setMessage("Test commit").setAuthor("Test User", "test@example.com").call();
             }

@@ -1,25 +1,19 @@
 package dumb.jaider.tools;
 
 import dumb.jaider.tooling.ToolContext;
+import org.json.JSONArray;
+import org.json.JSONObject;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
-import org.mockito.Mockito;
 
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.*;
-
-import java.io.BufferedReader;
-import java.io.ByteArrayInputStream;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
-import org.json.JSONArray;
-import org.json.JSONObject;
+
+import static org.junit.jupiter.api.Assertions.*;
 
 public class DependencyUpdaterTest {
 
@@ -59,7 +53,7 @@ public class DependencyUpdaterTest {
 
     @Test
     void testParseOutput_validJsonUpdates() {
-        String jsonInput = new JSONArray()
+        var jsonInput = new JSONArray()
             .put(new JSONObject()
                 .put("groupId", "group1")
                 .put("artifactId", "artifact1")
@@ -68,43 +62,43 @@ public class DependencyUpdaterTest {
                 .put("diff", "--- a/pom.xml\n+++ b/pom.xml\n@@ -1,1 +1,1 @@\n-version 1.0\n+version 1.1"))
             .toString();
 
-        Object result = dependencyUpdater.parseOutput(jsonInput);
+        var result = dependencyUpdater.parseOutput(jsonInput);
         assertNotNull(result);
-        assertTrue(result instanceof List);
-        List<Map<String, String>> updates = (List<Map<String, String>>) result;
+        assertInstanceOf(List.class, result);
+        var updates = (List<Map<String, String>>) result;
         assertEquals(1, updates.size());
-        assertEquals("group1", updates.get(0).get("groupId"));
-        assertEquals("1.1", updates.get(0).get("newVersion"));
-        assertTrue(updates.get(0).get("diff").contains("+version 1.1"));
+        assertEquals("group1", updates.getFirst().get("groupId"));
+        assertEquals("1.1", updates.getFirst().get("newVersion"));
+        assertTrue(updates.getFirst().get("diff").contains("+version 1.1"));
     }
 
     @Test
     void testParseOutput_mavenCommandFailedError() {
-        String errorInput = "Maven command failed with exit code 1...";
-        Object result = dependencyUpdater.parseOutput(errorInput);
-        assertTrue(result instanceof List);
-        List<Map<String, String>> updates = (List<Map<String, String>>) result;
+        var errorInput = "Maven command failed with exit code 1...";
+        var result = dependencyUpdater.parseOutput(errorInput);
+        assertInstanceOf(List.class, result);
+        var updates = (List<Map<String, String>>) result;
         assertEquals(1, updates.size());
-        assertTrue(updates.get(0).containsKey("error"));
-        assertTrue(updates.get(0).get("details").contains("Maven command failed"));
+        assertTrue(updates.getFirst().containsKey("error"));
+        assertTrue(updates.getFirst().get("details").contains("Maven command failed"));
     }
 
     @Test
     void testParseOutput_noUpdatesFoundRaw() {
-        String rawInput = "[INFO] --- versions-maven-plugin:2.8.1:display-dependency-updates (default-cli) @ jaider ---" + System.lineSeparator() +
+        var rawInput = "[INFO] --- versions-maven-plugin:2.8.1:display-dependency-updates (default-cli) @ jaider ---" + System.lineSeparator() +
                           "[INFO] No dependencies found that satisfy the filters";
-        Object result = dependencyUpdater.parseOutput(rawInput);
-        assertTrue(result instanceof List);
-        List<Map<String, String>> updates = (List<Map<String, String>>) result;
+        var result = dependencyUpdater.parseOutput(rawInput);
+        assertInstanceOf(List.class, result);
+        var updates = (List<Map<String, String>>) result;
         assertTrue(updates.isEmpty(), "Expected empty list when no updates are found in raw output");
     }
 
     @Test
     void testParseOutput_emptyJsonArray() { // For when execute returns "[]"
-        String jsonInput = "[]";
-        Object result = dependencyUpdater.parseOutput(jsonInput);
-        assertTrue(result instanceof List);
-        List<Map<String, String>> updates = (List<Map<String, String>>) result;
+        var jsonInput = "[]";
+        var result = dependencyUpdater.parseOutput(jsonInput);
+        assertInstanceOf(List.class, result);
+        var updates = (List<Map<String, String>>) result;
         assertTrue(updates.isEmpty());
     }
 
