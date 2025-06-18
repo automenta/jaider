@@ -137,13 +137,19 @@ Agents (primarily the CoderAgent) can use the following tools:
 
 1.  **Prerequisites:**
     *   Java 21 (or the version specified in `pom.xml`).
-    *   Apache Maven.
+    *   Java 21 (or the version specified in `pom.xml`).
+    *   Apache Maven (though using the included Maven Wrapper `mvnw` is recommended).
     *   Git (Jaider works best within a Git repository).
     *   (Optional) An Ollama instance running if you intend to use local models.
     *   (Optional) Google Cloud SDK configured for Application Default Credentials if using Gemini via Vertex AI.
 2.  **Build:**
+    It is recommended to use the Maven Wrapper (`mvnw`) included with the project. This ensures you use the project's specified Maven version without needing a separate Maven installation.
     ```bash
-    mvn clean package
+    # For Linux/macOS
+    ./mvnw clean package
+
+    # For Windows
+    mvnw.cmd clean package
     ```
 3.  **Run:**
     After packaging, the application can be run using the executable JAR created in the `target` directory:
@@ -152,10 +158,13 @@ Agents (primarily the CoderAgent) can use the following tools:
     ```
     (Replace `*` with the correct version from the `pom.xml`, e.g., `1.0-SNAPSHOT`).
 
-    Alternatively, for development purposes, you can run the application directly using Maven from the project's root directory:
+    Alternatively, for development purposes, you can run the application directly using the Maven Wrapper from the project's root directory:
     ```bash
-    # Make sure you are in the project's root directory
-    mvn exec:java -Dexec.mainClass="dumb.jaider.app.Jaider"
+    # For Linux/macOS
+    ./mvnw exec:java -Dexec.mainClass="dumb.jaider.app.Jaider"
+
+    # For Windows
+    mvnw.cmd exec:java -Dexec.mainClass="dumb.jaider.app.Jaider"
     ```
     The main class for running the Jaider application is `dumb.jaider.app.Jaider`. Specific main classes for available demos are listed in the "Demonstrations and Examples" section.
 
@@ -185,11 +194,19 @@ This is the **primary way to experience Jaider's full range of features**. It ru
 **Running the Comprehensive Demo:**
 1.  **Build the Project:** Ensure the entire project is compiled:
     ```bash
-    mvn clean package
+    # For Linux/macOS
+    ./mvnw clean package
+
+    # For Windows
+    mvnw.cmd clean package
     ```
 2.  **Run the Demo:**
     ```bash
-    mvn exec:java -Dexec.mainClass="dumb.integrationhandler.demo.ComprehensiveInteractiveDemo"
+    # For Linux/macOS
+    ./mvnw exec:java -Dexec.mainClass="dumb.integrationhandler.demo.ComprehensiveInteractiveDemo"
+
+    # For Windows
+    mvnw.cmd exec:java -Dexec.mainClass="dumb.integrationhandler.demo.ComprehensiveInteractiveDemo"
     ```
 3.  **Follow On-Screen Prompts:** The demo will guide you through various phases. You will be prompted to provide input (e.g., for AI prompts, or decisions like accepting a diff) or press Enter to continue.
     *   **LLM Configuration:** The demo starts with a default `.jaider.json` (using Ollama) created in a temporary directory. The script includes steps where you can use `/edit-config` to change LLM providers (e.g., to Gemini or OpenAI).
@@ -211,11 +228,19 @@ This is a very basic, stripped-down tutorial primarily intended for developers l
 **Running the Simplified Tutorial:**
 1.  **Build the Project:**
     ```bash
-    mvn clean package
+    # For Linux/macOS
+    ./mvnw clean package
+
+    # For Windows
+    mvnw.cmd clean package
     ```
 2.  **Run the Tutorial:**
     ```bash
-    mvn exec:java -Dexec.mainClass="dumb.integrationhandler.demo.JaiderIntegrationTutorialDemo"
+    # For Linux/macOS
+    ./mvnw exec:java -Dexec.mainClass="dumb.integrationhandler.demo.JaiderIntegrationTutorialDemo"
+
+    # For Windows
+    mvnw.cmd exec:java -Dexec.mainClass="dumb.integrationhandler.demo.JaiderIntegrationTutorialDemo"
     ```
     You will be prompted for a Gemini API key if you choose to use Gemini.
 
@@ -227,7 +252,11 @@ This was the original simple demo. It showcases a very simplified workflow for g
 
 **Running the Original Basic Demo:**
 ```bash
-mvn exec:java -Dexec.mainClass="dumb.integrationhandler.demo.InteractiveDemo"
+# For Linux/macOS
+./mvnw exec:java -Dexec.mainClass="dumb.integrationhandler.demo.InteractiveDemo"
+
+# For Windows
+mvnw.cmd exec:java -Dexec.mainClass="dumb.integrationhandler.demo.InteractiveDemo"
 ```
 
 It is recommended to use the **Comprehensive Interactive Demo** for the best understanding of Jaider's capabilities.
