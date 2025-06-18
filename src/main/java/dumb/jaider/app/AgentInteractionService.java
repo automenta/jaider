@@ -13,6 +13,13 @@ import org.slf4j.LoggerFactory;
 
 import java.util.concurrent.CompletableFuture;
 
+/**
+ * Manages interactions with the AI agent.
+ * This class orchestrates the agent's turn, including handling asynchronous operations,
+ * managing plan approvals from the user, and processing tool calls initiated by the agent.
+ * It integrates with various services like {@link AgentService}, {@link ToolLifecycleManager},
+ * {@link SessionManager}, and {@link UI} to provide a complete interaction loop.
+ */
 public class AgentInteractionService {
     private static final Logger logger = LoggerFactory.getLogger(AgentInteractionService.class);
 
@@ -27,6 +34,18 @@ public class AgentInteractionService {
 
     private AiMessage agentMessageWithPlan; // Moved from App
 
+    /**
+     * Constructs an {@code AgentInteractionService}.
+     *
+     * @param app                 The main application class for global state and UI updates.
+     * @param model               The JaiderModel for managing application data.
+     * @param chatMemory          The chat memory for storing conversation history.
+     * @param ui                  The UI for user interactions.
+     * @param agentService        The service for managing AI agents.
+     * @param toolLifecycleManager The manager for handling tool execution.
+     * @param sessionManager      The manager for session persistence.
+     * @param selfUpdateService   The service for handling self-updates.
+     */
     public AgentInteractionService(App app, JaiderModel model, ChatMemory chatMemory, UI ui,
                                    AgentService agentService, ToolLifecycleManager toolLifecycleManager,
                                    SessionManager sessionManager, SelfUpdateService selfUpdateService) { // Added SelfUpdateService
@@ -40,6 +59,24 @@ public class AgentInteractionService {
         this.selfUpdateService = selfUpdateService; // Added
     }
 
+    /**
+     * Processes a single turn of the agent's interaction.
+     * This method operates asynchronously. It sets the application state to {@code AGENT_THINKING},
+     * updates the UI, and then invokes the current agent.
+     * <p>
+     * If {@code expectPlan} is true, the agent's response is checked for a plan. If a plan is found,
+     * it is extracted and presented to the user for approval via the UI. The application state
+     * transitions to {@code WAITING_USER_PLAN_APPROVAL}.
+     * <p>
+     * If {@code expectPlan} is false, or if a plan was approved and the agent's message contains
+     * tool execution requests, those requests are handled by the {@link ToolLifecycleManager}.
+     * Otherwise, the turn is finished.
+     * <p>
+     * Error handling is included to catch exceptions during the agent's action or subsequent processing,
+     * ensuring the application state is reset correctly.
+     *
+     * @param expectPlan A boolean indicating whether to expect a plan from the agent in this turn.
+     */
     public void processAgentTurnPublic(boolean expectPlan) {
         app.setStatePublic(App.State.AGENT_THINKING);
         model.statusBarText = "Agent is thinking...";
@@ -99,6 +136,16 @@ public class AgentInteractionService {
         });
     }
 
+    /**
+     * Handles the user's decision on a proposed plan.
+     * If the plan is approved and the agent's message (which contained the plan)
+     * has tool execution requests, these are handled. Otherwise, the agent
+     * is prompted to proceed with the next step (which might be another thought cycle or action).
+     * If the plan is rejected, the agent is informed and asked to propose a new plan.
+     *
+     * @param agentMessageWithPlan The AI message that contained the plan.
+     * @param planApproved         {@code true} if the user approved the plan, {@code false} otherwise.
+     */
     public void handlePlanApproval(AiMessage agentMessageWithPlan, boolean planApproved) {
         if (planApproved) {
             chatMemory.add(UserMessage.from("Plan approved. Proceed."));
@@ -114,7 +161,15 @@ public class AgentInteractionService {
         ui.redraw(model);
     }
 
-    // Made public to be callable from App's finishTurnPublic
+    /**
+     * Finishes the current agent turn after a tool execution.
+     * Adds the tool execution result to the chat memory and triggers the agent
+     * for the next step, not expecting a plan.
+     * This method is typically called by the {@link ToolLifecycleManager} after a tool has finished executing.
+     *
+     * @param request The original tool execution request.
+     * @param result  The result of the tool execution.
+     */
     public void finishTurn(ToolExecutionRequest request, String result) {
         if (request != null) {
             chatMemory.add(ToolExecutionResultMessage.from(request, result));
@@ -122,7 +177,14 @@ public class AgentInteractionService {
         processAgentTurnPublic(false);
     }
 
-    // Made public to be callable from App's finishTurnPublic
+    /**
+     * Finishes the current agent turn, typically when no tool execution is involved
+     * or after an error.
+     * Adds an optional message to the log, sets the application state to {@code IDLE},
+     * updates the status bar, saves the session, and checks for self-updates.
+     *
+     * @param message An optional {@link ChatMessage} to log. Can be null.
+     */
     public void finishTurn(ChatMessage message) {
         if (message != null) {
             model.addLog(message);
@@ -138,6 +200,23 @@ public class AgentInteractionService {
         ui.redraw(model);
     }
 
+    /**
+     * Extracts a plan from the agent's message text using heuristics.
+     * <p>
+     * The method first looks for explicit plan markers like "Here's my plan:".
+     * If a marker is found, the text following the marker is considered the plan.
+     * If an "END_OF_PLAN" marker is present, the plan is truncated at that point.
+     * <p>
+     * If no explicit markers are found, the method attempts to detect a numbered or bulleted list
+     * (using digits followed by a period, asterisks, or hyphens) as a plan.
+     * A list is considered a plan if it contains at least two items.
+     * <p>
+     * If neither heuristic yields a plan, the entire message text is returned.
+     *
+     * @param messageText The text of the agent's message.
+     * @return The extracted plan, or the full messageText if no plan is identified.
+     *         Returns an empty string if the input messageText is null or blank.
+     */
     private String extractPlan(String messageText) {
 
         if (messageText == null || messageText.isBlank()) {
@@ -194,11 +273,12 @@ public class AgentInteractionService {
         if (inPlanList && planLines >= 2) {
             var extracted = planBuilder.toString().trim();
             var endOfPlanIndex = extracted.indexOf("END_OF_PLAN");
-             if (endOfPlanIndex != -1) {
+             if (endOfPlanIndex != -1) { // Ensure "END_OF_PLAN" is respected for list-based plans too
                  return extracted.substring(0, endOfPlanIndex).trim();
              }
              return extracted;
         }
+        // If no plan is found through markers or list detection, return the original message.
         return messageText;
     }
 }
