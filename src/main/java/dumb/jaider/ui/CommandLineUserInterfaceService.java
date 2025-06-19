@@ -174,4 +174,39 @@ public class CommandLineUserInterfaceService implements UI { // Changed interfac
         }
         logger.info("CommandLineUserInterfaceService shutdown complete.");
     }
+
+    @Override
+    public CompletableFuture<String> switchProjectDirectory(String currentDirectory) {
+        var future = new CompletableFuture<String>();
+        out.println("\n[SWITCH PROJECT DIRECTORY]");
+        out.println("Current directory: " + currentDirectory);
+        out.print("Enter new project directory (or press Enter to cancel): ");
+
+        executorService.submit(() -> {
+            try {
+                var line = inReader.readLine();
+                if (line == null || line.trim().isEmpty()) {
+                    future.complete(null); // Cancelled
+                } else {
+                    future.complete(line.trim());
+                }
+            } catch (IOException e) {
+                logger.error("IOException reading user input for switchProjectDirectory. Completing with null.", e);
+                future.complete(null); // Error, treat as cancellation
+            }
+        });
+        return future;
+    }
+
+    @Override
+    public CompletableFuture<Void> showGlobalConfiguration() {
+        out.println("\n[GLOBAL CONFIGURATION]");
+        // Placeholder for where global configurations would be shown or edited.
+        out.println("Global configuration settings:");
+        out.println("No global configurations available in CLI mode."); // Placeholder message
+        // In a real CLI, this might involve reading and displaying a config file,
+        // or prompting for various settings.
+        // For now, it's just a message and immediate completion.
+        return CompletableFuture.completedFuture(null);
+    }
 }

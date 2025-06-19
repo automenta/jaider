@@ -1,5 +1,6 @@
 package dumb.jaider.app;
 
+import java.nio.file.Paths; // Added for Path conversion
 import dev.langchain4j.agent.tool.ToolExecutionRequest;
 import dev.langchain4j.data.message.AiMessage;
 import dev.langchain4j.data.message.ChatMessage;
@@ -28,7 +29,7 @@ import java.util.Set;
 public class App {
     private static final Logger logger = LoggerFactory.getLogger(App.class);
     private final UI ui;
-    private final JaiderModel model = new JaiderModel();
+    private final JaiderModel model; // Instantiation moved to constructor
     private final Config config;
     private final Map<String, Command> commands = new HashMap<>();
     private ChatMemory memory; // Will be DI-injected or default
@@ -50,6 +51,8 @@ public class App {
 
     public App(UI ui, String... originalArgs) {
         this.ui = ui;
+        // Initialize model with default globalConfig before config, as config might need model.dir
+        this.model = new JaiderModel("Default global config");
         this.config = new Config(model.dir); // Config constructor initializes its own injector
         this.model.setOriginalArgs(originalArgs);
 
@@ -99,6 +102,9 @@ public class App {
         commands.put("/a", new AcceptSuggestionCommand());
         commands.put("/run", new RunCommand());
         commands.put("/self-develop", new SelfDevelopCommand());
+        // Add new commands for project switching and global config
+        commands.put("/switch_project", args -> switchProject());
+        commands.put("/global_config", args -> showGlobalConfigSettings());
     }
 
     public synchronized void update() {
@@ -329,5 +335,66 @@ public class App {
     private boolean isGitRepoClean() {
         var userProjectGitService = new dumb.jaider.vcs.GitService(this.model.dir);
         return userProjectGitService.isGitRepoClean();
+    }
+
+    // New methods to be added
+    public void switchProject() {
+        if (ui == null) {
+            logger.error("UI is not initialized. Cannot switch project.");
+            model.addLog(AiMessage.from("[App] Error: UI not available to switch project."));
+            if (model != null) ui.redraw(model); // Redraw to show error
+            return;
+        }
+
+        ui.switchProjectDirectory(model.getDir().toString()).thenAccept(newDirStr -> {
+            if (newDirStr != null && !newDirStr.trim().isEmpty()) {
+                Path newPath = Paths.get(newDirStr.trim());
+                // Validate if the new path is a directory
+                if (java.nio.file.Files.isDirectory(newPath)) {
+                    model.setDir(newPath); // This now also clears files, resets isIndexed, and updates statusBarText
+                    // Potentially update config object if it stores project path and needs to be aware of changes
+                    // config.updateProjectDirectory(newPath); // Example if Config needs update
+                    // Potentially re-run parts of app.update() if services depend on the path and need re-initialization
+                    // update(); // This might be too broad, consider more targeted updates.
+                    logger.info("Project directory switched to: {}. Model updated.", newPath);
+                    model.addLog(AiMessage.from("[App] Project directory switched to: " + newPath.getFileName()));
+                    // statusBarText is already updated by model.setDir()
+                } else {
+                    logger.warn("Switch project failed: Path is not a valid directory: {}", newDirStr);
+                    model.addLog(AiMessage.from("[App] Switch project failed: Selected path is not a valid directory."));
+                }
+            } else {
+                logger.info("Project directory switch cancelled or no path provided.");
+                model.addLog(AiMessage.from("[App] Project switch cancelled or no path provided."));
+            }
+            ui.redraw(model); // Redraw UI to reflect changes (e.g., status bar, file list)
+        }).exceptionally(ex -> {
+            logger.error("Exception during project directory switching: {}", ex.getMessage(), ex);
+            model.addLog(AiMessage.from("[App] Error switching project: " + ex.getMessage()));
+            if (ui != null) ui.redraw(model);
+            return null;
+        });
+    }
+
+    public void showGlobalConfigSettings() {
+        if (ui == null) {
+            logger.error("UI is not initialized. Cannot show global config.");
+            model.addLog(AiMessage.from("[App] Error: UI not available to show global config."));
+            return;
+        }
+        model.addLog(AiMessage.from("[App] Current global config (from model): " + model.globalConfig));
+        ui.showGlobalConfiguration().thenRun(() -> {
+            // This block runs after the UI interaction for global config is complete.
+            // For now, we just log that the user is done.
+            // In the future, this could handle saving changes if the UI allowed editing.
+            logger.info("Global configuration display/interaction finished.");
+            model.addLog(AiMessage.from("[App] Closed global configuration view."));
+            ui.redraw(model);
+        }).exceptionally(ex -> {
+            logger.error("Error during global configuration display: {}", ex.getMessage(), ex);
+            model.addLog(AiMessage.from("[App] Error showing global config: " + ex.getMessage()));
+            if (ui != null) ui.redraw(model);
+            return null;
+        });
     }
 }

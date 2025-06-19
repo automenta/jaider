@@ -237,4 +237,62 @@ public class TUI implements UI {
             });
         }
     }
+
+    @Override
+    public CompletableFuture<String> switchProjectDirectory(String currentDirectory) {
+        var future = new CompletableFuture<String>();
+        gui.getGUIThread().invokeLater(() -> {
+            var dialog = new BasicWindow("Switch Project Directory");
+            dialog.setHints(List.of(Window.Hint.CENTERED));
+
+            var contentPanel = new Panel(new LinearLayout(Direction.VERTICAL));
+            contentPanel.addComponent(new Label("Enter new project directory:"));
+
+            var directoryInput = new TextBox(currentDirectory);
+            directoryInput.setPreferredSize(new TerminalSize(80, 1));
+            contentPanel.addComponent(directoryInput);
+
+            var buttonPanel = new Panel(new LinearLayout(Direction.HORIZONTAL));
+            buttonPanel.addComponent(new Button("Switch", () -> {
+                future.complete(directoryInput.getText());
+                dialog.close();
+            }));
+            buttonPanel.addComponent(new Button("Cancel", () -> {
+                future.complete(null);
+                dialog.close();
+            }));
+            contentPanel.addComponent(buttonPanel);
+
+            dialog.setComponent(contentPanel);
+            dialog.setCloseWindowWithEscape(true); // Allow Esc to close/cancel
+            gui.addWindow(dialog);
+        });
+        return future;
+    }
+
+    @Override
+    public CompletableFuture<Void> showGlobalConfiguration() {
+        var future = new CompletableFuture<Void>();
+        gui.getGUIThread().invokeLater(() -> {
+            var dialog = new BasicWindow("Global Configuration");
+            dialog.setHints(List.of(Window.Hint.CENTERED));
+
+            var contentPanel = new Panel(new LinearLayout(Direction.VERTICAL));
+            // For now, using a placeholder message.
+            // This can be expanded later to show actual configuration settings.
+            contentPanel.addComponent(new Label("Global configuration settings will be displayed here."));
+
+            var buttonPanel = new Panel(new LinearLayout(Direction.HORIZONTAL));
+            buttonPanel.addComponent(new Button("OK", () -> {
+                future.complete(null); // Complete the future when dialog is closed
+                dialog.close();
+            }));
+            contentPanel.addComponent(buttonPanel);
+
+            dialog.setComponent(contentPanel);
+            dialog.setCloseWindowWithEscape(true); // Allow Esc to close
+            gui.addWindow(dialog);
+        });
+        return future;
+    }
 }
