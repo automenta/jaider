@@ -9,11 +9,20 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
+import org.json.JSONObject;
+
 
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
+// import java.nio.file.attribute.PosixFilePermission; // No longer using PosixFilePermission directly
+// import java.util.EnumSet; // No longer using EnumSet
+// import java.util.Set; // No longer using Set for permissions
+import org.junit.jupiter.api.Timeout;
+
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.when;
 
 public class StandardToolsTest {
 
@@ -206,5 +215,118 @@ public class StandardToolsTest {
                  git.commit().setMessage("Test commit").setAuthor("Test User", "test@example.com").call();
             }
         }
+    }
+
+    // --- runValidationCommand Tests ---
+
+    private void makeScriptExecutable(Path scriptPath) throws Exception {
+        // Simplified executable setting
+        scriptPath.toFile().setExecutable(true, false); // ownerOnly = false for wider applicability
+    }
+
+    @Test
+    @Timeout(5) // Add a 5-second timeout for this specific test
+    void runValidationCommand_success() throws Exception {
+        Path scriptFile = tempDir.resolve("test_script.sh");
+        String scriptContent = """
+                #!/bin/bash
+                echo "output from script"
+                exit 0
+                """;
+        Files.writeString(scriptFile, scriptContent, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
+        makeScriptExecutable(scriptFile);
+
+        when(config.getRunCommand()).thenReturn(scriptFile.toString());
+
+        String jsonResult = standardTools.runValidationCommand(null);
+        JSONObject result = new JSONObject(jsonResult);
+
+        assertTrue(result.getBoolean("success"));
+        assertEquals(0, result.getInt("exitCode"));
+        assertTrue(result.getString("output").contains("output from script"));
+    }
+
+    @Test
+    void runValidationCommand_failure() throws Exception {
+        Path scriptFile = tempDir.resolve("fail_script.sh");
+        String scriptContent = """
+                #!/bin/bash
+                echo "error output"
+                exit 1
+                """;
+        Files.writeString(scriptFile, scriptContent, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
+        makeScriptExecutable(scriptFile);
+
+        when(config.getRunCommand()).thenReturn(scriptFile.toString());
+
+        String jsonResult = standardTools.runValidationCommand(null);
+        JSONObject result = new JSONObject(jsonResult);
+
+        assertFalse(result.getBoolean("success"));
+        assertEquals(1, result.getInt("exitCode"));
+        assertTrue(result.getString("output").contains("error output"));
+    }
+
+    @Test
+    void runValidationCommand_withArguments() throws Exception {
+        Path scriptFile = tempDir.resolve("args_script.sh");
+        String scriptContent = """
+                #!/bin/bash
+                echo "Args: $1 $2"
+                exit 0
+                """;
+        Files.writeString(scriptFile, scriptContent, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
+        makeScriptExecutable(scriptFile);
+
+        when(config.getRunCommand()).thenReturn(scriptFile.toString());
+
+        String jsonResult = standardTools.runValidationCommand("arg1 arg2");
+        JSONObject result = new JSONObject(jsonResult);
+
+        assertTrue(result.getBoolean("success"));
+        assertEquals(0, result.getInt("exitCode"));
+        assertTrue(result.getString("output").contains("Args: arg1 arg2"));
+    }
+
+    @Test
+    void runValidationCommand_notConfigured() {
+        when(config.getRunCommand()).thenReturn(null);
+
+        String jsonResult = standardTools.runValidationCommand(null);
+        JSONObject result = new JSONObject(jsonResult);
+
+        assertFalse(result.getBoolean("success"));
+        assertEquals(-1, result.getInt("exitCode"));
+        assertEquals("Run command is not configured.", result.getString("output"));
+
+        when(config.getRunCommand()).thenReturn("");
+        jsonResult = standardTools.runValidationCommand(null);
+        result = new JSONObject(jsonResult);
+        assertFalse(result.getBoolean("success"));
+        assertEquals(-1, result.getInt("exitCode"));
+        assertEquals("Run command is not configured.", result.getString("output"));
+    }
+
+    @Test
+    void runValidationCommand_timeout() throws Exception {
+        Path scriptFile = tempDir.resolve("timeout_script.sh");
+        // StandardTools.COMMAND_TIMEOUT_SECONDS is 1.
+        String scriptContent = """
+                #!/bin/bash
+                sleep 3
+                echo "should not see this"
+                exit 0
+                """;
+        Files.writeString(scriptFile, scriptContent, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
+        makeScriptExecutable(scriptFile);
+
+        when(config.getRunCommand()).thenReturn(scriptFile.toString());
+
+        String jsonResult = standardTools.runValidationCommand(null);
+        JSONObject result = new JSONObject(jsonResult);
+
+        assertFalse(result.getBoolean("success"));
+        assertEquals(1, result.getInt("exitCode"));
+        assertTrue(result.getString("output").contains("Command execution timed out after 1 seconds."));
     }
 }
