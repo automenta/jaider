@@ -287,7 +287,7 @@ public class DependencyInjectorTest {
         assertNotNull(instance.mixedItemsList);
         assertEquals(3, instance.mixedItemsList.size());
         assertEquals("First String", instance.mixedItemsList.get(0));
-        assertTrue(instance.mixedItemsList.get(1) instanceof ComponentA);
+        assertInstanceOf(ComponentA.class, instance.mixedItemsList.get(1));
         assertSame(injector.getComponent("compA_for_mixed_list"), instance.mixedItemsList.get(1));
         assertEquals(2024, instance.mixedItemsList.get(2));
     }
@@ -336,7 +336,7 @@ public class DependencyInjectorTest {
         assertNotNull(instance);
         assertNotNull(instance.stringListArg);
         assertEquals(2, instance.stringListArg.size());
-        assertEquals("str1", instance.stringListArg.get(0));
+        assertEquals("str1", instance.stringListArg.getFirst());
         assertNotNull(instance.componentListArg);
         assertEquals(2, instance.componentListArg.size());
         assertSame(injector.getComponent("compA_factory_list1"), instance.componentListArg.get(0));

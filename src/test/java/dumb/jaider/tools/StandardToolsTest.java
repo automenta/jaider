@@ -4,22 +4,17 @@ import dev.langchain4j.model.embedding.EmbeddingModel;
 import dumb.jaider.config.Config;
 import dumb.jaider.model.JaiderModel;
 import org.eclipse.jgit.api.errors.GitAPIException;
+import org.json.JSONObject;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.io.TempDir;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
-import org.json.JSONObject;
-
 
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
-// import java.nio.file.attribute.PosixFilePermission; // No longer using PosixFilePermission directly
-// import java.util.EnumSet; // No longer using EnumSet
-// import java.util.Set; // No longer using Set for permissions
-import org.junit.jupiter.api.Timeout;
-
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.when;
@@ -219,7 +214,7 @@ public class StandardToolsTest {
 
     // --- runValidationCommand Tests ---
 
-    private void makeScriptExecutable(Path scriptPath) throws Exception {
+    private void makeScriptExecutable(Path scriptPath) {
         // Simplified executable setting
         scriptPath.toFile().setExecutable(true, false); // ownerOnly = false for wider applicability
     }

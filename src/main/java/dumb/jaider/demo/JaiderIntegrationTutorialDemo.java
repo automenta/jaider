@@ -166,11 +166,12 @@ public class JaiderIntegrationTutorialDemo {
         }
 
         String promptString = String.format(
-            "You are a helpful coding assistant. Your task is to generate the code for a single file based on the following description: '%s'.\n" +
-            "The code should be for a %s application/class if specified, otherwise a general code snippet.\n" +
-            "For this simplified demonstration, please generate the code focusing only on the main feature described, and you can omit %s.\n" +
-            "First, on a line by itself, write the suggested filename for this code (e.g., 'my_program%s'). The filename should be simple, using underscores for spaces if necessary, and have the correct extension.\n" +
-            "Then, starting on the next line, provide only the complete code for this single file. Do not include any explanations, comments about the omission, or markdown formatting around the code block itself. Just the raw code.",
+                """
+                        You are a helpful coding assistant. Your task is to generate the code for a single file based on the following description: '%s'.
+                        The code should be for a %s application/class if specified, otherwise a general code snippet.
+                        For this simplified demonstration, please generate the code focusing only on the main feature described, and you can omit %s.
+                        First, on a line by itself, write the suggested filename for this code (e.g., 'my_program%s'). The filename should be simple, using underscores for spaces if necessary, and have the correct extension.
+                        Then, starting on the next line, provide only the complete code for this single file. Do not include any explanations, comments about the omission, or markdown formatting around the code block itself. Just the raw code.""",
             description, languageHint, omissionFeature, fileExtension
         );
 
@@ -212,7 +213,7 @@ public class JaiderIntegrationTutorialDemo {
             java.nio.file.Files.writeString(filePath, generatedCode, java.nio.file.StandardOpenOption.CREATE, java.nio.file.StandardOpenOption.TRUNCATE_EXISTING);
 
             System.out.println("\nLLM generated project code:");
-            System.out.println("File created at: " + filePath.toString());
+            System.out.println("File created at: " + filePath);
             System.out.println("--- Content of " + suggestedFilename + " ---");
             System.out.println(generatedCode);
             System.out.println("------------------------------------");

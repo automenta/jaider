@@ -1,6 +1,5 @@
 package dumb.jaider.app;
 
-import java.nio.file.Paths; // Added for Path conversion
 import dev.langchain4j.agent.tool.ToolExecutionRequest;
 import dev.langchain4j.data.message.AiMessage;
 import dev.langchain4j.data.message.ChatMessage;
@@ -21,6 +20,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
@@ -103,8 +103,8 @@ public class App {
         commands.put("/run", new RunCommand());
         commands.put("/self-develop", new SelfDevelopCommand());
         // Add new commands for project switching and global config
-        commands.put("/switch_project", args -> switchProject());
-        commands.put("/global_config", args -> showGlobalConfigSettings());
+        commands.put("/switch_project", (args, ctx) -> switchProject());
+        commands.put("/global_config", (args, ctx) -> showGlobalConfigSettings());
     }
 
     public synchronized void update() {
@@ -342,7 +342,7 @@ public class App {
         if (ui == null) {
             logger.error("UI is not initialized. Cannot switch project.");
             model.addLog(AiMessage.from("[App] Error: UI not available to switch project."));
-            if (model != null) ui.redraw(model); // Redraw to show error
+            ui.redraw(model); // Redraw to show error
             return;
         }
 
@@ -371,7 +371,7 @@ public class App {
         }).exceptionally(ex -> {
             logger.error("Exception during project directory switching: {}", ex.getMessage(), ex);
             model.addLog(AiMessage.from("[App] Error switching project: " + ex.getMessage()));
-            if (ui != null) ui.redraw(model);
+            ui.redraw(model);
             return null;
         });
     }
@@ -393,7 +393,7 @@ public class App {
         }).exceptionally(ex -> {
             logger.error("Error during global configuration display: {}", ex.getMessage(), ex);
             model.addLog(AiMessage.from("[App] Error showing global config: " + ex.getMessage()));
-            if (ui != null) ui.redraw(model);
+            ui.redraw(model);
             return null;
         });
     }

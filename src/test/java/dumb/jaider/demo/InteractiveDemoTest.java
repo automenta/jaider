@@ -19,6 +19,7 @@ public class InteractiveDemoTest {
     @BeforeEach
     void setUp() {
         demo = new InteractiveDemo();
+        demo.cleanup = true;
         // For tests that don't use @TempDir, we can set up a common temp dir here if needed
         // However, for setup/cleanup test, it's better to let the method create its own
     }

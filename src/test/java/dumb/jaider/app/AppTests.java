@@ -1,22 +1,20 @@
 package dumb.jaider.app;
 
+import dev.langchain4j.data.message.AiMessage;
 import dumb.jaider.model.JaiderModel;
 import dumb.jaider.ui.UI;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
-import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.io.IOException;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.concurrent.CompletableFuture;
 
-import static org.mockito.Mockito.*;
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class AppTests {
@@ -90,7 +88,7 @@ class AppTests {
     }
 
     @Test
-    void switchProject_userCancels_shouldNotUpdateModelAndRedraw() throws IOException {
+    void switchProject_userCancels_shouldNotUpdateModelAndRedraw() {
         JaiderModel appModel = app.getModel();
         Path originalPath = appModel.getDir().toAbsolutePath(); // Capture original path
 
@@ -107,7 +105,7 @@ class AppTests {
     }
 
     @Test
-    void switchProject_userProvidesEmptyPath_shouldNotUpdateModelAndRedraw() throws IOException {
+    void switchProject_userProvidesEmptyPath_shouldNotUpdateModelAndRedraw() {
         JaiderModel appModel = app.getModel();
         Path originalPath = appModel.getDir().toAbsolutePath();
 
@@ -123,7 +121,7 @@ class AppTests {
     }
 
     @Test
-    void switchProject_userProvidesInvalidDirectoryPath_shouldNotUpdateModelAndRedraw() throws IOException {
+    void switchProject_userProvidesInvalidDirectoryPath_shouldNotUpdateModelAndRedraw() {
         JaiderModel appModel = app.getModel();
         Path originalPath = appModel.getDir().toAbsolutePath();
         String invalidPathString = "path/that/does/not/exist/and/is/not/a/directory";
@@ -136,7 +134,7 @@ class AppTests {
 
         verify(mockUi).switchProjectDirectory(originalPath.toString());
         assertEquals(originalPath, appModel.getDir().toAbsolutePath(), "Model directory should remain unchanged for invalid path.");
-        assertTrue(appModel.log.stream().anyMatch(logMsg -> logMsg.text().contains("Selected path is not a valid directory")), "Log should contain invalid path message.");
+        assertTrue(appModel.log.stream().anyMatch(logMsg -> ((AiMessage) logMsg).text().contains("Selected path is not a valid directory")), "Log should contain invalid path message.");
         verify(mockUi).redraw(appModel);
     }
 
@@ -150,12 +148,12 @@ class AppTests {
         CompletableFuture.allOf().join();
 
         verify(mockUi).showGlobalConfiguration();
-        assertTrue(appModel.log.stream().anyMatch(logMsg -> logMsg.text().contains("Current global config (from model)")), "Log should show current global config.");
+        assertTrue(appModel.log.stream().anyMatch(logMsg -> ((AiMessage) logMsg).text().contains("Current global config (from model)")), "Log should show current global config.");
         verify(mockUi).redraw(appModel); // Redraw happens after UI interaction
     }
 
     @BeforeEach
-    void tearDown() throws IOException {
+    void tearDown() {
         // Clean up the initial directory created in App's JaiderModel if it's not null
         // This is tricky because App creates its own model.
         // The JaiderModel instance created by App() uses Paths.get("").toAbsolutePath() if not given one.

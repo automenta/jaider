@@ -22,7 +22,7 @@ public class AddCommandTest {
     @Mock
     private AppContext mockAppContext; // Removed duplicate
     @Spy
-    private final JaiderModel mockJaiderModel = new JaiderModel();
+    private final JaiderModel mockJaiderModel = new JaiderModel("null");
     @Mock
     private App mockApp;
 

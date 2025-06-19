@@ -57,7 +57,7 @@ class TUITest {
     void setUp() {
         tui.gui = gui;
         tui.contextListBox = contextListBox;
-        tui.logListBox = logListBoxPanel;
+        tui.logListBoxPanel = logListBoxPanel;
         tui.statusBar = statusBar;
         tui.suggestionsLabel = suggestionsLabel; // Assign mock to the TUI instance
 

@@ -8,7 +8,6 @@ import dumb.jaider.service.SelfUpdateOrchestratorService;
 import dumb.jaider.tools.JaiderTools;
 import dumb.jaider.ui.CommandLineUserInterfaceService;
 
-import java.nio.file.Paths;
 import java.util.Scanner;
 
 public class JaiderApplication {
@@ -21,7 +20,7 @@ public class JaiderApplication {
 
         // 1. Initialize Model and Services
         // Initialize JaiderModel with the project directory
-        var jaiderModel = new JaiderModel(Paths.get(".").toAbsolutePath());
+        var jaiderModel = new JaiderModel("Default global config");
         jaiderModel.setOriginalArgs(args);
         // The project directory is the current directory from which Jaider is run.
         // This is typically the root of the Maven project Jaider is working on (which includes Jaider itself for self-update).

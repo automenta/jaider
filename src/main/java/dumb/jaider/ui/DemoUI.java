@@ -5,7 +5,6 @@ import dumb.jaider.app.App;
 import dumb.jaider.model.JaiderModel;
 
 import java.io.BufferedReader;
-import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.LinkedList;
 import java.util.List;
@@ -103,7 +102,7 @@ public class DemoUI implements UI {
 
 
     @Override
-    public void init(App app) throws IOException {
+    public void init(App app) {
         this.app = app;
         System.out.println("[DemoUI] Initialized by App. Waiting for script to start via startProcessingScript().");
     }
@@ -198,21 +197,26 @@ public class DemoUI implements UI {
 
         handleBlockingUiInteraction(future, "[DemoUI] Action? (accept/reject/edit) > ", reader -> {
             String action = reader.readLine().trim().toLowerCase();
-            if ("accept".equals(action)) {
-                return new DiffInteractionResult(true, false, diff);
-            } else if ("reject".equals(action)) {
-                return new DiffInteractionResult(false, false, null);
-            } else if ("edit".equals(action)) {
-                System.out.println("[DemoUI] Enter the new diff content. Type 'END_OF_DIFF' on a new line to finish:");
-                StringBuilder editedDiffBuilder = new StringBuilder();
-                String line;
-                while (!(line = reader.readLine()).equals("END_OF_DIFF")) {
-                    editedDiffBuilder.append(line).append(System.lineSeparator());
+            switch (action) {
+                case "accept" -> {
+                    return new DiffInteractionResult(true, false, diff);
                 }
-                return new DiffInteractionResult(true, true, editedDiffBuilder.toString().trim());
-            } else {
-                System.out.println("[DemoUI] Invalid action. Rejecting diff.");
-                return new DiffInteractionResult(false, false, null);
+                case "reject" -> {
+                    return new DiffInteractionResult(false, false, null);
+                }
+                case "edit" -> {
+                    System.out.println("[DemoUI] Enter the new diff content. Type 'END_OF_DIFF' on a new line to finish:");
+                    StringBuilder editedDiffBuilder = new StringBuilder();
+                    String line;
+                    while (!(line = reader.readLine()).equals("END_OF_DIFF")) {
+                        editedDiffBuilder.append(line).append(System.lineSeparator());
+                    }
+                    return new DiffInteractionResult(true, true, editedDiffBuilder.toString().trim());
+                }
+                default -> {
+                    System.out.println("[DemoUI] Invalid action. Rejecting diff.");
+                    return new DiffInteractionResult(false, false, null);
+                }
             }
         });
         return future;
@@ -263,7 +267,17 @@ public class DemoUI implements UI {
     }
 
     @Override
-    public void close() throws IOException {
+    public CompletableFuture<String> switchProjectDirectory(String currentDirectory) {
+        return null;
+    }
+
+    @Override
+    public CompletableFuture<Void> showGlobalConfiguration() {
+        return null;
+    }
+
+    @Override
+    public void close() {
         System.out.println("[DemoUI] Close called. Initiating shutdown of DemoUI resources.");
         scriptRunning = false;
 
@@ -271,7 +285,7 @@ public class DemoUI implements UI {
             demoCompletionFuture.complete(null);
         }
 
-        if (uiInteractionExecutor != null && !uiInteractionExecutor.isShutdown()) {
+        if (!uiInteractionExecutor.isShutdown()) {
             System.out.println("[DemoUI] Shutting down UI interaction executor service...");
             uiInteractionExecutor.shutdown();
             try {

@@ -44,6 +44,11 @@ public class JaiderModel {
         this.globalConfig = globalConfig;
     }
 
+    @Deprecated
+    public JaiderModel(Path dir) {
+        this(dir, "Default global config");
+    }
+
     public JaiderModel(Path dir, String globalConfig) {
         this.dir = dir;
         this.globalConfig = globalConfig;

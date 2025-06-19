@@ -44,7 +44,7 @@ public class ComprehensiveInteractiveDemo {
         Files.writeString(mainPyPath,
                 """
                             def hello():
-                                print(\"Hello from main.py\")
+                                print("Hello from main.py")
                         
                             hello()
                         """
@@ -102,7 +102,7 @@ public class ComprehensiveInteractiveDemo {
             // This is a known challenge for this demo structure. A more robust solution would be for App to accept a root path.
 
             System.setProperty("user.dir", temporaryDemoDirectory.toAbsolutePath().toString());
-            System.out.println("[DemoSetup] Set user.dir to: " + temporaryDemoDirectory.toAbsolutePath().toString());
+            System.out.println("[DemoSetup] Set user.dir to: " + temporaryDemoDirectory.toAbsolutePath());
 
 
             app = new App(demoUI, args); // Pass main args if needed by App
@@ -235,12 +235,8 @@ public class ComprehensiveInteractiveDemo {
         } finally {
             if (app != null) {
                 // Attempt to close the app resources if it's not already closed by /exit
-                 try {
-                     // app.exitAppInternalPublic(); // If /exit wasn't called or didn't fully close UI
-                     if (demoUI != null) demoUI.close(); // Ensure UI resources are freed
-                 } catch (IOException e) {
-                     System.err.println("[DemoError] Error closing UI resources: " + e.getMessage());
-                 }
+                // app.exitAppInternalPublic(); // If /exit wasn't called or didn't fully close UI
+                demoUI.close(); // Ensure UI resources are freed
             }
             cleanupTemporaryDirectory(); // This is also hooked to shutdown
             System.out.println("--- Jaider Comprehensive Interactive Demo Finished ---");

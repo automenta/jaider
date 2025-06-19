@@ -4,10 +4,8 @@ import com.googlecode.lanterna.TerminalSize;
 import com.googlecode.lanterna.TextColor;
 import com.googlecode.lanterna.gui2.*;
 import com.googlecode.lanterna.gui2.dialogs.MessageDialog;
-import com.googlecode.lanterna.gui2.dialogs.MessageDialogButton;
 import com.googlecode.lanterna.gui2.dialogs.MessageDialogBuilder;
-import com.googlecode.lanterna.TerminalPosition; // Required for WindowListener
-import com.googlecode.lanterna.input.KeyStroke;
+import com.googlecode.lanterna.gui2.dialogs.MessageDialogButton;
 import com.googlecode.lanterna.input.KeyType;
 import com.googlecode.lanterna.screen.TerminalScreen;
 import com.googlecode.lanterna.terminal.DefaultTerminalFactory;
@@ -21,7 +19,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 
 public class TUI implements UI {
@@ -68,7 +65,7 @@ public class TUI implements UI {
                 String text = inputBox.getText();
                 if (!text.isBlank()) {
                     app.handleUserInput(text);
-                    if (commandHistory.isEmpty() || !commandHistory.get(commandHistory.size() - 1).equals(text)) {
+                    if (commandHistory.isEmpty() || !commandHistory.getLast().equals(text)) {
                         commandHistory.add(text);
                     }
                     commandHistoryIndex = commandHistory.size();
@@ -165,27 +162,23 @@ public class TUI implements UI {
         if (gui == null) return;
         gui.getGUIThread().invokeLater(() -> {
             contextListBox.clearItems();
-            if (model.files != null) {
-                model.files.forEach(p -> contextListBox.addItem(model.dir.relativize(p).toString(), null));
-            }
+            model.files.forEach(p -> contextListBox.addItem(model.dir.relativize(p).toString(), null));
 
             logListBoxPanel.removeAllComponents();
-            if (model.log != null) {
-                for (var msg : model.log) {
-                    var text = dumb.jaider.utils.Util.chatMessageToText(msg);
-                    if (text == null || text.isBlank()) continue;
-                    var l = new Label(String.format("[%s] %s", msg.type().name(), text));
-                    if (msg instanceof UserMessage)
-                        l.setForegroundColor(TextColor.ANSI.CYAN);
-                    else if (msg instanceof AiMessage aim) {
-                        if (aim.hasToolExecutionRequests()) {
-                            l.setText(String.format("[Agent] Wants to use tool: %s", aim.toolExecutionRequests().getFirst().name()));
-                            l.setForegroundColor(TextColor.ANSI.YELLOW);
-                        } else
-                            l.setForegroundColor(TextColor.ANSI.GREEN);
-                    }
-                    logListBoxPanel.addComponent(l); // Add labels directly to logListBoxPanel
+            for (var msg : model.log) {
+                var text = dumb.jaider.utils.Util.chatMessageToText(msg);
+                if (text == null || text.isBlank()) continue;
+                var l = new Label(String.format("[%s] %s", msg.type().name(), text));
+                if (msg instanceof UserMessage)
+                    l.setForegroundColor(TextColor.ANSI.CYAN);
+                else if (msg instanceof AiMessage aim) {
+                    if (aim.hasToolExecutionRequests()) {
+                        l.setText(String.format("[Agent] Wants to use tool: %s", aim.toolExecutionRequests().getFirst().name()));
+                        l.setForegroundColor(TextColor.ANSI.YELLOW);
+                    } else
+                        l.setForegroundColor(TextColor.ANSI.GREEN);
                 }
+                logListBoxPanel.addComponent(l); // Add labels directly to logListBoxPanel
             }
 
             statusBar.setText(String.format("| Mode: %s | %s | Tokens: %d", model.mode, model.statusBarText, model.currentTokenCount));

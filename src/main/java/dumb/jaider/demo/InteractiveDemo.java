@@ -21,9 +21,10 @@ public class InteractiveDemo {
     Path temporaryDirectoryPath; // Made package-private for testing
     private Path generatedFilePath;
 
-    private static final String DEFAULT_GEMINI_MODEL_NAME = "gemini-pro";
+    private static final String DEFAULT_GEMINI_MODEL_NAME = "gemini-2.5-flash-preview-05-20";
     private static final String GENERATED_FILE_NAME = "generated_project_output.txt";
     private static final String OLLAMA_PLACEHOLDER_FILE_NAME = "ollama_placeholder.txt";
+    boolean cleanup = false;
 
     public InteractiveDemo() {
         // Constructor logic, if any
@@ -159,9 +160,8 @@ public class InteractiveDemo {
         System.out.println("including features like applying changes via diffs, running validation commands, working with your project's full context, and more.");
         System.out.println("For the complete feature set, please run the main Jaider application.");
         System.out.println("******************\n");
-        Scanner scanner = new Scanner(System.in);
 
-        try {
+        try (Scanner scanner = new Scanner(System.in)) {
             System.out.println("\nCollecting user input...");
             // LM Selection
             while (true) {
@@ -239,8 +239,8 @@ public class InteractiveDemo {
 
             if (generationSucceeded && generatedFilePath != null) {
                 verifyProjectGeneration(generatedFilePath);
-            } else if (generationSucceeded && generatedFilePath == null) {
-                 System.err.println("Warning: Generation reported success, but no output file path was set.");
+            } else if (generationSucceeded) {
+                System.err.println("Warning: Generation reported success, but no output file path was set.");
             } else {
                 System.err.println("Project generation failed or was skipped. Verification not performed.");
             }
@@ -249,8 +249,8 @@ public class InteractiveDemo {
             System.err.println("An unexpected error occurred during the demo: " + e.getClass().getSimpleName() + " - " + e.getMessage());
             e.printStackTrace(); // For dev debugging
         } finally {
-            scanner.close();
-            cleanupTemporaryDirectory();
+            if (cleanup)
+                cleanupTemporaryDirectory();
             System.out.println("\n*** Demo Scope Reminder ***");
             System.out.println("This simplified demo focused on single-file generation.");
             System.out.println("To explore Jaider's full capabilities for AI-assisted coding, please try the main application.");

@@ -11,7 +11,6 @@ public class Jaider {
     public static void main(String[] args) {
         logger.info("Jaider self-development task initiated.");
         try {
-            // App is now in the same package
             new App(new TUI(), args).run();
         } catch (Exception e) {
             System.err.println("Jaider failed to start: " + e.getMessage());
