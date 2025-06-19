@@ -19,7 +19,7 @@ import java.util.stream.Collectors;
 public class JaiderModel {
     public static final int LOG_CAPACITY = 200;
 
-    public final Path dir;
+    public Path dir; // Removed final modifier
 
     /** active files in context */
     public final Set<Path> files = new HashSet<>();
@@ -34,16 +34,19 @@ public class JaiderModel {
     public boolean isIndexed = false;
     public String lastAppliedDiff = null;
     public String mode = "Coder";
+    public final String globalConfig; // Added globalConfig field
 
     private String[] originalArgs;
     private List<dumb.jaider.suggestion.ActiveSuggestion> activeSuggestions = new ArrayList<>(); // Changed for actionable suggestions
 
-    public JaiderModel() {
+    public JaiderModel(String globalConfig) {
         this.dir = Paths.get("").toAbsolutePath();
+        this.globalConfig = globalConfig;
     }
 
-    public JaiderModel(Path dir) {
+    public JaiderModel(Path dir, String globalConfig) {
         this.dir = dir;
+        this.globalConfig = globalConfig;
     }
 
     public void addLog(ChatMessage message) {
@@ -117,6 +120,16 @@ public class JaiderModel {
 
     public Path getDir() { // Changed return type to Path
         return this.dir;
+    }
+
+    public void setDir(Path newDir) {
+        this.dir = newDir;
+        this.files.clear(); // Clear context files when directory changes
+        // Potentially clear/reset other directory-dependent states here, e.g., isIndexed
+        this.isIndexed = false; // Assuming index is directory-specific
+        this.statusBarText = "Project directory changed to: " + newDir.getFileName() + ". Index may need to be rebuilt.";
+        // Other fields like lastAppliedDiff might also need reset depending on app logic
+        this.lastAppliedDiff = null;
     }
 
     // Removed getFiles() method as AddCommand will use the public field model.files directly

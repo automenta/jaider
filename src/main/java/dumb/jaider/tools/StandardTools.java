@@ -13,6 +13,7 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.nio.file.Files;
@@ -25,11 +26,17 @@ public class StandardTools {
     private final JaiderModel model;
     private final Config config;
     private final EmbeddingModel embedding;
+    private final ProcessExecutor processExecutor;
 
-    public StandardTools(JaiderModel model, Config config, EmbeddingModel embedding) {
+    public StandardTools(JaiderModel model, Config config, EmbeddingModel embedding, ProcessExecutor processExecutor) {
         this.model = model;
         this.config = config;
         this.embedding = embedding;
+        this.processExecutor = processExecutor;
+    }
+
+    public StandardTools(JaiderModel model, Config config, EmbeddingModel embedding) {
+        this(model, config, embedding, (command, directory) -> new ProcessBuilder(command).directory(directory).redirectErrorStream(true).start());
     }
 
     // Removed diffReader method
@@ -151,10 +158,7 @@ public class StandardTools {
 
         try {
             // Ensure ProcessBuilder splits the commandToExecute correctly
-            var pb = new ProcessBuilder(commandToExecute.trim().split("\\s+"))
-                    .directory(model.dir.toFile())
-                    .redirectErrorStream(true);
-            var process = pb.start();
+            var process = this.processExecutor.execute(commandToExecute.trim().split("\\s+"), model.dir.toFile());
 
             var output = new StringBuilder();
             try (var reader = new BufferedReader(new InputStreamReader(process.getInputStream()))) {

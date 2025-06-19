@@ -4,6 +4,8 @@
 
 Jaider is an interactive, command-line AI programming assistant designed to help developers with coding tasks by leveraging Large Language Models (LLMs). It operates within your project directory, allowing AI agents to read your code, propose changes via diffs, run validation commands, and even search the web for information. Jaider is inspired by tools like Aider and aims to provide a flexible and configurable environment for AI-assisted development.
 
+For those interested in the internal design, a detailed overview of Jaider's components and their interactions can be found in [ARCHITECTURE.md](ARCHITECTURE.md).
+
 ## Features
 
 *   **Multiple Agent Modes:**
@@ -135,28 +137,42 @@ Agents (primarily the CoderAgent) can use the following tools:
 
 1.  **Prerequisites:**
     *   Java 21 (or the version specified in `pom.xml`).
-    *   Apache Maven.
+    *   Java 21 (or the version specified in `pom.xml`).
+    *   Apache Maven (though using the included Maven Wrapper `mvnw` is recommended).
     *   Git (Jaider works best within a Git repository).
     *   (Optional) An Ollama instance running if you intend to use local models.
     *   (Optional) Google Cloud SDK configured for Application Default Credentials if using Gemini via Vertex AI.
 2.  **Build:**
+    It is recommended to use the Maven Wrapper (`mvnw`) included with the project. This ensures you use the project's specified Maven version without needing a separate Maven installation.
     ```bash
-    mvn clean package
+    # For Linux/macOS
+    ./mvnw clean package
+
+    # For Windows
+    mvnw.cmd clean package
     ```
 3.  **Run:**
     After packaging, the application can be run using the executable JAR created in the `target` directory:
     ```bash
-    java -jar target/jaider-1.0-SNAPSHOT.jar
+    java -jar target/jaider-*.jar
     ```
-    (If you change the project version, update `1.0-SNAPSHOT` accordingly).
+    (Replace `*` with the correct version from the `pom.xml`, e.g., `1.0-SNAPSHOT`).
 
-    Alternatively, for development purposes, you can run the application directly using Maven:
+    Alternatively, for development purposes, you can run the application directly using the Maven Wrapper from the project's root directory:
     ```bash
-    mvn exec:java -Dexec.mainClass="dumb.jaider.app.Jaider"
-    ```
-    (Note: The main class for the primary Jaider application is `dumb.jaider.app.Jaider`. See the "Interactive Demo" section below for its specific main class.)
+    # For Linux/macOS
+    ./mvnw exec:java -Dexec.mainClass="dumb.jaider.app.Jaider"
 
-4.  **First Run:** Jaider will create a default `.jaider.json` if one isn't found. You should edit this file to configure your preferred LLM provider and API keys. Use `/edit-config` or edit it manually.
+    # For Windows
+    mvnw.cmd exec:java -Dexec.mainClass="dumb.jaider.app.Jaider"
+    ```
+    The main class for running the Jaider application is `dumb.jaider.app.Jaider`. Specific main classes for available demos are listed in the "Demonstrations and Examples" section.
+
+4.  **First Run:** When you first run Jaider in a project directory, it will create a default `.jaider.json` file if one isn't already present. You should edit this file to configure your preferred LLM provider, model names, and any necessary API keys. You can use the `/edit-config` command within Jaider or edit the file manually with a text editor.
+
+## Architecture
+
+For a detailed understanding of Jaider's internal structure, components, and high-level interaction flows, please see the dedicated [ARCHITECTURE.md](ARCHITECTURE.md) document.
 
 ## Demonstrations and Examples
 
@@ -178,11 +194,19 @@ This is the **primary way to experience Jaider's full range of features**. It ru
 **Running the Comprehensive Demo:**
 1.  **Build the Project:** Ensure the entire project is compiled:
     ```bash
-    mvn clean package
+    # For Linux/macOS
+    ./mvnw clean package
+
+    # For Windows
+    mvnw.cmd clean package
     ```
 2.  **Run the Demo:**
     ```bash
-    mvn exec:java -Dexec.mainClass="dumb.integrationhandler.demo.ComprehensiveInteractiveDemo"
+    # For Linux/macOS
+    ./mvnw exec:java -Dexec.mainClass="dumb.integrationhandler.demo.ComprehensiveInteractiveDemo"
+
+    # For Windows
+    mvnw.cmd exec:java -Dexec.mainClass="dumb.integrationhandler.demo.ComprehensiveInteractiveDemo"
     ```
 3.  **Follow On-Screen Prompts:** The demo will guide you through various phases. You will be prompted to provide input (e.g., for AI prompts, or decisions like accepting a diff) or press Enter to continue.
     *   **LLM Configuration:** The demo starts with a default `.jaider.json` (using Ollama) created in a temporary directory. The script includes steps where you can use `/edit-config` to change LLM providers (e.g., to Gemini or OpenAI).
@@ -204,11 +228,19 @@ This is a very basic, stripped-down tutorial primarily intended for developers l
 **Running the Simplified Tutorial:**
 1.  **Build the Project:**
     ```bash
-    mvn clean package
+    # For Linux/macOS
+    ./mvnw clean package
+
+    # For Windows
+    mvnw.cmd clean package
     ```
 2.  **Run the Tutorial:**
     ```bash
-    mvn exec:java -Dexec.mainClass="dumb.integrationhandler.demo.JaiderIntegrationTutorialDemo"
+    # For Linux/macOS
+    ./mvnw exec:java -Dexec.mainClass="dumb.integrationhandler.demo.JaiderIntegrationTutorialDemo"
+
+    # For Windows
+    mvnw.cmd exec:java -Dexec.mainClass="dumb.integrationhandler.demo.JaiderIntegrationTutorialDemo"
     ```
     You will be prompted for a Gemini API key if you choose to use Gemini.
 
@@ -220,7 +252,11 @@ This was the original simple demo. It showcases a very simplified workflow for g
 
 **Running the Original Basic Demo:**
 ```bash
-mvn exec:java -Dexec.mainClass="dumb.integrationhandler.demo.InteractiveDemo"
+# For Linux/macOS
+./mvnw exec:java -Dexec.mainClass="dumb.integrationhandler.demo.InteractiveDemo"
+
+# For Windows
+mvnw.cmd exec:java -Dexec.mainClass="dumb.integrationhandler.demo.InteractiveDemo"
 ```
 
 It is recommended to use the **Comprehensive Interactive Demo** for the best understanding of Jaider's capabilities.

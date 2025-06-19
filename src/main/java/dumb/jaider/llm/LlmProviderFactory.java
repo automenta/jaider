@@ -12,9 +12,12 @@ import dev.langchain4j.model.openai.OpenAiEmbeddingModel;
 import dumb.jaider.app.Jaider;
 import dumb.jaider.config.Config;
 import dumb.jaider.model.JaiderModel;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 
 public class LlmProviderFactory {
+    private static final Logger logger = LoggerFactory.getLogger(LlmProviderFactory.class);
     private final Config config;
     private final JaiderModel model;
 
@@ -171,7 +174,9 @@ public class LlmProviderFactory {
             modelName = config.getGenericOpenaiModelName();
 
             if (apiKey == null || apiKey.isEmpty()) {
-                model.addLog(AiMessage.from("[Jaider] INFO: Generic OpenAI API key is not configured in .jaider.json or related environment variables. The endpoint might require an API key."));
+                // model.addLog(AiMessage.from("[Jaider] INFO: Generic OpenAI API key is not configured in .jaider.json or related environment variables. The endpoint might require an API key."));
+                LlmProviderFactory.logger.error("Generic OpenAI API key is not configured for provider at {}. Please set GENERIC_OPENAI_API_KEY or configure in .jaider.json if required by the provider.", baseUrl);
+                throw new dumb.jaider.app.exceptions.ChatModelInitializationException("Generic OpenAI API key is missing for provider at " + baseUrl + ". Configure if required.");
             }
 
             this.chatModel = OpenAiChatModel.builder()
@@ -239,7 +244,9 @@ public class LlmProviderFactory {
             modelName = config.getOpenaiModelName();
 
             if (apiKey == null || apiKey.trim().isEmpty()) {
-                model.addLog(AiMessage.from("[Jaider] INFO: OpenAI API key is not configured. Langchain4j might attempt to find it in environment variables or system properties."));
+                // model.addLog(AiMessage.from("[Jaider] INFO: OpenAI API key is not configured. Langchain4j might attempt to find it in environment variables or system properties."));
+                LlmProviderFactory.logger.error("OpenAI API key is not configured. Please set OPENAI_API_KEY environment variable or add 'openai' to 'apiKeys' in .jaider.json.");
+                throw new dumb.jaider.app.exceptions.ChatModelInitializationException("OpenAI API key is missing. Set OPENAI_API_KEY env var or configure in .jaider.json.");
             }
 
             this.chatModel = OpenAiChatModel.builder()
