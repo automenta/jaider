@@ -28,19 +28,39 @@ public class IndexCommand implements Command {
             return;
         }
 
+        // Check if project directory is null
+        if (context.model().getDir() == null) {
+            String errorMessage = "[Error] Project directory is not set. Cannot index.";
+            logger.error(errorMessage); // Optional: log server-side
+            context.app().finishTurnPublic(AiMessage.from(errorMessage));
+            return;
+        }
+
         context.app().setStatePublic(App.State.AGENT_THINKING); // Needs to be public or called via a public method in App
         m.statusBarText = "Indexing project...";
         context.ui().redraw(m);
 
         CompletableFuture.runAsync(() -> {
             try {
-                var rootDir = m.dir; // Store rootDir
+                var rootDir = m.getDir(); // Use getter for clarity
+                // Ensure rootDir is not null before proceeding with file operations
+                // This check is defensive, as the outer method already checks context.model().getDir()
+                if (rootDir == null) {
+                    // This specific internal check might be redundant now due to the outer check,
+                    // but kept for safety within async block if m.getDir() could somehow become null later.
+                    // However, the primary null check is now done synchronously outside this CompletableFuture.
+                    // Thus, this internal check might ideally be removed if the outer check is deemed sufficient.
+                    logger.error("Project directory became null unexpectedly within async execution.");
+                    context.app().finishTurnPublic(AiMessage.from("[Error] Indexing failed: Project directory is null."));
+                    return;
+                }
+
                 var documents = FileSystemDocumentLoader.loadDocuments(
                     rootDir, // Use rootDir here
                     (Path relativePath) -> {
                         // Path objects from FileSystemDocumentLoader's pathMatcher might be relative to the rootDir.
                         // Resolve them to ensure Files.isRegularFile and Files.size work correctly.
-                        var absolutePath = rootDir.resolve(relativePath);
+                        var absolutePath = rootDir.resolve(relativePath); // rootDir is now checked for null
                         try {
                             // It's good practice to log which path is being evaluated by the matcher if issues persist.
                             // System.out.println("Predicate evaluating: " + absolutePath);

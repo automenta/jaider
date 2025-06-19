@@ -201,4 +201,45 @@ class IndexCommandTest {
             Files.deleteIfExists(dummyFile);
         }
     }
+
+    @Test
+    void execute_nullProjectDirectory_shouldLogErrorAndFinishTurn() {
+        // 1. Set model.isIndexed = false;
+        model.isIndexed = false;
+
+        // 2. Simulate model.dir being null by stubbing getDir()
+        // model.dir = null; // This is final, cannot be reassigned
+        doReturn(null).when(model).getDir();
+
+
+        // 3. Ensure app.getEmbeddingModel() returns a valid mock embeddingModel (though not strictly necessary for this path, good for consistency)
+        when(appContext.app()).thenReturn(app);
+        // Remove when(appContext.ui()).thenReturn(ui); as ui specific to indexing status shouldn't be called
+        when(app.getEmbeddingModel()).thenReturn(embeddingModel); // Should not be reached, but good to have appContext fully mocked.
+
+        // 4. Call indexCommand.execute(null, appContext);
+        indexCommand.execute(null, appContext);
+
+        // 5. Verify that app.setStatePublic(App.State.AGENT_THINKING); is NOT called.
+        verify(app, never()).setStatePublic(eq(App.State.AGENT_THINKING));
+        verify(app, never()).setStatePublic(any(App.State.class)); // More general check if specific state is too restrictive
+
+        // 6. Verify that app.finishTurnPublic(messageCaptor.capture()); is called
+        ArgumentCaptor<AiMessage> messageCaptor = ArgumentCaptor.forClass(AiMessage.class);
+        // No timeout needed if it's a direct call now
+        verify(app).finishTurnPublic(messageCaptor.capture());
+
+        // 7. Assert that the captured message is the specific error message
+        AiMessage capturedMessage = messageCaptor.getValue();
+        assertNotNull(capturedMessage, "Captured message should not be null");
+        assertEquals("[Error] Project directory is not set. Cannot index.", capturedMessage.text(), "Error message does not match expected.");
+
+        // 8. Assert that model.isIndexed remains false.
+        assertFalse(model.isIndexed, "model.isIndexed should remain false after a failure");
+
+        // 9. Verify ui().redraw(model) for status "Indexing project..." is NOT called.
+        // If finishTurnPublic causes a redraw, that's separate.
+        // This specific redraw is tied to the AGENT_THINKING state and "Indexing project..." status.
+        verify(ui, never()).redraw(model);
+    }
 }
